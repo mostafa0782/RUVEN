@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import iq.ruven.app.data.model.SchoolPermissions
 import iq.ruven.app.data.model.SchoolRole
+import iq.ruven.app.data.remote.SupabaseBackend
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 
 private val Ink = Color(0xFF10253F)
@@ -108,10 +110,39 @@ private enum class RuvenTab(val title: String) {
 }
 
 @Composable
+@Composable
 private fun RuvenApp() {
+    var session by remember { mutableStateOf<SupabaseBackend.Session?>(null) }
+    var profile by remember { mutableStateOf<SupabaseBackend.Profile?>(null) }
+    val backend = remember { SupabaseBackend() }
+    val scope = rememberCoroutineScope()
+    if (session == null || profile == null) {
+        SupabaseLoginScreen { newSession, newProfile ->
+            session = newSession
+            profile = newProfile
+        }
+    } else {
+        RuvenAuthenticatedApp(profile = profile!!, onSignOut = {
+            val oldSession = session
+            session = null
+            profile = null
+            if (oldSession != null) scope.launch { backend.signOut(oldSession) }
+        })
+    }
+}
+
+private fun schoolRoleFromDatabase(value: String): SchoolRole = when (value.lowercase()) {
+    "class_monitor" -> SchoolRole.CLASS_MONITOR
+    "teacher" -> SchoolRole.TEACHER
+    "assistant_principal" -> SchoolRole.ASSISTANT_PRINCIPAL
+    "principal" -> SchoolRole.PRINCIPAL
+    else -> SchoolRole.STUDENT
+}
+
+@Composable
+private fun RuvenAuthenticatedApp(profile: SupabaseBackend.Profile, onSignOut: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
-    var role by remember { mutableStateOf(SchoolRole.STUDENT) }
-    var roleMenu by remember { mutableStateOf(false) }
+    val role = remember(profile.role) { schoolRoleFromDatabase(profile.role) }
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("ruven_local_data", Context.MODE_PRIVATE) }
     val homework = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "homework")) } }
@@ -150,12 +181,11 @@ private fun RuvenApp() {
                         Text("RUVEN", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
                         Text("منظومتك المدرسية", color = Muted, fontSize = 11.sp)
                     }
-                    Box {
-                        TextButton(onClick = { roleMenu = true }) { Text(roleLabel(role) + "  ▾", color = Blue) }
-                        DropdownMenu(expanded = roleMenu, onDismissRequest = { roleMenu = false }) {
-                            SchoolRole.entries.forEach { r ->
-                                DropdownMenuItem(text = { Text(roleLabel(r)) }, onClick = { role = r; roleMenu = false })
-                            }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(profile.fullName, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(roleLabel(role), color = Blue, fontSize = 11.sp)
+                            TextButton(onClick = onSignOut) { Text("خروج", color = Blue, fontSize = 11.sp) }
                         }
                     }
                 }
