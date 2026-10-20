@@ -980,6 +980,10 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
     var subject by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
+    var search by remember { mutableStateOf("") }
+    val filteredHomework = homework.withIndex().filter { (_, entry) ->
+        search.isBlank() || entry.contains(search, ignoreCase = true)
+    }
     var editingIndex by remember { mutableIntStateOf(-1) }
     var editingText by remember { mutableStateOf("") }
     val canCreate = SchoolPermissions.canCreateHomework(role, assignedSubject = role == SchoolRole.TEACHER && subject.isNotBlank())
@@ -1012,9 +1016,36 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
                 }
             }
         }
-        item { SectionHeading("قائمة الواجبات", "المحتوى المحلي المحفوظ على هذا الجهاز") }
-        if (homework.isEmpty()) item { EmptyCard("ماكو واجبات مضافة", "الواجبات تظهر هنا بعد إضافة بيانات تجريبية أو ربط الخادم.") }
-        else itemsIndexed(homework) { i, entry ->
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("قائمة الواجبات", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("${homework.size} واجب محفوظ محلياً", color = Muted, fontSize = 11.sp)
+                }
+                Surface(color = Color(0xFFFFF0DD), shape = RoundedCornerShape(50)) {
+                    Text("واجبات", color = Color(0xFFB66A12), fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
+                }
+            }
+        }
+        item {
+            OutlinedTextField(
+                value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(),
+                singleLine = true, shape = RoundedCornerShape(16.dp),
+                placeholder = { Text("ابحث عن واجب أو مادة…") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
+                trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
+                    Icon(Icons.Rounded.Close, contentDescription = "مسح البحث")
+                } }
+            )
+        }
+        if (filteredHomework.isEmpty()) item {
+            EmptyCard(if (search.isBlank()) "ماكو واجبات مضافة" else "ما لقينا واجب مطابق",
+                if (search.isBlank()) "الواجبات تظهر هنا بعد إضافة بيانات تجريبية أو ربط الخادم." else "غيّر البحث أو امسحه حتى تشوف كل الواجبات.")
+        }
+        else itemsIndexed(filteredHomework, key = { _, indexed -> indexed.index }) { _, indexed ->
+            val i = indexed.index
+            val entry = indexed.value
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(entry, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
@@ -1050,6 +1081,10 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
     var subject by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
+    var search by remember { mutableStateOf("") }
+    val filteredPreparations = preparations.withIndex().filter { (_, entry) ->
+        search.isBlank() || entry.contains(search, ignoreCase = true)
+    }
     val canCreate = SchoolPermissions.canCreatePreparation(role, assignedSubject = subject.isNotBlank())
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         item { PageHeader("التحاضير", "دفتر رقمي لتحضير الدروس وأهدافها وخطوات شرحها.") }
@@ -1080,9 +1115,35 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
                 }
             }
         }
-        item { SectionHeading("دفتر التحاضير", "التحاضير المحفوظة على هذا الجهاز") }
-        if (preparations.isEmpty()) item { EmptyCard("دفتر التحاضير فارغ", "تظهر هنا التحاضير التي أُضيفت في المعاينة.") }
-        else itemsIndexed(preparations) { i, entry -> ContentCard(entry, "تحضير " + (i + 1), Icons.Rounded.Description) }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("دفتر التحاضير", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("${preparations.size} تحضير محفوظ محلياً", color = Muted, fontSize = 11.sp)
+                }
+                Surface(color = Color(0xFFE5F8F1), shape = RoundedCornerShape(50)) {
+                    Text("التحاضير", color = Color(0xFF168A70), fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
+                }
+            }
+        }
+        item {
+            OutlinedTextField(
+                value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(),
+                singleLine = true, shape = RoundedCornerShape(16.dp),
+                placeholder = { Text("ابحث باسم التحضير أو المادة…") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
+                trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
+                    Icon(Icons.Rounded.Close, contentDescription = "مسح البحث")
+                } }
+            )
+        }
+        if (filteredPreparations.isEmpty()) item {
+            EmptyCard(if (search.isBlank()) "دفتر التحاضير فارغ" else "ما لقينا تحضير مطابق",
+                if (search.isBlank()) "تظهر هنا التحاضير التي أُضيفت في المعاينة." else "غيّر البحث أو امسحه حتى تشوف كل التحاضير.")
+        } else itemsIndexed(filteredPreparations, key = { _, indexed -> indexed.index }) { _, indexed ->
+            ContentCard(indexed.value, "تحضير " + (indexed.index + 1), Icons.Rounded.Description)
+        }
     }
 }
 
