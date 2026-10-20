@@ -12,25 +12,18 @@ import iq.ruven.app.data.model.SchoolModelValidation
 class ValidatedSchoolContentRepository(
     private val delegate: SchoolContentRepository
 ) : SchoolContentRepository {
-    override suspend fun getLessons(
-        schoolId: String,
-        studentId: String,
-        weekday: Int
-    ): Result<List<Lesson>> = delegate.getLessons(schoolId, studentId, weekday).mapCatching { lessons ->
-        validateRecords(lessons, SchoolModelValidation::validate)
-    }
+    override suspend fun getLessons(weekday: Int): Result<List<Lesson>> =
+        delegate.getLessons(weekday).mapCatching { lessons ->
+            validateRecords(lessons, SchoolModelValidation::validate)
+        }
 
-    override suspend fun getHomework(
-        schoolId: String,
-        studentId: String
-    ): Result<List<Homework>> = delegate.getHomework(schoolId, studentId).mapCatching { homework ->
-        validateRecords(homework, SchoolModelValidation::validate)
-    }
+    override suspend fun getHomework(): Result<List<Homework>> =
+        delegate.getHomework().mapCatching { homework ->
+            validateRecords(homework, SchoolModelValidation::validate)
+        }
 
-    override suspend fun getAnnouncements(
-        schoolId: String
-    ): Result<List<SchoolAnnouncement>> =
-        delegate.getAnnouncements(schoolId).mapCatching { announcements ->
+    override suspend fun getAnnouncements(): Result<List<SchoolAnnouncement>> =
+        delegate.getAnnouncements().mapCatching { announcements ->
             validateRecords(announcements, SchoolModelValidation::validate)
         }
 
