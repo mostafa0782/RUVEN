@@ -14,14 +14,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +39,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -92,14 +92,14 @@ private enum class RuvenTab(val title: String) {
 @Composable
 private fun RuvenApp() {
     var selectedTab by remember { mutableIntStateOf(0) }
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Scaffold(
         containerColor = Canvas,
         bottomBar = {
             NavigationBar(
                 containerColor = Color.White,
                 contentColor = Blue,
-                tonalElevation = 8.dp,
-                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                tonalElevation = 8.dp
             ) {
                 val tabs = listOf(
                     RuvenTab.Home to Icons.Rounded.Home,
@@ -132,6 +132,7 @@ private fun RuvenApp() {
                 else -> PlaceholderScreen("الإعلانات المدرسية", "ستظهر إعلانات المدرسة الرسمية هنا.")
             }
         }
+    }
     }
 }
 
