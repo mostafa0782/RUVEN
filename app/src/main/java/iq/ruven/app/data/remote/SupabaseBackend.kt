@@ -33,6 +33,14 @@ class SupabaseBackend(
         val isOwner: Boolean
     )
 
+    data class ManagedProfile(
+        val id: String,
+        val email: String?,
+        val fullName: String,
+        val role: String,
+        val className: String?
+    )
+
     data class SchoolItem(
         val id: String,
         val itemType: String,
@@ -73,6 +81,41 @@ class SupabaseBackend(
             className = row.optString("class_name").takeIf { it.isNotBlank() && it != "null" },
             isOwner = row.optBoolean("is_owner", false)
         )
+    }
+
+    /** Visible to the owner through profiles RLS; other roles cannot enumerate the school. */
+    suspend fun loadManagedProfiles(session: Session): List<ManagedProfile> = withContext(Dispatchers.IO) {
+        val query = "select=id,email,full_name,role,class_name&order=full_name.asc&limit=500"
+        val rows = requestArray("/rest/v1/profiles?$query", session = session)
+        (0 until rows.length()).map { index ->
+            val row = rows.getJSONObject(index)
+            ManagedProfile(
+                id = row.getString("id"),
+                email = row.optString("email").takeIf { it.isNotBlank() && it != "null" },
+                fullName = row.getString("full_name"),
+                role = row.getString("role"),
+                className = row.optString("class_name").takeIf { it.isNotBlank() && it != "null" }
+            )
+        }
+    }
+
+    /** The database RPC independently verifies the owner flag and blocks app-side owner promotion. */
+    suspend fun setManagedProfileRole(
+        session: Session,
+        targetUserId: String,
+        role: String,
+        className: String?
+    ) = withContext(Dispatchers.IO) {
+        require(role in setOf(
+            "student", "class_monitor", "parliament_member", "teacher", "class_supervisor",
+            "assistant_principal", "principal", "educational_counselor", "ministry_education_member"
+        )) { "نوع الحساب غير مسموح." }
+        val payload = JSONObject()
+            .put("target_user_id", targetUserId)
+            .put("new_role", role)
+            .put("new_class_name", className?.trim()?.takeIf { it.isNotBlank() } ?: JSONObject.NULL)
+        requestRaw("/rest/v1/rpc/owner_set_profile_role", "POST", payload, session)
+        Unit
     }
 
     suspend fun loadPublishedItems(session: Session, className: String?): List<SchoolItem> = withContext(Dispatchers.IO) {
