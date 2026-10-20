@@ -38,6 +38,8 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.School
@@ -1127,9 +1129,30 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
 
 @Composable
 private fun PageHeader(title: String, subtitle: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text(title, color = Ink, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text(subtitle, color = Muted, fontSize = 13.sp, lineHeight = 20.sp)
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            Modifier.fillMaxWidth()
+                .background(Brush.linearGradient(listOf(Color(0xFFEAF2FF), Color.White, Color(0xFFE6FAFC))))
+                .padding(horizontal = 17.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp)
+        ) {
+            Box(
+                Modifier.size(49.dp).clip(RoundedCornerShape(16.dp))
+                    .background(Brush.linearGradient(listOf(Blue, Cyan))),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.School, contentDescription = null, tint = Color.White, modifier = Modifier.size(25.dp))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(title, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                Text(subtitle, color = Muted, fontSize = 12.sp, lineHeight = 19.sp)
+            }
+        }
     }
 }
 
@@ -1157,15 +1180,55 @@ private fun SummaryCard(title: String, value: String, caption: String, icon: Ima
 
 @Composable
 private fun ContentCard(title: String, subtitle: String, icon: ImageVector) {
-    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-        Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFFEAF2FF)), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = Blue)
+    var expanded by remember(title, subtitle) { mutableStateOf(false) }
+    Card(
+        onClick = { expanded = !expanded },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (expanded) 3.dp else 1.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(15.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                Modifier.size(43.dp).clip(RoundedCornerShape(14.dp))
+                    .background(Brush.linearGradient(listOf(Color(0xFFEAF2FF), Color(0xFFE3F9FA)))),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Blue, modifier = Modifier.size(22.dp))
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(title, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 21.sp)
-                Text(subtitle, color = Muted, fontSize = 11.sp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(title, color = Ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 21.sp)
+                Text(
+                    subtitle,
+                    color = Muted,
+                    fontSize = 12.sp,
+                    lineHeight = 19.sp,
+                    maxLines = if (expanded) Int.MAX_VALUE else 2
+                )
+                androidx.compose.animation.AnimatedVisibility(visible = expanded) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Icon(
+                            if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            contentDescription = null,
+                            tint = Blue,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text("اضغط للطي", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                if (!expanded) {
+                    Text("اضغط لعرض التفاصيل", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
+            Icon(
+                if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                contentDescription = if (expanded) "طي التفاصيل" else "عرض التفاصيل",
+                tint = Muted,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
