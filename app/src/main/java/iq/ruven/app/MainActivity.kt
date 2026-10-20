@@ -24,6 +24,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -766,11 +768,18 @@ private fun HomeScreen(
 ) {
     var search by remember { mutableStateOf("") }
     var showAllStats by remember { mutableStateOf(false) }
-    val filteredItems = remember(remoteItems, search) {
+    var selectedType by remember { mutableStateOf("all") }
+    val filteredItems = remember(remoteItems, search, selectedType) {
         remoteItems.filter { item ->
-            search.isBlank() || item.title.contains(search, ignoreCase = true) ||
+            val matchesSearch = search.isBlank() || item.title.contains(search, ignoreCase = true) ||
                 item.body.contains(search, ignoreCase = true) ||
                 (item.subjectName?.contains(search, ignoreCase = true) == true)
+            val matchesType = when (selectedType) {
+                "all" -> true
+                "announcement" -> item.itemType !in listOf("homework", "preparation", "timetable")
+                else -> item.itemType.equals(selectedType, ignoreCase = true)
+            }
+            matchesSearch && matchesType
         }
     }
     LazyColumn(
@@ -901,6 +910,25 @@ private fun HomeScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SectionHeading("آخر منشورات المدرسة", "واجبات وتحاضير وإعلانات منشورة من الخادم")
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        "all" to "الكل",
+                        "homework" to "الواجبات",
+                        "preparation" to "التحاضير",
+                        "timetable" to "الجداول",
+                        "announcement" to "الإعلانات"
+                    ).forEach { (type, label) ->
+                        FilterChip(
+                            selected = selectedType == type,
+                            onClick = { selectedType = type },
+                            label = { Text(label) },
+                            shape = RoundedCornerShape(50)
+                        )
+                    }
+                }
                 OutlinedTextField(
                     value = search,
                     onValueChange = { search = it },
