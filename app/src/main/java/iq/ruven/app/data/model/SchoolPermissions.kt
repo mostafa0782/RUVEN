@@ -36,10 +36,10 @@ object SchoolPermissions {
     fun canUploadTimetableFile(role: SchoolRole): Boolean = canManageTimetable(role)
 
     fun canCreatePreparation(role: SchoolRole, assignedSubject: Boolean = false): Boolean =
-        role == SchoolRole.TEACHER && assignedSubject
+        (role == SchoolRole.TEACHER && assignedSubject) || role == SchoolRole.OWNER
 
     fun canReportToPrincipal(role: SchoolRole): Boolean = role == SchoolRole.CLASS_MONITOR
 
     fun canPublishAnnouncements(role: SchoolRole): Boolean =
-        role == SchoolRole.PRINCIPAL || role == SchoolRole.ASSISTANT_PRINCIPAL
+        role == SchoolRole.PRINCIPAL || role == SchoolRole.ASSISTANT_PRINCIPAL || role == SchoolRole.OWNER
 }
