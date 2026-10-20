@@ -347,12 +347,16 @@ private fun HomeScreen(
                     Text("دورك الحالي", color = Muted, fontSize = 12.sp)
                     Text(roleLabel(role), color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                     Text(when (role) {
-                        SchoolRole.STUDENT -> "عرض الجدول والواجبات والتحاضير المنشورة."
-                        SchoolRole.CLASS_MONITOR -> "إضافة الجدول والواجبات وإرسال بلاغات للمدير."
+                        SchoolRole.STUDENT -> "عرض الجدول والواجبات والتحاضير المنشورة لشعبتك."
+                        SchoolRole.CLASS_MONITOR -> "متابعة شؤون الشعبة وإرسال البلاغات للإدارة."
+                        SchoolRole.PARLIAMENT_MEMBER -> "تمثيل الطلبة ورفع المقترحات والبلاغات؛ لا تمنح العضوية صلاحيات إدارية."
                         SchoolRole.TEACHER -> "نشر واجبات وتحاضير المواد المسندة إليك فقط."
-                        SchoolRole.ASSISTANT_PRINCIPAL -> "إدارة الجدول ومراجعة المحتوى وفق الصلاحيات."
-                        SchoolRole.PRINCIPAL -> "الإشراف الإداري وإدارة الجدول والواجبات."
-                        SchoolRole.OWNER -> "صلاحيات المالك الكاملة لإدارة بيانات المدرسة والحسابات والإعدادات."
+                        SchoolRole.CLASS_SUPERVISOR -> "متابعة الشعبة المكلّف بها بعد تحديد نطاق صلاحياتها."
+                        SchoolRole.ASSISTANT_PRINCIPAL -> "إدارة المحتوى المدرسي وفق الصلاحيات المعتمدة."
+                        SchoolRole.PRINCIPAL -> "الإشراف الإداري على شؤون المدرسة."
+                        SchoolRole.EDUCATIONAL_COUNSELOR -> "متابعة الشؤون التربوية ضمن صلاحيات تحمي خصوصية الطلبة."
+                        SchoolRole.MINISTRY_EDUCATION_MEMBER -> "دور رقابي تربوي مستقل؛ لا تُمنح صلاحيات الإدارة تلقائياً."
+                        SchoolRole.OWNER -> "إدارة النظام والحسابات والإعدادات بصلاحيات المالك."
                     }, color = Muted, fontSize = 13.sp, lineHeight = 20.sp)
                 }
             }
