@@ -12,10 +12,14 @@ import iq.ruven.app.data.model.SchoolModelValidation
 class ValidatedSchoolContentRepository(
     private val delegate: SchoolContentRepository
 ) : SchoolContentRepository {
-    override suspend fun getLessons(weekday: Int): Result<List<Lesson>> =
-        delegate.getLessons(weekday).mapCatching { lessons ->
+    override suspend fun getLessons(weekday: Int): Result<List<Lesson>> {
+        if (weekday !in 1..7) {
+            return Result.failure(IllegalArgumentException("weekday must be in 1..7"))
+        }
+        return delegate.getLessons(weekday).mapCatching { lessons ->
             validateRecords(lessons, SchoolModelValidation::validate)
         }
+    }
 
     override suspend fun getHomework(): Result<List<Homework>> =
         delegate.getHomework().mapCatching { homework ->
