@@ -242,11 +242,12 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
     var title by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
     val canCreate = SchoolPermissions.canCreateHomework(role, assignedSubject = role == SchoolRole.TEACHER && subject.isNotBlank())
+    val canSeeHomeworkForm = role != SchoolRole.STUDENT
     val canModerate = SchoolPermissions.canEditOrDeleteHomework(role)
     val canReport = SchoolPermissions.canReportToPrincipal(role)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         item { PageHeader("الواجبات", "نشر حسب المادة وصلاحيات الإدارة.") }
-        if (canCreate) item {
+        if (canSeeHomeworkForm) item {
             Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("إضافة واجب", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
@@ -257,7 +258,7 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
                     Button(onClick = {
                         homework.add(subject + ": " + title + if (details.isBlank()) "" else " — " + details)
                         subject = ""; title = ""; details = ""
-                    }, enabled = subject.isNotBlank() && title.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("نشر في المعاينة") }
+                    }, enabled = canCreate && subject.isNotBlank() && title.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("نشر في المعاينة") }
                 }
             }
         } else if (canReport) item {
@@ -311,14 +312,14 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
                             Text("للمدرسين ضمن موادهم المسندة", color = Muted, fontSize = 11.sp)
                         }
                     }
-                    if (canCreate) {
+                    if (role == SchoolRole.TEACHER) {
                         OutlinedTextField(subject, { subject = it }, label = { Text("المادة المسندة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(title, { title = it }, label = { Text("عنوان التحضير") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(content, { content = it }, label = { Text("أهداف الدرس وخطوات الشرح والواجب") }, modifier = Modifier.fillMaxWidth(), minLines = 4)
                         Button(onClick = {
                             preparations.add(subject + " — " + title + ": " + content)
                             subject = ""; title = ""; content = ""
-                        }, enabled = subject.isNotBlank() && title.isNotBlank() && content.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                        }, enabled = canCreate && subject.isNotBlank() && title.isNotBlank() && content.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Rounded.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text("حفظ التحضير في المعاينة")
                         }
                         Text("يُحفظ محلياً في هذه النسخة التجريبية فقط.", color = Muted, fontSize = 11.sp)
