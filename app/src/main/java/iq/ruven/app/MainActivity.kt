@@ -123,12 +123,46 @@ private fun RuvenApp() {
     ) { }
     var session by remember { mutableStateOf<SupabaseBackend.Session?>(null) }
     var profile by remember { mutableStateOf<SupabaseBackend.Profile?>(null) }
+    var restoringSession by remember { mutableStateOf(true) }
     var remoteItems by remember { mutableStateOf<List<SupabaseBackend.SchoolItem>>(emptyList()) }
     var feedError by remember { mutableStateOf<String?>(null) }
     val backend = remember { SupabaseBackend() }
     val scope = rememberCoroutineScope()
-    if (session == null || profile == null) {
+    val authPrefs = remember(context) { context.getSharedPreferences("ruven_auth", Context.MODE_PRIVATE) }
+
+    LaunchedEffect(Unit) {
+        val savedRefreshToken = authPrefs.getString("refresh_token", null)
+        if (!savedRefreshToken.isNullOrBlank()) {
+            try {
+                val restored = backend.refreshSession(savedRefreshToken)
+                val restoredProfile = backend.loadMyProfile(restored)
+                session = restored
+                profile = restoredProfile
+                authPrefs.edit().putString("refresh_token", restored.refreshToken).apply()
+                try {
+                    val loaded = backend.loadPublishedItems(restored, restoredProfile.className)
+                    remoteItems = loaded
+                    RuvenNotifications.processSync(context, restoredProfile.id, loaded)
+                } catch (e: Exception) {
+                    feedError = e.message ?: "تعذر تحميل محتوى المدرسة."
+                }
+            } catch (_: Exception) {
+                authPrefs.edit().remove("refresh_token").apply()
+            }
+        }
+        restoringSession = false
+    }
+
+    if (restoringSession) {
+        Box(Modifier.fillMaxSize().background(Canvas), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator()
+                Text("جارٍ استعادة جلسة الدخول…", color = Ink)
+            }
+        }
+    } else if (session == null || profile == null) {
         SupabaseLoginScreen { newSession, newProfile ->
+            authPrefs.edit().putString("refresh_token", newSession.refreshToken).apply()
             session = newSession
             profile = newProfile
             feedError = null
@@ -170,6 +204,7 @@ private fun RuvenApp() {
                 }
             },
             onSignOut = {
+                authPrefs.edit().remove("refresh_token").apply()
                 session = null
                 profile = null
                 remoteItems = emptyList()
