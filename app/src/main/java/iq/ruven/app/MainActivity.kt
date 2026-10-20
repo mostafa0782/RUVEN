@@ -373,47 +373,51 @@ private fun OwnerAccountManagementScreen(
                     Text(account.fullName, color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(account.email ?: account.id, color = Muted, fontSize = 11.sp)
                     Text("الدور الحالي: " + (managedRoleOptions.firstOrNull { it.value == account.role }?.label ?: account.role), color = Blue, fontSize = 12.sp)
-                    Box {
-                        OutlinedButton(onClick = { menuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text("الدور الجديد: " + (managedRoleOptions.firstOrNull { it.value == selectedRole }?.label ?: selectedRole))
-                        }
-                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                            managedRoleOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option.label) },
-                                    onClick = { selectedRole = option.value; menuExpanded = false }
-                                )
+                    if (account.role == "owner") {
+                        Text("حساب المالك محمي ولا يمكن تغيير دوره من هذه اللوحة.", color = Muted, fontSize = 12.sp)
+                    } else {
+                        Box {
+                            OutlinedButton(onClick = { menuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text("الدور الجديد: " + (managedRoleOptions.firstOrNull { it.value == selectedRole }?.label ?: selectedRole))
                             }
-                        }
-                    }
-                    OutlinedTextField(
-                        value = className,
-                        onValueChange = { className = it },
-                        label = { Text("الصف والشعبة (مثال: الثالث متوسط - A)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                saving = true
-                                error = null
-                                notice = null
-                                try {
-                                    backend.setManagedProfileRole(session, account.id, selectedRole, className)
-                                    notice = "تم تحديث الحساب بنجاح."
-                                    accounts = backend.loadManagedProfiles(session)
-                                } catch (e: Exception) {
-                                    error = e.message ?: "تعذر حفظ صلاحيات الحساب."
-                                } finally {
-                                    saving = false
+                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                                managedRoleOptions.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option.label) },
+                                        onClick = { selectedRole = option.value; menuExpanded = false }
+                                    )
                                 }
                             }
-                        },
-                        enabled = !saving && selectedRole != "owner",
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (saving) "جارٍ الحفظ..." else "حفظ الدور والشعبة")
+                        }
+                        OutlinedTextField(
+                            value = className,
+                            onValueChange = { className = it },
+                            label = { Text("الصف والشعبة (مثال: الثالث متوسط - A)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    saving = true
+                                    error = null
+                                    notice = null
+                                    try {
+                                        backend.setManagedProfileRole(session, account.id, selectedRole, className)
+                                        notice = "تم تحديث الحساب بنجاح."
+                                        accounts = backend.loadManagedProfiles(session)
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "تعذر حفظ صلاحيات الحساب."
+                                    } finally {
+                                        saving = false
+                                    }
+                                }
+                            },
+                            enabled = !saving,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (saving) "جارٍ الحفظ..." else "حفظ الدور والشعبة")
+                        }
                     }
                 }
             }
