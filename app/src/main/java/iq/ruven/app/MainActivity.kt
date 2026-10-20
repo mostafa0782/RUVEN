@@ -1,6 +1,7 @@
 package iq.ruven.app
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -126,6 +127,8 @@ private fun RuvenApp() {
     var restoringSession by remember { mutableStateOf(true) }
     var remoteItems by remember { mutableStateOf<List<SupabaseBackend.SchoolItem>>(emptyList()) }
     var feedError by remember { mutableStateOf<String?>(null) }
+    var updateMessage by remember { mutableStateOf<String?>(null) }
+    var checkingUpdate by remember { mutableStateOf(false) }
     val backend = remember { SupabaseBackend() }
     val scope = rememberCoroutineScope()
     val authPrefs = remember(context) { context.getSharedPreferences("ruven_auth", Context.MODE_PRIVATE) }
@@ -191,6 +194,37 @@ private fun RuvenApp() {
             backend = backend,
             remoteItems = remoteItems,
             feedError = feedError,
+            updateMessage = updateMessage,
+            checkingUpdate = checkingUpdate,
+            onDismissUpdateMessage = { updateMessage = null },
+            onCheckUpdates = {
+                if (!checkingUpdate) scope.launch {
+                    checkingUpdate = true
+                    updateMessage = "جارٍ فحص الإصدارات الرسمية…"
+                    try {
+                        val release = RuvenUpdater.latestRelease()
+                        val packageInfo = if (Build.VERSION.SDK_INT >= 33) {
+                            context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+                        } else {
+                            @Suppress("DEPRECATION")
+                            context.packageManager.getPackageInfo(context.packageName, 0)
+                        }
+                        val currentVersion = packageInfo.versionName ?: "0.1.0"
+                        if (!RuvenUpdater.isNewer(currentVersion, release.versionName)) {
+                            updateMessage = "أنت تستخدم أحدث إصدار رسمي (v$currentVersion)."
+                        } else {
+                            updateMessage = "يتوفر تحديث v${release.versionName}. جارٍ تنزيله…"
+                            val activity = context as? Activity ?: throw IllegalStateException("افتح التحديث من التطبيق مباشرة.")
+                            RuvenUpdater.downloadAndInstall(activity, release.apkUrl)
+                            updateMessage = "تم تنزيل التحديث. أكمل التثبيت من نافذة أندرويد."
+                        }
+                    } catch (e: Exception) {
+                        updateMessage = e.message ?: "تعذر فحص التحديثات."
+                    } finally {
+                        checkingUpdate = false
+                    }
+                }
+            },
             onRefresh = {
                 scope.launch {
                     try {
@@ -235,6 +269,10 @@ private fun RuvenAuthenticatedApp(
     backend: SupabaseBackend,
     remoteItems: List<SupabaseBackend.SchoolItem>,
     feedError: String?,
+    updateMessage: String?,
+    checkingUpdate: Boolean,
+    onDismissUpdateMessage: () -> Unit,
+    onCheckUpdates: () -> Unit,
     onRefresh: () -> Unit,
     onSignOut: () -> Unit
 ) {
@@ -254,6 +292,16 @@ private fun RuvenAuthenticatedApp(
     LaunchedEffect(scheduleFiles.toList()) { writeLocalItems(prefs, "schedule_files", scheduleFiles.toList()) }
     LaunchedEffect(reports.toList()) { writeLocalItems(prefs, "reports", reports.toList()) }
     LaunchedEffect(announcements.toList()) { writeLocalItems(prefs, "announcements", announcements.toList()) }
+    if (updateMessage != null) {
+        AlertDialog(
+            onDismissRequest = onDismissUpdateMessage,
+            title = { Text("تحديث RUVEN") },
+            text = { Text(updateMessage) },
+            confirmButton = {
+                TextButton(onClick = onDismissUpdateMessage) { Text("حسناً") }
+            }
+        )
+    }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(containerColor = Canvas, bottomBar = {
             NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
@@ -288,6 +336,10 @@ private fun RuvenAuthenticatedApp(
                             Text(roleLabel(role), color = Blue, fontSize = 11.sp)
                             IconButton(onClick = onRefresh) {
                                 Icon(Icons.Rounded.Refresh, contentDescription = "تحديث المحتوى والإشعارات", tint = Blue)
+                            }
+                            TextButton(onClick = onCheckUpdates, enabled = !checkingUpdate) {
+                                if (checkingUpdate) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                else Text("تحديث التطبيق", color = Blue, fontSize = 11.sp)
                             }
                             TextButton(onClick = onSignOut) { Text("خروج", color = Blue, fontSize = 11.sp) }
                         }
