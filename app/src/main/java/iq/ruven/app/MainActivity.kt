@@ -23,11 +23,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Announcement
+import androidx.compose.material.icons.automirrored.rounded.Announcement
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -104,8 +104,8 @@ private fun RuvenApp() {
                 val tabs = listOf(
                     RuvenTab.Home to Icons.Rounded.Home,
                     RuvenTab.Schedule to Icons.Rounded.CalendarMonth,
-                    RuvenTab.Homework to Icons.Rounded.MenuBook,
-                    RuvenTab.Notices to Icons.Rounded.Announcement
+                    RuvenTab.Homework to Icons.AutoMirrored.Rounded.MenuBook,
+                    RuvenTab.Notices to Icons.AutoMirrored.Rounded.Announcement
                 )
                 tabs.forEachIndexed { index, item ->
                     NavigationBarItem(
@@ -207,7 +207,7 @@ private fun HomeScreen() {
                     Box(
                         modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFEAF4FF)),
                         contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Rounded.Announcement, null, tint = Blue) }
+                    ) { Icon(Icons.AutoMirrored.Rounded.Announcement, null, tint = Blue) }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
                         Text("ماكو إعلانات حالياً", fontWeight = FontWeight.SemiBold, color = Ink)
                         Text("الإعلانات الرسمية راح تظهر هنا بعد ربط النظام.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
