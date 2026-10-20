@@ -96,6 +96,79 @@ class SupabaseBackend(
         }
     }
 
+    /** Create school content. PostgreSQL RLS is the final authority for role/subject permissions. */
+    suspend fun createSchoolItem(
+        session: Session,
+        itemType: String,
+        title: String,
+        body: String,
+        subjectName: String? = null,
+        className: String? = null,
+        published: Boolean = true
+    ): SchoolItem = withContext(Dispatchers.IO) {
+        require(itemType in setOf("homework", "preparation", "timetable", "announcement", "report")) {
+            "نوع المنشور غير صالح."
+        }
+        require(title.isNotBlank() && title.length <= 160) { "العنوان مطلوب وبحد أقصى 160 حرفاً." }
+        require(body.length <= 12000) { "تفاصيل المنشور تتجاوز الحد المسموح." }
+        val payload = JSONObject()
+            .put("item_type", itemType)
+            .put("title", title.trim())
+            .put("body", body.trim())
+            .put("created_by", session.userId)
+            .put("published", published)
+        subjectName?.takeIf { it.isNotBlank() }?.let { payload.put("subject_name", it.trim()) }
+        className?.takeIf { it.isNotBlank() }?.let { payload.put("class_name", it.trim()) }
+        val response = requestRaw(
+            "/rest/v1/school_items?select=id,item_type,title,body,subject_name,class_name,created_at",
+            "POST",
+            payload,
+            session,
+            preferRepresentation = true
+        )
+        val rows = JSONArray(response)
+        if (rows.length() == 0) throw IOException("تم إرسال المنشور لكن الخادم لم يرجع بياناته.")
+        val row = rows.getJSONObject(0)
+        SchoolItem(
+            id = row.getString("id"),
+            itemType = row.getString("item_type"),
+            title = row.getString("title"),
+            body = row.optString("body"),
+            subjectName = row.optString("subject_name").takeIf { it.isNotBlank() && it != "null" },
+            className = row.optString("class_name").takeIf { it.isNotBlank() && it != "null" },
+            createdAt = row.optString("created_at")
+        )
+    }
+
+    /** These mutations are restricted again by database RLS; only authorized administrators can change items. */
+    suspend fun updateSchoolItem(
+        session: Session,
+        itemId: String,
+        title: String,
+        body: String,
+        published: Boolean
+    ) = withContext(Dispatchers.IO) {
+        require(title.isNotBlank() && title.length <= 160) { "العنوان مطلوب وبحد أقصى 160 حرفاً." }
+        require(body.length <= 12000) { "تفاصيل المنشور تتجاوز الحد المسموح." }
+        val payload = JSONObject()
+            .put("title", title.trim())
+            .put("body", body.trim())
+            .put("published", published)
+        requestRaw(
+            "/rest/v1/school_items?id=eq.${encode(itemId)}",
+            "PATCH",
+            payload,
+            session,
+            preferRepresentation = true
+        )
+        Unit
+    }
+
+    suspend fun deleteSchoolItem(session: Session, itemId: String) = withContext(Dispatchers.IO) {
+        requestRaw("/rest/v1/school_items?id=eq.${encode(itemId)}", "DELETE", null, session)
+        Unit
+    }
+
     suspend fun signOut(session: Session) = withContext(Dispatchers.IO) {
         if (baseUrl.isBlank() || publishableKey.isBlank()) return@withContext
         runCatching {
@@ -120,7 +193,13 @@ class SupabaseBackend(
         return if (raw.isBlank()) JSONObject() else JSONObject(raw)
     }
 
-    private fun requestRaw(path: String, method: String, body: JSONObject?, session: Session?): String {
+    private fun requestRaw(
+        path: String,
+        method: String,
+        body: JSONObject?,
+        session: Session?,
+        preferRepresentation: Boolean = false
+    ): String {
         requireConfigured()
         var connection: HttpURLConnection? = null
         try {
@@ -131,6 +210,7 @@ class SupabaseBackend(
                 setRequestProperty("apikey", publishableKey)
                 setRequestProperty("Accept", "application/json")
                 setRequestProperty("Content-Type", "application/json")
+                if (preferRepresentation) setRequestProperty("Prefer", "return=representation")
                 if (session != null) setRequestProperty("Authorization", "Bearer ${session.accessToken}")
                 if (body != null) {
                     doOutput = true
