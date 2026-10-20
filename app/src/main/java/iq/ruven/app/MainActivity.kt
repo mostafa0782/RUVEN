@@ -110,7 +110,6 @@ private enum class RuvenTab(val title: String) {
 }
 
 @Composable
-@Composable
 private fun RuvenApp() {
     var session by remember { mutableStateOf<SupabaseBackend.Session?>(null) }
     var profile by remember { mutableStateOf<SupabaseBackend.Profile?>(null) }
