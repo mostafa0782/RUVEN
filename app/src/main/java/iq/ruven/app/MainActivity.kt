@@ -911,6 +911,11 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>, sch
     val context = LocalContext.current
     var title by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
+    var search by remember { mutableStateOf("") }
+    var showComposer by remember { mutableStateOf(true) }
+    val filteredSchedules = schedules.withIndex().filter { (_, entry) ->
+        search.isBlank() || entry.contains(search, ignoreCase = true)
+    }
     var fileName by remember { mutableStateOf<String?>(null) }
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
     val canManage = SchoolPermissions.canManageTimetable(role)
@@ -926,9 +931,16 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>, sch
         item {
             Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                    Text("إضافة جدول", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                    Text("الصلاحية حسب التصميم: مراقب الشعبة والمدير والمعاونون.", color = Muted, fontSize = 12.sp)
-                    if (canManage) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("إضافة جدول", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            Text("للمخولين بإدارة الجدول", color = Muted, fontSize = 11.sp)
+                        }
+                        TextButton(onClick = { showComposer = !showComposer }) {
+                            Text(if (showComposer) "إخفاء" else "إضافة")
+                        }
+                    }
+                    if (canManage && showComposer) {
                         OutlinedTextField(title, { title = it }, label = { Text("عنوان الجدول") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(details, { details = it }, label = { Text("الجدول كتابةً (اختياري)") }, placeholder = { Text("الأحد: رياضيات، عربي، كيمياء...") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
                         Button(onClick = { picker.launch(arrayOf("application/pdf", "image/*")) }, modifier = Modifier.fillMaxWidth()) {
@@ -952,9 +964,36 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>, sch
                 }
             }
         }
-        item { SectionHeading("الجداول المضافة", "محفوظة على هذا الجهاز") }
-        if (schedules.isEmpty()) item { EmptyCard("ماكو جدول مضاف", "أضف جدولاً تجريبياً حتى يظهر هنا.") }
-        else itemsIndexed(schedules) { i, entry ->
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("الجداول المضافة", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("${schedules.size} جدول محفوظ محلياً", color = Muted, fontSize = 11.sp)
+                }
+                Surface(color = Color(0xFFEAF2FF), shape = RoundedCornerShape(50)) {
+                    Text("الجدول", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
+                }
+            }
+        }
+        item {
+            OutlinedTextField(
+                value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(),
+                singleLine = true, shape = RoundedCornerShape(16.dp),
+                placeholder = { Text("ابحث في الجداول…") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
+                trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
+                    Icon(Icons.Rounded.Close, contentDescription = "مسح البحث")
+                } }
+            )
+        }
+        if (filteredSchedules.isEmpty()) item {
+            EmptyCard(if (search.isBlank()) "ماكو جدول مضاف" else "ما لقينا جدول مطابق",
+                if (search.isBlank()) "أضف جدولاً تجريبياً حتى يظهر هنا." else "جرّب كلمة ثانية أو امسح البحث.")
+        }
+        else itemsIndexed(filteredSchedules, key = { _, indexed -> indexed.index }) { _, indexed ->
+            val i = indexed.index
+            val entry = indexed.value
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(entry, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 21.sp)
