@@ -19,7 +19,7 @@ import iq.ruven.app.data.remote.SupabaseBackend
 object RuvenNotifications {
     private const val CHANNEL_ID = "ruven_school_updates_v1"
     private const val PREFS_NAME = "ruven_notification_state"
-    private const val BLUE = 0xFF2867D8.toInt()
+    private val BLUE = 0xFF2867D8.toInt()
 
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -64,8 +64,8 @@ object RuvenNotifications {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return 0
 
         val fresh = items.filter { it.id !in previouslySeen }
-        fresh.asReversed().forEachIndexed { index, item ->
-            post(context, item, index)
+        fresh.asReversed().forEach { item ->
+            post(context, item)
         }
 
         // Store a bounded recent window; the server feed is itself limited to 100 rows.
@@ -73,7 +73,7 @@ object RuvenNotifications {
         return fresh.size
     }
 
-    private fun post(context: Context, item: SupabaseBackend.SchoolItem, index: Int) {
+    private fun post(context: Context, item: SupabaseBackend.SchoolItem) {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
 
         val (kind, emoji) = when (item.itemType.lowercase()) {
