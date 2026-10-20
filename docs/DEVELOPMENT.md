@@ -25,7 +25,7 @@ GitHub Actions runs unit tests before assembling a debug APK. Check the actual w
 - Arabic-first RTL layout with blue/cyan styling.
 - Home, timetable, homework, preparations, and announcements navigation.
 - Timetable UI can select PDF/image files and accept typed schedule text; the file is not uploaded.
-- Local preview forms for homework, preparations, and administrative reports; these are persisted on-device with SharedPreferences.
+- Local preview forms for homework, preparations, administrative reports, and announcements; these are persisted on-device with SharedPreferences. Announcement create/delete is a local-only prototype.
 - Administrative homework editing and deletion within the local preview.
 - Selected timetable document URI is retained for local reopening where Android permits persistent URI access.
 - Typed domain models, input-validation helpers, repository contract, role policy helpers, and unit tests.
