@@ -35,6 +35,26 @@ class SchoolModelValidationTest {
     }
 
     @Test
+    fun lessonRejectsMalformedTimesAndBlankIdentifiers() {
+        val lesson = Lesson(
+            id = " ",
+            subject = "",
+            startsAt = "eight",
+            endsAt = "08:45",
+            weekday = 1
+        )
+
+        assertEquals(
+            listOf(
+                "id must not be blank",
+                "subject must not be blank",
+                "startsAt must be a valid ISO local time"
+            ),
+            SchoolModelValidation.validate(lesson)
+        )
+    }
+
+    @Test
     fun homeworkRejectsBlankTitleAndMalformedDueDate() {
         val homework = Homework(
             id = "homework-1",
