@@ -10,8 +10,8 @@ android {
         applicationId = "iq.ruven.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = providers.gradleProperty("VERSION_CODE").orElse("1").get().toInt()
+        versionName = providers.gradleProperty("VERSION_NAME").orElse("0.1.0").get()
     }
     buildFeatures {
         compose = true
