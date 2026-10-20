@@ -112,7 +112,7 @@ private fun RuvenTheme(content: @Composable () -> Unit) {
 
 private enum class RuvenTab(val title: String) {
     Home("الرئيسية"), Schedule("الجدول"), Homework("الواجبات"),
-    Preparations("التحاضير"), Notices("الإعلانات")
+    Preparations("التحاضير"), Notices("الإعلانات"), Admin("الحسابات")
 }
 
 @Composable
@@ -153,6 +153,8 @@ private fun RuvenApp() {
         val activeProfile = profile!!
         RuvenAuthenticatedApp(
             profile = activeProfile,
+            session = activeSession,
+            backend = backend,
             remoteItems = remoteItems,
             feedError = feedError,
             onRefresh = {
@@ -194,6 +196,8 @@ private fun schoolRoleFromDatabase(value: String): SchoolRole = when (value.lowe
 @Composable
 private fun RuvenAuthenticatedApp(
     profile: SupabaseBackend.Profile,
+    session: SupabaseBackend.Session,
+    backend: SupabaseBackend,
     remoteItems: List<SupabaseBackend.SchoolItem>,
     feedError: String?,
     onRefresh: () -> Unit,
@@ -218,13 +222,14 @@ private fun RuvenAuthenticatedApp(
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(containerColor = Canvas, bottomBar = {
             NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
-                val tabs = listOf(
-                    RuvenTab.Home to Icons.Rounded.Home,
-                    RuvenTab.Schedule to Icons.Rounded.CalendarMonth,
-                    RuvenTab.Homework to Icons.AutoMirrored.Rounded.MenuBook,
-                    RuvenTab.Preparations to Icons.Rounded.Description,
-                    RuvenTab.Notices to Icons.AutoMirrored.Rounded.Announcement
-                )
+                val tabs = buildList {
+                    add(RuvenTab.Home to Icons.Rounded.Home)
+                    add(RuvenTab.Schedule to Icons.Rounded.CalendarMonth)
+                    add(RuvenTab.Homework to Icons.AutoMirrored.Rounded.MenuBook)
+                    add(RuvenTab.Preparations to Icons.Rounded.Description)
+                    add(RuvenTab.Notices to Icons.AutoMirrored.Rounded.Announcement)
+                    if (role == SchoolRole.OWNER) add(RuvenTab.Admin to Icons.Rounded.School)
+                }
                 tabs.forEachIndexed { i, item ->
                     NavigationBarItem(selected = tab == i, onClick = { tab = i },
                         icon = { Icon(item.second, contentDescription = item.first.title) },
@@ -262,7 +267,9 @@ private fun RuvenAuthenticatedApp(
                         1 -> ScheduleScreen(role, schedules, scheduleFiles)
                         2 -> HomeworkScreen(role, homework, reports)
                         3 -> PreparationsScreen(role, preparations)
-                        else -> NoticesScreen(role, announcements)
+                        4 -> NoticesScreen(role, announcements)
+                        else -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
+                            else NoticesScreen(role, announcements)
                     }
                 }
             }
@@ -281,6 +288,137 @@ private fun roleLabel(role: SchoolRole): String = when (role) {
     SchoolRole.EDUCATIONAL_COUNSELOR -> "مرشد تربوي"
     SchoolRole.MINISTRY_EDUCATION_MEMBER -> "عضو تربوي من وزارة التربية"
     SchoolRole.OWNER -> "المالك"
+}
+
+
+private data class RoleOption(val value: String, val label: String)
+
+private val managedRoleOptions = listOf(
+    RoleOption("student", "طالب"),
+    RoleOption("class_monitor", "مراقب شعبة"),
+    RoleOption("parliament_member", "عضو برلمان الطلبة"),
+    RoleOption("teacher", "أستاذ"),
+    RoleOption("class_supervisor", "أستاذ مشرف شعبة"),
+    RoleOption("assistant_principal", "معاون"),
+    RoleOption("principal", "مدير"),
+    RoleOption("educational_counselor", "مرشد تربوي"),
+    RoleOption("ministry_education_member", "عضو تربوي من وزارة التربية")
+)
+
+@Composable
+private fun OwnerAccountManagementScreen(
+    session: SupabaseBackend.Session,
+    backend: SupabaseBackend
+) {
+    var accounts by remember { mutableStateOf<List<SupabaseBackend.ManagedProfile>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    fun reload() {
+        scope.launch {
+            isLoading = true
+            error = null
+            try {
+                accounts = backend.loadManagedProfiles(session)
+            } catch (e: Exception) {
+                error = e.message ?: "تعذر تحميل الحسابات."
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    LaunchedEffect(session.userId) { reload() }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item { PageHeader("إدارة الحسابات", "تعيين الأدوار والشعب للحسابات المسجلة في RUVEN.") }
+        item {
+            Text(
+                "هذه اللوحة تدير الحسابات المسجلة مسبقاً. إنشاء حساب دخول جديد يحتاج إعداداً آمناً على الخادم، ولا يمكن منح دور المالك من التطبيق.",
+                color = Muted, fontSize = 12.sp, lineHeight = 18.sp
+            )
+        }
+        item {
+            OutlinedButton(onClick = { reload() }, modifier = Modifier.fillMaxWidth(), enabled = !isLoading) {
+                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (isLoading) "جارٍ التحديث..." else "تحديث قائمة الحسابات")
+            }
+        }
+        if (error != null) item { EmptyCard("تعذر تحميل الحسابات", error!!) }
+        if (notice != null) item {
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F7EF))) {
+                Text(notice!!, modifier = Modifier.padding(14.dp), color = Color(0xFF176B45), fontSize = 13.sp)
+            }
+        }
+        if (!isLoading && error == null && accounts.isEmpty()) {
+            item { EmptyCard("ماكو حسابات إضافية", "تظهر الحسابات هنا بعد تسجيلها في Supabase Auth.") }
+        }
+        itemsIndexed(accounts, key = { _, account -> account.id }) { _, account ->
+            var selectedRole by remember(account.id, account.role) { mutableStateOf(account.role) }
+            var className by remember(account.id, account.className) { mutableStateOf(account.className.orEmpty()) }
+            var menuExpanded by remember { mutableStateOf(false) }
+            var saving by remember(account.id) { mutableStateOf(false) }
+            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(
+                    Modifier.fillMaxWidth().padding(15.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    Text(account.fullName, color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(account.email ?: account.id, color = Muted, fontSize = 11.sp)
+                    Text("الدور الحالي: " + (managedRoleOptions.firstOrNull { it.value == account.role }?.label ?: account.role), color = Blue, fontSize = 12.sp)
+                    Box {
+                        OutlinedButton(onClick = { menuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text("الدور الجديد: " + (managedRoleOptions.firstOrNull { it.value == selectedRole }?.label ?: selectedRole))
+                        }
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            managedRoleOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option.label) },
+                                    onClick = { selectedRole = option.value; menuExpanded = false }
+                                )
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = className,
+                        onValueChange = { className = it },
+                        label = { Text("الصف والشعبة (مثال: الثالث متوسط - A)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                saving = true
+                                error = null
+                                notice = null
+                                try {
+                                    backend.setManagedProfileRole(session, account.id, selectedRole, className)
+                                    notice = "تم تحديث الحساب بنجاح."
+                                    accounts = backend.loadManagedProfiles(session)
+                                } catch (e: Exception) {
+                                    error = e.message ?: "تعذر حفظ صلاحيات الحساب."
+                                } finally {
+                                    saving = false
+                                }
+                            }
+                        },
+                        enabled = !saving && selectedRole != "owner",
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (saving) "جارٍ الحفظ..." else "حفظ الدور والشعبة")
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
