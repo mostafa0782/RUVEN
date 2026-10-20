@@ -8,7 +8,8 @@ The Android client is a native Kotlin application built with Jetpack Compose and
 
 - `iq.ruven.app`: Android entry point and initial Compose UI.
 - `iq.ruven.app.data.model`: typed models for lessons, homework, and school announcements.
-- `iq.ruven.app.data.repository`: `SchoolContentRepository`, the suspendable contract between app features and a future authenticated data source.
+- `iq.ruven.app.data.model`: typed lesson, homework, and announcement records plus validation rules for API data.
+- `iq.ruven.app.data.repository`: `SchoolContentRepository`, the suspendable contract for an authenticated data source, and `ValidatedSchoolContentRepository`, which rejects malformed records before presentation.
 
 The repository contract is deliberately not backed by hard-coded demo content. UI features should represent loading, empty, and error states distinctly once a data source is connected.
 
@@ -31,7 +32,7 @@ Introduce ViewModels, Room, DataStore, and a network client when a concrete feat
 
 ## Data and authorization
 
-The current UI has no backend and contains no real student data. Every protected operation must be authorized server-side and scoped to the authenticated user's school, role, class, and relevant conversation. A client-supplied identifier is never proof of authorization.
+The current UI has no backend and contains no real student data. Every protected operation must be authorized server-side and scoped to the authenticated user's school, role, class, and relevant conversation. The client repository API does not accept arbitrary student or school IDs for content queries; the future data source must derive identity from the authenticated session. Any server-side client-supplied identifier is never proof of authorization.
 
 ## Messaging policy
 
