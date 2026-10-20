@@ -26,6 +26,17 @@ class ValidatedSchoolContentRepositoryTest {
     }
 
     @Test
+    fun invalidRequestedWeekdayReturnsFailure() = runTest {
+        val repository = ValidatedSchoolContentRepository(FakeRepository())
+
+        val result = repository.getLessons(0)
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertEquals("weekday must be in 1..7", result.exceptionOrNull()?.message)
+    }
+
+    @Test
     fun malformedRecordsReturnFailureInsteadOfBeingRendered() = runTest {
         val repository = ValidatedSchoolContentRepository(
             FakeRepository(lessons = listOf(
