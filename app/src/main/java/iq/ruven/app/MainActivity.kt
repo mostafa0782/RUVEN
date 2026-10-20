@@ -1,6 +1,7 @@
 package iq.ruven.app
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
@@ -94,10 +95,12 @@ private fun RuvenApp() {
     val homework = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "homework")) } }
     val preparations = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "preparations")) } }
     val schedules = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "schedules")) } }
+    val scheduleFiles = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "schedule_files")) } }
     val reports = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "reports")) } }
     LaunchedEffect(homework.toList()) { writeLocalItems(prefs, "homework", homework.toList()) }
     LaunchedEffect(preparations.toList()) { writeLocalItems(prefs, "preparations", preparations.toList()) }
     LaunchedEffect(schedules.toList()) { writeLocalItems(prefs, "schedules", schedules.toList()) }
+    LaunchedEffect(scheduleFiles.toList()) { writeLocalItems(prefs, "schedule_files", scheduleFiles.toList()) }
     LaunchedEffect(reports.toList()) { writeLocalItems(prefs, "reports", reports.toList()) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(containerColor = Canvas, bottomBar = {
@@ -141,7 +144,7 @@ private fun RuvenApp() {
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
                     when (current) {
                         0 -> HomeScreen(role, homework.size, preparations.size, schedules.size)
-                        1 -> ScheduleScreen(role, schedules)
+                        1 -> ScheduleScreen(role, schedules, scheduleFiles)
                         2 -> HomeworkScreen(role, homework, reports)
                         3 -> PreparationsScreen(role, preparations)
                         else -> NoticesScreen()
@@ -214,7 +217,8 @@ private fun HomeScreen(role: SchoolRole, homeworkCount: Int, prepCount: Int, sch
 }
 
 @Composable
-private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>) {
+private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>, scheduleFiles: MutableList<String>) {
+    val context = LocalContext.current
     var title by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
     var fileName by remember { mutableStateOf<String?>(null) }
@@ -222,6 +226,9 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>) {
     val canManage = SchoolPermissions.canManageTimetable(role)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         selectedUri = uri
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        }
         fileName = uri?.lastPathSegment?.substringAfterLast('/')
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
@@ -243,7 +250,9 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>) {
                                 (if (details.isBlank()) "" else " — " + details) +
                                 (if (fileName == null) "" else " — ملف: " + fileName)
                             if (title.isNotBlank() || details.isNotBlank() || selectedUri != null) {
-                                schedules.add(entry); title = ""; details = ""; fileName = null; selectedUri = null
+                                schedules.add(entry)
+                                scheduleFiles.add(selectedUri?.toString().orEmpty())
+                                title = ""; details = ""; fileName = null; selectedUri = null
                             }
                         }, enabled = title.isNotBlank() || details.isNotBlank() || selectedUri != null, modifier = Modifier.fillMaxWidth()) {
                             Text("إضافة للمعاينة")
@@ -255,7 +264,24 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>) {
         }
         item { SectionHeading("الجداول المضافة", "محفوظة على هذا الجهاز") }
         if (schedules.isEmpty()) item { EmptyCard("ماكو جدول مضاف", "أضف جدولاً تجريبياً حتى يظهر هنا.") }
-        else itemsIndexed(schedules) { i, entry -> ContentCard(entry, "جدول محلي " + (i + 1), Icons.Rounded.CalendarMonth) }
+        else itemsIndexed(schedules) { i, entry ->
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(entry, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 21.sp)
+                    Text("جدول محلي " + (i + 1), color = Muted, fontSize = 11.sp)
+                    val fileUri = scheduleFiles.getOrNull(i)?.takeIf { it.isNotBlank() }?.let(Uri::parse)
+                    if (fileUri != null) {
+                        TextButton(onClick = {
+                            val mime = context.contentResolver.getType(fileUri) ?: "*/*"
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(fileUri, mime)
+                                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+                            }
+                        }) { Text("فتح الملف المرفق") }
+                    }
+                }
+            }
+        }
     }
 }
 
