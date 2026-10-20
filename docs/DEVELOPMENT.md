@@ -24,7 +24,8 @@ The GitHub Actions workflow performs the same debug-APK assembly on pushes to `m
 - Native Android Kotlin + Jetpack Compose + Material 3 shell.
 - Arabic-first UI with explicit RTL layout.
 - Navigation shell for home, timetable, homework, and announcements.
-- Typed domain models and a repository contract for school content.
+- Typed domain models, input-validation helpers, and a repository contract for school content.
+- Unit tests for lesson, homework, and announcement record validation; CI runs `:app:testDebugUnitTest` before packaging.
 - No login, backend/API, database, live school data, messaging, or push notifications.
 - No Gradle wrapper has been committed yet.
 - Do not treat the project as production-ready until the debug build is green, tests are added and run, and authentication/authorization and backend security have been implemented and reviewed.
