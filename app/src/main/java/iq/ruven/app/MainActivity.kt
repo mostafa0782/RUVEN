@@ -562,6 +562,7 @@ private fun OwnerAccountManagementScreen(
     var newRole by remember { mutableStateOf("student") }
     var newClassName by remember { mutableStateOf("") }
     var newRoleMenu by remember { mutableStateOf(false) }
+    var showCreateAccountForm by remember { mutableStateOf(false) }
     var creating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -613,7 +614,16 @@ private fun OwnerAccountManagementScreen(
         item {
             Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("إنشاء حساب جديد", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("إنشاء حساب جديد", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            Text(if (showCreateAccountForm) "أدخل بيانات الحساب الجديد" else "إنشاء حساب طالب أو موظف بصلاحيات محددة", color = Muted, fontSize = 12.sp)
+                        }
+                        TextButton(onClick = { showCreateAccountForm = !showCreateAccountForm }) {
+                            Text(if (showCreateAccountForm) "إغلاق ▲" else "إضافة +")
+                        }
+                    }
+                    if (showCreateAccountForm) {
                     Text("ينشئ حساب دخول حقيقياً. لا يمكن إنشاء مالك آخر، وكلمة المرور لا تُعرض ضمن قائمة الحسابات.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
                     OutlinedTextField(newFullName, { newFullName = it }, label = { Text("اسم الطالب أو الموظف") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(newEmail, { newEmail = it }, label = { Text("البريد الإلكتروني") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -643,6 +653,7 @@ private fun OwnerAccountManagementScreen(
                                     notice = "تم إنشاء الحساب. احفظ البريد وكلمة المرور المؤقتة وأرسلها لصاحب الحساب بأمان."
                                     newFullName = ""; newEmail = ""; newPassword = ""; newRole = "student"; newClassName = ""
                                     accounts = backend.loadManagedProfiles(session)
+                                    showCreateAccountForm = false
                                 } catch (e: Exception) {
                                     error = e.message ?: "تعذر إنشاء الحساب."
                                 } finally { creating = false }
@@ -652,6 +663,7 @@ private fun OwnerAccountManagementScreen(
                             (newRole != "student" || newClassName.trim().uppercase() in setOf("A", "B", "C", "D", "E", "F")),
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(if (creating) "جارٍ إنشاء الحساب..." else "إنشاء الحساب") }
+                    }
                 }
             }
         }
