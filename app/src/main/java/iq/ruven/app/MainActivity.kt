@@ -230,7 +230,7 @@ private fun RuvenAuthenticatedApp(
                     add(RuvenTab.Notices to Icons.AutoMirrored.Rounded.Announcement)
                     if (role == SchoolRole.OWNER) {
                         add(RuvenTab.Admin to Icons.Rounded.School)
-                        add(RuvenTab.Sections to Icons.Rounded.People)
+                        add(RuvenTab.Sections to Icons.Rounded.School)
                     }
                 }
                 tabs.forEachIndexed { i, item ->
