@@ -314,6 +314,13 @@ private fun OwnerAccountManagementScreen(
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var newFullName by remember { mutableStateOf("") }
+    var newEmail by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var newRole by remember { mutableStateOf("student") }
+    var newClassName by remember { mutableStateOf("") }
+    var newRoleMenu by remember { mutableStateOf(false) }
+    var creating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     fun reload() {
@@ -339,10 +346,49 @@ private fun OwnerAccountManagementScreen(
     ) {
         item { PageHeader("إدارة الحسابات", "تعيين الأدوار والشعب للحسابات المسجلة في RUVEN.") }
         item {
-            Text(
-                "هذه اللوحة تدير الحسابات المسجلة مسبقاً. إنشاء حساب دخول جديد يحتاج إعداداً آمناً على الخادم، ولا يمكن منح دور المالك من التطبيق.",
-                color = Muted, fontSize = 12.sp, lineHeight = 18.sp
-            )
+            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("إنشاء حساب جديد", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text("ينشئ حساب دخول حقيقياً. لا يمكن إنشاء مالك آخر، وكلمة المرور لا تُعرض ضمن قائمة الحسابات.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+                    OutlinedTextField(newFullName, { newFullName = it }, label = { Text("اسم الطالب أو الموظف") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(newEmail, { newEmail = it }, label = { Text("البريد الإلكتروني") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(newPassword, { newPassword = it }, label = { Text("كلمة مرور مؤقتة (8 أحرف على الأقل)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    Box {
+                        OutlinedButton(onClick = { newRoleMenu = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text("نوع الحساب: " + (managedRoleOptions.firstOrNull { it.value == newRole }?.label ?: newRole))
+                        }
+                        DropdownMenu(expanded = newRoleMenu, onDismissRequest = { newRoleMenu = false }) {
+                            managedRoleOptions.forEach { option ->
+                                DropdownMenuItem(text = { Text(option.label) }, onClick = { newRole = option.value; newRoleMenu = false })
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        newClassName, { newClassName = it.uppercase().filter { ch -> ch in 'A'..'F' || ch.isWhitespace() || ch == '-' } },
+                        label = { Text("الشعبة (A–F)، إلزامية للطالب") },
+                        supportingText = { Text("اكتب A أو B أو C أو D أو E أو F؛ يمكن تركها فارغة للموظفين.") },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true
+                    )
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                creating = true; error = null; notice = null
+                                try {
+                                    backend.createManagedAccount(session, newFullName, newEmail, newPassword, newRole, newClassName)
+                                    notice = "تم إنشاء الحساب. احفظ البريد وكلمة المرور المؤقتة وأرسلها لصاحب الحساب بأمان."
+                                    newFullName = ""; newEmail = ""; newPassword = ""; newRole = "student"; newClassName = ""
+                                    accounts = backend.loadManagedProfiles(session)
+                                } catch (e: Exception) {
+                                    error = e.message ?: "تعذر إنشاء الحساب."
+                                } finally { creating = false }
+                            }
+                        },
+                        enabled = !creating && newFullName.isNotBlank() && newEmail.isNotBlank() && newPassword.length >= 8 &&
+                            (newRole != "student" || newClassName.trim().uppercase() in setOf("A", "B", "C", "D", "E", "F")),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(if (creating) "جارٍ إنشاء الحساب..." else "إنشاء الحساب") }
+                }
+            }
         }
         item {
             OutlinedButton(onClick = { reload() }, modifier = Modifier.fillMaxWidth(), enabled = !isLoading) {
