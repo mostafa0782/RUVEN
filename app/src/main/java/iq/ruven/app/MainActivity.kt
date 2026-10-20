@@ -416,6 +416,7 @@ private val managedRoleOptions = listOf(
 @Composable
 private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: SupabaseBackend) {
     var sections by remember { mutableStateOf<List<SupabaseBackend.ManagedSection>>(emptyList()) }
+    var sectionSearch by remember { mutableStateOf("") }
     var gradeName by remember { mutableStateOf("الثالث متوسط") }
     var sectionCode by remember { mutableStateOf("A") }
     var sectionMenu by remember { mutableStateOf(false) }
@@ -437,7 +438,19 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
     LaunchedEffect(session.userId) { reload() }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { PageHeader("إدارة الشعب", "الشعب A–F فقط. لا تُنشأ أي شعبة تلقائياً؛ الشعب المغلقة لا تظهر للمستخدمين العاديين.") }
+        item { PageHeader("إدارة الشعب", "إدارة مرئية للشعب المفتوحة والمغلقة، مع منع إنشاء الشعب غير المطلوبة.") }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf("إجمالي الشعب" to sections.size, "مفتوحة" to sections.count { it.isOpen }, "مغلقة" to sections.count { !it.isOpen }).forEach { (label, count) ->
+                    Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(count.toString(), color = Blue, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(label, color = Muted, fontSize = 11.sp, maxLines = 1)
+                        }
+                    }
+                }
+            }
+        }
         item {
             Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -476,26 +489,43 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
         if (notice != null) item { Text(notice!!, color = Color(0xFF176B45), fontSize = 13.sp) }
         if (error != null) item { EmptyCard("تعذر تنفيذ العملية", error!!) }
         item {
+            OutlinedTextField(
+                value = sectionSearch, onValueChange = { sectionSearch = it },
+                modifier = Modifier.fillMaxWidth(), singleLine = true,
+                label = { Text("بحث بالصف أو رمز الشعبة") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
+        item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("الشعب المسجلة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("الشعب المسجلة (${sections.size})", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 TextButton(onClick = { reload() }, enabled = !loading) { Text(if (loading) "تحميل..." else "تحديث") }
             }
         }
         if (!loading && sections.isEmpty()) item { EmptyCard("ماكو شعب مسجلة", "أنشئ الشعبة المطلوبة فقط؛ الشعب الفارغة لا تنشأ وحدها.") }
-        itemsIndexed(sections, key = { _, section -> section.id }) { _, section ->
+        val filteredSections = sections.filter { section ->
+            val query = sectionSearch.trim()
+            query.isEmpty() || section.gradeName.contains(query, ignoreCase = true) || section.sectionCode.contains(query, ignoreCase = true)
+        }
+        if (!loading && sections.isNotEmpty() && filteredSections.isEmpty()) item { EmptyCard("ما لقينا شعبة مطابقة", "ابحث باسم الصف أو رمز الشعبة A–F.") }
+        itemsIndexed(filteredSections, key = { _, section -> section.id }) { _, section ->
+            var updating by remember(section.id) { mutableStateOf(false) }
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("${section.gradeName} — شعبة ${section.sectionCode}", color = Ink, fontWeight = FontWeight.Bold)
                         Text(if (section.isOpen) "مفتوحة للمستخدمين" else "مغلقة ومخفية", color = if (section.isOpen) Color(0xFF176B45) else Muted, fontSize = 12.sp)
                     }
-                    Switch(checked = section.isOpen, onCheckedChange = { next ->
+                    Switch(checked = section.isOpen, enabled = !updating, onCheckedChange = { next ->
                         scope.launch {
+                            updating = true
                             try {
                                 backend.setManagedSectionOpen(session, section.id, next)
                                 sections = backend.loadManagedSections(session)
                                 error = null
                             } catch (e: Exception) { error = e.message ?: "تعذر تغيير حالة الشعبة." }
+                            finally { updating = false }
                         }
                     })
                 }
