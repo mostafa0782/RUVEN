@@ -44,4 +44,26 @@ class SchoolPermissionsTest {
         assertFalse(SchoolPermissions.canCreatePreparation(SchoolRole.STUDENT))
         assertFalse(SchoolPermissions.canManageTimetable(SchoolRole.STUDENT))
     }
+
+    @Test
+    fun newAccountTypesDoNotInheritAdministrativePrivileges() {
+        val nonAdminRoles = listOf(
+            SchoolRole.STUDENT,
+            SchoolRole.PARLIAMENT_MEMBER,
+            SchoolRole.CLASS_SUPERVISOR,
+            SchoolRole.EDUCATIONAL_COUNSELOR,
+            SchoolRole.MINISTRY_EDUCATION_MEMBER
+        )
+        nonAdminRoles.forEach { role ->
+            assertFalse("$role must not publish announcements", SchoolPermissions.canPublishAnnouncements(role))
+            assertFalse("$role must not edit/delete homework", SchoolPermissions.canEditOrDeleteHomework(role))
+        }
+    }
+
+    @Test
+    fun parliamentMemberAndCounselorCanRaiseReportsWithoutAdminRights() {
+        assertTrue(SchoolPermissions.canReportToPrincipal(SchoolRole.PARLIAMENT_MEMBER))
+        assertTrue(SchoolPermissions.canReportToPrincipal(SchoolRole.EDUCATIONAL_COUNSELOR))
+        assertFalse(SchoolPermissions.canPublishAnnouncements(SchoolRole.PARLIAMENT_MEMBER))
+    }
 }
