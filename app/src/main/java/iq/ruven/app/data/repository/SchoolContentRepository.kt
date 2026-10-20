@@ -5,26 +5,16 @@ import iq.ruven.app.data.model.Lesson
 import iq.ruven.app.data.model.SchoolAnnouncement
 
 /**
- * Boundary between UI/domain code and the future authenticated data source.
+ * Boundary between UI/domain code and an authenticated school data source.
  *
- * Implementations must scope every query to the authenticated user's school and
- * permissions. A schoolId supplied by a client is not an authorization check.
- * No in-memory/demo implementation is provided, so the UI cannot mistake sample
- * content for official school information.
+ * Identity and school membership must be derived from the authenticated session,
+ * not supplied as arbitrary studentId/schoolId parameters by the UI. The backend
+ * must still authorize every request and scope it to that session.
  */
 interface SchoolContentRepository {
-    suspend fun getLessons(
-        schoolId: String,
-        studentId: String,
-        weekday: Int
-    ): Result<List<Lesson>>
+    suspend fun getLessons(weekday: Int): Result<List<Lesson>>
 
-    suspend fun getHomework(
-        schoolId: String,
-        studentId: String
-    ): Result<List<Homework>>
+    suspend fun getHomework(): Result<List<Homework>>
 
-    suspend fun getAnnouncements(
-        schoolId: String
-    ): Result<List<SchoolAnnouncement>>
+    suspend fun getAnnouncements(): Result<List<SchoolAnnouncement>>
 }
