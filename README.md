@@ -9,10 +9,12 @@ The Android client foundation includes:
 - Arabic-first interface, RTL layout, and a blue/cyan visual system.
 - Home dashboard and navigation for timetable, homework, preparations, and announcements.
 - Timetable form with a system file picker for PDF/image selection plus a text entry option.
-- Local preview flows for homework, teacher preparations, and administrative reports.
+- Local preview flows for homework, teacher preparations, and administrative reports, persisted on-device using SharedPreferences.
+- Administrative homework edit/delete controls in the local preview.
+- Persisted URI access for a selected timetable document, with a local open-file action.
 - Typed school-content models, data validation, and role-policy unit tests.
 
-**Important limitation:** this is a UI prototype. The selected timetable file is not uploaded to a server, and created content is kept in memory during the current app session. There is no authentication, backend/API, database, live school data, messaging, push notifications, or production role enforcement yet.
+**Important limitation:** this is still a UI prototype. Preview content is persisted on this device with SharedPreferences; it is not synced between users or backed up to a school server. A selected PDF/image can be reopened locally when Android preserves access, but it is not uploaded. There is no authentication, backend/API, server database, live school data, messaging, push notifications, or production role enforcement yet.
 
 ## Intended role policy
 
