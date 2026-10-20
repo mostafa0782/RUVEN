@@ -41,10 +41,10 @@ jobs:
           accept-android-sdk-licenses: true
 
       - name: Run unit tests
-        run: gradle :app:testDebugUnitTest
+        run: gradle :app:testDebugUnitTest -PSUPABASE_URL="${{ secrets.SUPABASE_URL }}" -PSUPABASE_PUBLISHABLE_KEY="${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"
 
       - name: Assemble debug APK
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleDebug -PSUPABASE_URL="${{ secrets.SUPABASE_URL }}" -PSUPABASE_PUBLISHABLE_KEY="${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"
 
       - name: Upload debug APK
         if: success()
