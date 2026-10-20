@@ -2,11 +2,19 @@
 
 ## Current client
 
-The Android client is a native Kotlin application built with Jetpack Compose and Material 3. The current implementation is intentionally small while the project is being established.
+The Android client is a native Kotlin application built with Jetpack Compose and Material 3. The current UI is an initial shell: it has navigation and explicit empty states, but no account system or live school data.
 
-## Planned boundaries
+## Source boundaries
 
-As features grow, separate UI state and data access by feature:
+- `iq.ruven.app`: Android entry point and initial Compose UI.
+- `iq.ruven.app.data.model`: typed models for lessons, homework, and school announcements.
+- `iq.ruven.app.data.repository`: `SchoolContentRepository`, the suspendable contract between app features and a future authenticated data source.
+
+The repository contract is deliberately not backed by hard-coded demo content. UI features should represent loading, empty, and error states distinctly once a data source is connected.
+
+## Planned feature boundaries
+
+As the app grows, move UI state and data access into feature modules/packages:
 - feature/auth
 - feature/home
 - feature/timetable
@@ -19,12 +27,16 @@ As features grow, separate UI state and data access by feature:
 - core/network
 - core/database
 
-Introduce ViewModels, repositories, Room, DataStore, and a network client only when a concrete feature needs them. Avoid adding unused infrastructure before its requirements are known.
+Introduce ViewModels, Room, DataStore, and a network client when a concrete feature needs them. Avoid unused infrastructure before requirements are known.
 
 ## Data and authorization
 
-The current UI has no backend and contains no real student data. When the backend is designed, every protected operation must be authorized server-side and scoped to the user's school, role, and relevant class or conversation.
+The current UI has no backend and contains no real student data. Every protected operation must be authorized server-side and scoped to the authenticated user's school, role, class, and relevant conversation. A client-supplied identifier is never proof of authorization.
+
+## Messaging policy
+
+Student-to-student messaging is out of scope for version 1. Messaging, when implemented, must be limited to explicitly authorized student-to-teacher or student-to-administration conversations. The server must enforce participant permissions on every read and write.
 
 ## Multi-school readiness
 
-School-scoped data must be enforced by the backend. A school identifier supplied by a client is not proof of access.
+School-scoped data must be enforced by the backend. Never trust a school identifier supplied by a client without checking membership and permissions on the server.
