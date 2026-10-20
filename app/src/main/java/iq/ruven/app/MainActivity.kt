@@ -114,18 +114,30 @@ private enum class RuvenTab(val title: String) {
 private fun RuvenApp() {
     var session by remember { mutableStateOf<SupabaseBackend.Session?>(null) }
     var profile by remember { mutableStateOf<SupabaseBackend.Profile?>(null) }
+    var remoteItems by remember { mutableStateOf<List<SupabaseBackend.SchoolItem>>(emptyList()) }
+    var feedError by remember { mutableStateOf<String?>(null) }
     val backend = remember { SupabaseBackend() }
     val scope = rememberCoroutineScope()
     if (session == null || profile == null) {
         SupabaseLoginScreen { newSession, newProfile ->
             session = newSession
             profile = newProfile
+            feedError = null
+            scope.launch {
+                try {
+                    remoteItems = backend.loadPublishedItems(newSession, newProfile.className)
+                } catch (e: Exception) {
+                    feedError = e.message ?: "تعذر تحميل محتوى المدرسة."
+                }
+            }
         }
     } else {
-        RuvenAuthenticatedApp(profile = profile!!, onSignOut = {
+        RuvenAuthenticatedApp(profile = profile!!, remoteItems = remoteItems, feedError = feedError, onSignOut = {
             val oldSession = session
             session = null
             profile = null
+            remoteItems = emptyList()
+            feedError = null
             if (oldSession != null) scope.launch { backend.signOut(oldSession) }
         })
     }
@@ -140,7 +152,12 @@ private fun schoolRoleFromDatabase(value: String): SchoolRole = when (value.lowe
 }
 
 @Composable
-private fun RuvenAuthenticatedApp(profile: SupabaseBackend.Profile, onSignOut: () -> Unit) {
+private fun RuvenAuthenticatedApp(
+    profile: SupabaseBackend.Profile,
+    remoteItems: List<SupabaseBackend.SchoolItem>,
+    feedError: String?,
+    onSignOut: () -> Unit
+) {
     var tab by remember { mutableIntStateOf(0) }
     val role = remember(profile.role) { schoolRoleFromDatabase(profile.role) }
     val context = LocalContext.current
@@ -197,7 +214,7 @@ private fun RuvenAuthenticatedApp(profile: SupabaseBackend.Profile, onSignOut: (
                 AnimatedContent(targetState = tab, transitionSpec = { fadeIn() togetherWith fadeOut() },
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
                     when (current) {
-                        0 -> HomeScreen(role, homework.size, preparations.size, schedules.size)
+                        0 -> HomeScreen(role, homework.size, preparations.size, schedules.size, remoteItems, feedError)
                         1 -> ScheduleScreen(role, schedules, scheduleFiles)
                         2 -> HomeworkScreen(role, homework, reports)
                         3 -> PreparationsScreen(role, preparations)
@@ -218,7 +235,10 @@ private fun roleLabel(role: SchoolRole): String = when (role) {
 }
 
 @Composable
-private fun HomeScreen(role: SchoolRole, homeworkCount: Int, prepCount: Int, scheduleCount: Int) {
+private fun HomeScreen(
+    role: SchoolRole, homeworkCount: Int, prepCount: Int, scheduleCount: Int,
+    remoteItems: List<SupabaseBackend.SchoolItem>, feedError: String?
+) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -243,7 +263,28 @@ private fun HomeScreen(role: SchoolRole, homeworkCount: Int, prepCount: Int, sch
                 }
             }
         }
-        item { SectionHeading("ملخص المساحة", "محتوى المعاينة المحلية") }
+        item {
+            SectionHeading("محتوى المدرسة من الخادم", "المنشورات المنشورة في قاعدة بيانات RUVEN")
+        }
+        if (feedError != null) {
+            item { EmptyCard("تعذر تحميل المحتوى", feedError) }
+        } else if (remoteItems.isEmpty()) {
+            item { EmptyCard("ماكو منشورات منشورة بعد", "تسجيل الدخول نجح، لكن لا توجد عناصر منشورة مرئية لهذا الحساب.") }
+        } else {
+            itemsIndexed(remoteItems) { index, item ->
+                ContentCard(
+                    title = item.title + (item.subjectName?.let { " • $it" } ?: ""),
+                    subtitle = item.itemType + (item.body.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""),
+                    icon = when (item.itemType) {
+                        "homework" -> Icons.AutoMirrored.Rounded.MenuBook
+                        "preparation" -> Icons.Rounded.Description
+                        "timetable" -> Icons.Rounded.CalendarMonth
+                        else -> Icons.AutoMirrored.Rounded.Announcement
+                    }
+                )
+            }
+        }
+        item { SectionHeading("ملخص المساحة", "أعداد المعاينة المحلية فقط") }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 SummaryCard("الجدول", scheduleCount.toString(), "عناصر محلية", Icons.Rounded.CalendarMonth, Modifier.weight(1f))
