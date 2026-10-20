@@ -1090,40 +1090,187 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
 private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) {
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
+    var search by remember { mutableStateOf("") }
+    var showComposer by remember { mutableStateOf(false) }
     val canPublish = SchoolPermissions.canPublishAnnouncements(role)
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-        item { PageHeader("الإعلانات المدرسية", "إعلانات محلية تجريبية؛ لا تصل إلى أجهزة الطلاب الآخرين.") }
+    val filteredAnnouncements = announcements.withIndex().filter { (_, announcement) ->
+        search.isBlank() || announcement.contains(search, ignoreCase = true)
+    }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(13.dp)
+    ) {
+        item { PageHeader("الإعلانات المدرسية", "تابع التوجيهات والتنبيهات المهمة. هذه الإعلانات محلية ولا تصل إلى أجهزة الآخرين.") }
         if (canPublish) item {
-            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("إنشاء إعلان", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                    OutlinedTextField(title, { title = it }, label = { Text("عنوان الإعلان") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(body, { body = it }, label = { Text("نص الإعلان") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-                    Button(onClick = {
-                        announcements.add(0, title.trim() + "\n" + body.trim())
-                        title = ""; body = ""
-                    }, enabled = title.isNotBlank() && body.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Rounded.Add, contentDescription = null)
-                        Spacer(Modifier.width(7.dp))
-                        Text("نشر الإعلان محلياً")
+            Card(
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(11.dp)
+                    ) {
+                        Box(
+                            Modifier.size(43.dp).clip(RoundedCornerShape(14.dp))
+                                .background(Brush.linearGradient(listOf(Blue, Cyan))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Rounded.Add, contentDescription = null, tint = Color.White)
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("لوحة إنشاء إعلان", color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("اكتب عنواناً واضحاً ورسالة مختصرة", color = Muted, fontSize = 11.sp)
+                        }
+                        TextButton(onClick = { showComposer = !showComposer }) {
+                            Text(if (showComposer) "إغلاق" else "إنشاء")
+                        }
+                    }
+                    androidx.compose.animation.AnimatedVisibility(visible = showComposer) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedTextField(
+                                value = title,
+                                onValueChange = { title = it },
+                                label = { Text("عنوان الإعلان") },
+                                placeholder = { Text("مثال: تغيير موعد الامتحان") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                shape = RoundedCornerShape(15.dp)
+                            )
+                            OutlinedTextField(
+                                value = body,
+                                onValueChange = { body = it },
+                                label = { Text("نص الإعلان") },
+                                placeholder = { Text("اكتب التفاصيل المهمة هنا…") },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 3,
+                                shape = RoundedCornerShape(15.dp)
+                            )
+                            Button(
+                                onClick = {
+                                    announcements.add(0, title.trim() + "\n" + body.trim())
+                                    title = ""
+                                    body = ""
+                                    showComposer = false
+                                },
+                                enabled = title.isNotBlank() && body.isNotBlank(),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(15.dp)
+                            ) {
+                                Icon(Icons.Rounded.Add, contentDescription = null)
+                                Spacer(Modifier.width(7.dp))
+                                Text("نشر في المعاينة")
+                            }
+                        }
                     }
                 }
             }
         }
-        item { SectionHeading("الإعلانات المنشورة", "محفوظة على هذا الجهاز فقط") }
-        if (announcements.isEmpty()) item {
-            EmptyCard("ماكو إعلانات حالياً", if (canPublish) "أنشئ إعلاناً تجريبياً ليظهر هنا." else "ستظهر الإعلانات بعد إضافتها في المعاينة أو ربط خادم المدرسة.")
-        } else itemsIndexed(announcements) { index, announcement ->
-            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("إعلان مدرسي " + (index + 1), color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text(announcement.substringBefore("\n"), color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text(announcement.substringAfter("\n", ""), color = Muted, fontSize = 13.sp, lineHeight = 20.sp)
-                    if (canPublish) TextButton(onClick = { announcements.removeAt(index) }, modifier = Modifier.align(Alignment.End)) { Text("حذف الإعلان") }
+        item {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("لوحة الإعلانات", color = Ink, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("${announcements.size} إعلان محفوظ على هذا الجهاز", color = Muted, fontSize = 11.sp)
+                }
+                Surface(color = Color(0xFFEAF2FF), shape = RoundedCornerShape(50)) {
+                    Text("محلي", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
                 }
             }
         }
-        item { Text("تنبيه: دور المستخدم قابل للتغيير من واجهة المعاينة، لذلك هذا ليس نظام صلاحيات آمناً.", color = Muted, fontSize = 11.sp) }
+        item {
+            OutlinedTextField(
+                value = search,
+                onValueChange = { search = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                placeholder = { Text("ابحث في الإعلانات…") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
+                trailingIcon = {
+                    if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
+                        Icon(Icons.Rounded.Close, contentDescription = "مسح البحث")
+                    }
+                }
+            )
+        }
+        if (filteredAnnouncements.isEmpty()) item {
+            EmptyCard(
+                if (search.isBlank()) "ماكو إعلانات حالياً" else "ما لقينا إعلان مطابق",
+                if (search.isBlank()) {
+                    if (canPublish) "اضغط «إنشاء» حتى تضيف إعلاناً تجريبياً." else "ستظهر الإعلانات بعد ربط خادم المدرسة ونشرها."
+                } else "غيّر كلمات البحث أو امسحها حتى تشوف كل الإعلانات."
+            )
+        } else {
+            itemsIndexed(filteredAnnouncements, key = { _, indexed -> indexed.index }) { _, indexed ->
+                val index = indexed.index
+                val announcement = indexed.value
+                var expanded by remember(index, announcement) { mutableStateOf(false) }
+                Card(
+                    onClick = { expanded = !expanded },
+                    shape = RoundedCornerShape(21.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = if (expanded) 3.dp else 1.dp)
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Box(
+                                Modifier.size(38.dp).clip(RoundedCornerShape(13.dp))
+                                    .background(Color(0xFFF0E9FF)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.AutoMirrored.Rounded.Announcement, contentDescription = null, tint = Color(0xFF7651C9))
+                            }
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("إعلان مدرسي ${announcements.size - index}", color = Color(0xFF7651C9), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text(announcement.substringBefore("\n"), color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 21.sp)
+                            }
+                            Icon(
+                                if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                contentDescription = if (expanded) "طي الإعلان" else "عرض الإعلان",
+                                tint = Muted
+                            )
+                        }
+                        Text(
+                            announcement.substringAfter("\n", ""),
+                            color = Muted,
+                            fontSize = 12.sp,
+                            lineHeight = 20.sp,
+                            maxLines = if (expanded) Int.MAX_VALUE else 2
+                        )
+                        androidx.compose.animation.AnimatedVisibility(visible = expanded) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Divider(color = Color(0xFFE8EDF5))
+                                Text("نص الإعلان الكامل", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                if (canPublish) {
+                                    TextButton(
+                                        onClick = { announcements.removeAt(index) },
+                                        modifier = Modifier.align(Alignment.End)
+                                    ) {
+                                        Icon(Icons.Rounded.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("حذف الإعلان")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Text(
+                "ملاحظة: النشر الحالي تجريبي ومحلي؛ لا تعتبره إعلاناً رسمياً حتى يُربط بخادم المدرسة.",
+                color = Muted, fontSize = 10.sp, lineHeight = 16.sp
+            )
+        }
     }
 }
 
