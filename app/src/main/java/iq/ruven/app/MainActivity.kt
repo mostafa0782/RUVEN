@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.UploadFile
@@ -350,10 +351,18 @@ private fun RuvenAuthenticatedApp(
                         }
                     }
                 }
-                Surface(color = Color(0xFFFFF4D8), modifier = Modifier.fillMaxWidth()) {
-                    Text("معاينة تجريبية: اختيار الدور لا يمنح صلاحيات حقيقية، والبيانات محلية.",
-                        color = Color(0xFF795A16), fontSize = 11.sp,
-                        modifier = Modifier.padding(horizontal = 15.dp, vertical = 7.dp))
+                Surface(color = Color(0xFFEAF2FF), modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Rounded.Info, contentDescription = null, tint = Blue, modifier = Modifier.size(16.dp))
+                        Text(
+                            "بعض الأقسام ما زالت قيد التطوير؛ المنشورات هنا تُحمّل من خادم المدرسة.",
+                            color = Color(0xFF315786), fontSize = 10.sp, lineHeight = 15.sp
+                        )
+                    }
                 }
                 AnimatedContent(targetState = tab, transitionSpec = { fadeIn() togetherWith fadeOut() },
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
