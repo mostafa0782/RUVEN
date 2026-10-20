@@ -510,6 +510,7 @@ private fun OwnerAccountManagementScreen(
     backend: SupabaseBackend
 ) {
     var accounts by remember { mutableStateOf<List<SupabaseBackend.ManagedProfile>>(emptyList()) }
+    var accountSearch by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -543,7 +544,30 @@ private fun OwnerAccountManagementScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { PageHeader("إدارة الحسابات", "تعيين الأدوار والشعب للحسابات المسجلة في RUVEN.") }
+        item { PageHeader("إدارة الحسابات", "لوحة موحّدة لإدارة المستخدمين والأدوار والشعب.") }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf("كل الحسابات" to accounts.size, "طلاب" to accounts.count { it.role == "student" }, "موظفون" to accounts.count { it.role != "student" && it.role != "owner" }).forEach { (label, count) ->
+                    Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.fillMaxWidth().padding(vertical = 13.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(count.toString(), color = Blue, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(label, color = Muted, fontSize = 11.sp, maxLines = 1)
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            OutlinedTextField(
+                value = accountSearch,
+                onValueChange = { accountSearch = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("بحث بالاسم أو البريد أو الدور") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
         item {
             Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -605,7 +629,17 @@ private fun OwnerAccountManagementScreen(
         if (!isLoading && error == null && accounts.isEmpty()) {
             item { EmptyCard("ماكو حسابات إضافية", "تظهر الحسابات هنا بعد تسجيلها في Supabase Auth.") }
         }
-        itemsIndexed(accounts, key = { _, account -> account.id }) { _, account ->
+        val filteredAccounts = accounts.filter { account ->
+            val query = accountSearch.trim()
+            query.isEmpty() || account.fullName.contains(query, ignoreCase = true) ||
+                account.email.orEmpty().contains(query, ignoreCase = true) ||
+                (managedRoleOptions.firstOrNull { it.value == account.role }?.label ?: account.role).contains(query, ignoreCase = true) ||
+                account.className.orEmpty().contains(query, ignoreCase = true)
+        }
+        if (!isLoading && error == null && accounts.isNotEmpty() && filteredAccounts.isEmpty()) {
+            item { EmptyCard("ما لقينا حساب مطابق", "جرّب الاسم أو البريد أو الدور أو الشعبة.") }
+        }
+        itemsIndexed(filteredAccounts, key = { _, account -> account.id }) { _, account ->
             var selectedRole by remember(account.id, account.role) { mutableStateOf(account.role) }
             var className by remember(account.id, account.className) { mutableStateOf(account.className.orEmpty()) }
             var menuExpanded by remember { mutableStateOf(false) }
