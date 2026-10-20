@@ -147,6 +147,7 @@ private fun schoolRoleFromDatabase(value: String): SchoolRole = when (value.lowe
     "teacher" -> SchoolRole.TEACHER
     "assistant_principal" -> SchoolRole.ASSISTANT_PRINCIPAL
     "principal" -> SchoolRole.PRINCIPAL
+    "owner" -> SchoolRole.OWNER
     else -> SchoolRole.STUDENT
 }
 
@@ -231,6 +232,7 @@ private fun roleLabel(role: SchoolRole): String = when (role) {
     SchoolRole.TEACHER -> "مدرّس"
     SchoolRole.ASSISTANT_PRINCIPAL -> "معاون المدير"
     SchoolRole.PRINCIPAL -> "المدير"
+    SchoolRole.OWNER -> "المالك"
 }
 
 @Composable
@@ -302,6 +304,7 @@ private fun HomeScreen(
                         SchoolRole.TEACHER -> "نشر واجبات وتحاضير المواد المسندة إليك فقط."
                         SchoolRole.ASSISTANT_PRINCIPAL -> "إدارة الجدول ومراجعة المحتوى وفق الصلاحيات."
                         SchoolRole.PRINCIPAL -> "الإشراف الإداري وإدارة الجدول والواجبات."
+                        SchoolRole.OWNER -> "صلاحيات المالك الكاملة لإدارة بيانات المدرسة والحسابات والإعدادات."
                     }, color = Muted, fontSize = 13.sp, lineHeight = 20.sp)
                 }
             }
