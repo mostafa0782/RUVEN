@@ -1,9 +1,12 @@
 package iq.ruven.app
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -31,6 +34,7 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.UploadFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -92,6 +97,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         scheduleBackendHealthChecks()
+        RuvenNotifications.createChannel(this)
         setContent { RuvenTheme { RuvenApp() } }
     }
 }
@@ -111,6 +117,10 @@ private enum class RuvenTab(val title: String) {
 
 @Composable
 private fun RuvenApp() {
+    val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
     var session by remember { mutableStateOf<SupabaseBackend.Session?>(null) }
     var profile by remember { mutableStateOf<SupabaseBackend.Profile?>(null) }
     var remoteItems by remember { mutableStateOf<List<SupabaseBackend.SchoolItem>>(emptyList()) }
@@ -122,23 +132,49 @@ private fun RuvenApp() {
             session = newSession
             profile = newProfile
             feedError = null
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
             scope.launch {
                 try {
-                    remoteItems = backend.loadPublishedItems(newSession, newProfile.className)
+                    val loaded = backend.loadPublishedItems(newSession, newProfile.className)
+                    remoteItems = loaded
+                    // First sync is intentionally silent; only later new items alert the user.
+                    RuvenNotifications.processSync(context, newProfile.id, loaded)
                 } catch (e: Exception) {
                     feedError = e.message ?: "تعذر تحميل محتوى المدرسة."
                 }
             }
         }
     } else {
-        RuvenAuthenticatedApp(profile = profile!!, remoteItems = remoteItems, feedError = feedError, onSignOut = {
-            val oldSession = session
-            session = null
-            profile = null
-            remoteItems = emptyList()
-            feedError = null
-            if (oldSession != null) scope.launch { backend.signOut(oldSession) }
-        })
+        val activeSession = session!!
+        val activeProfile = profile!!
+        RuvenAuthenticatedApp(
+            profile = activeProfile,
+            remoteItems = remoteItems,
+            feedError = feedError,
+            onRefresh = {
+                scope.launch {
+                    try {
+                        val loaded = backend.loadPublishedItems(activeSession, activeProfile.className)
+                        remoteItems = loaded
+                        RuvenNotifications.processSync(context, activeProfile.id, loaded)
+                        feedError = null
+                    } catch (e: Exception) {
+                        feedError = e.message ?: "تعذر تحديث محتوى المدرسة."
+                    }
+                }
+            },
+            onSignOut = {
+                session = null
+                profile = null
+                remoteItems = emptyList()
+                feedError = null
+                scope.launch { backend.signOut(activeSession) }
+            }
+        )
     }
 }
 
@@ -156,6 +192,7 @@ private fun RuvenAuthenticatedApp(
     profile: SupabaseBackend.Profile,
     remoteItems: List<SupabaseBackend.SchoolItem>,
     feedError: String?,
+    onRefresh: () -> Unit,
     onSignOut: () -> Unit
 ) {
     var tab by remember { mutableIntStateOf(0) }
@@ -202,6 +239,9 @@ private fun RuvenAuthenticatedApp(
                         Text(profile.fullName, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(roleLabel(role), color = Blue, fontSize = 11.sp)
+                            IconButton(onClick = onRefresh) {
+                                Icon(Icons.Rounded.Refresh, contentDescription = "تحديث المحتوى والإشعارات", tint = Blue)
+                            }
                             TextButton(onClick = onSignOut) { Text("خروج", color = Blue, fontSize = 11.sp) }
                         }
                     }
