@@ -6,7 +6,7 @@ This guide is for the school owner/authorized administrator. Never put a Supabas
 
 1. Open the Supabase project `ruven-school-app`.
 2. Go to **Authentication → Users → Add user**.
-3. Create the principal/owner account using a school-controlled email and a strong password.
+3. Create the dedicated **owner** account using the owner's controlled email and a strong password. This is not the principal role; `owner` is a separate highest-level role.
 4. Confirm the user is listed. Do not send the password to the developer or put it in this repository.
 
 ## 2. Link that account to the school profile
@@ -17,12 +17,12 @@ This guide is for the school owner/authorized administrator. Never put a Supabas
 
 ```sql
 insert into public.profiles (id, full_name, role, class_name, is_owner)
-select id, 'OWNER_FULL_NAME_HERE', 'principal'::public.school_role, null, true
+select id, 'OWNER_FULL_NAME_HERE', 'owner'::public.school_role, null, true
 from auth.users
 where lower(email) = lower('OWNER_EMAIL_HERE')
 on conflict (id) do update
 set full_name = excluded.full_name,
-    role = 'principal'::public.school_role,
+    role = 'owner'::public.school_role,
     class_name = null,
     is_owner = true;
 ```
@@ -45,6 +45,7 @@ Create each user in **Authentication → Users** first, then add a matching `pub
 - `teacher`
 - `assistant_principal`
 - `principal`
+- `owner` (highest level; full school administration)
 
 Use the exact school class/section naming convention agreed by the school (for example, grade + section A–F). Do not allow users to choose their own role or class at sign-up.
 
@@ -78,4 +79,4 @@ The Android app reads Gradle properties named `SUPABASE_URL` and `SUPABASE_PUBLI
 
 ## Important release gate
 
-Creating the owner/profile is only account provisioning. Before distributing the APK, verify the app builds, a student cannot publish content, a teacher cannot post outside assigned subjects/classes, and only the principal/assistant principal can moderate published content. The current UI still contains local-only controls in some screens; do not treat them as live school features until they have been wired to the backend and tested.
+Creating the owner/profile is only account provisioning. Before distributing the APK, verify the app builds, a student cannot publish content, a teacher cannot post outside assigned subjects/classes, and the owner has full school-data administration, while principal/assistant principal retain their school-level moderation permissions. The current UI still contains local-only controls in some screens; do not treat them as live school features until they have been wired to the backend and tested.
