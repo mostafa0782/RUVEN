@@ -22,7 +22,7 @@ class ValidatedSchoolContentRepositoryTest {
             FakeRepository(lessons = listOf(lesson))
         )
 
-        assertEquals(Result.success(listOf(lesson)), repository.getLessons("school", "student", 1))
+        assertEquals(Result.success(listOf(lesson)), repository.getLessons(1))
     }
 
     @Test
@@ -39,7 +39,7 @@ class ValidatedSchoolContentRepositoryTest {
             ))
         )
 
-        val result = repository.getLessons("school", "student", 1)
+        val result = repository.getLessons(1)
 
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is InvalidSchoolContentException)
@@ -54,16 +54,10 @@ class ValidatedSchoolContentRepositoryTest {
         private val homework: List<Homework> = emptyList(),
         private val announcements: List<SchoolAnnouncement> = emptyList()
     ) : SchoolContentRepository {
-        override suspend fun getLessons(
-            schoolId: String,
-            studentId: String,
-            weekday: Int
-        ) = Result.success(lessons)
+        override suspend fun getLessons(weekday: Int) = Result.success(lessons)
 
-        override suspend fun getHomework(schoolId: String, studentId: String) =
-            Result.success(homework)
+        override suspend fun getHomework() = Result.success(homework)
 
-        override suspend fun getAnnouncements(schoolId: String) =
-            Result.success(announcements)
+        override suspend fun getAnnouncements() = Result.success(announcements)
     }
 }
