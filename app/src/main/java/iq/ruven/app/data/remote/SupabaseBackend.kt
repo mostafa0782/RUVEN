@@ -76,6 +76,24 @@ class SupabaseBackend(
         )
     }
 
+    /** Restore a saved login using Supabase's rotating refresh token. */
+    suspend fun refreshSession(refreshToken: String): Session = withContext(Dispatchers.IO) {
+        requireConfigured()
+        require(refreshToken.isNotBlank()) { "انتهت جلسة الدخول. سجّل الدخول من جديد." }
+        val result = request(
+            path = "/auth/v1/token?grant_type=refresh_token",
+            method = "POST",
+            body = JSONObject().put("refresh_token", refreshToken),
+            authenticated = false
+        )
+        val user = result.optJSONObject("user") ?: throw IOException("تعذر استعادة جلسة الحساب.")
+        Session(
+            userId = user.getString("id"),
+            accessToken = result.getString("access_token"),
+            refreshToken = result.optString("refresh_token").ifBlank { refreshToken }
+        )
+    }
+
     suspend fun loadMyProfile(session: Session): Profile = withContext(Dispatchers.IO) {
         val query = "select=id,full_name,role,class_name,is_owner&id=eq.${encode(session.userId)}&limit=1"
         val rows = requestArray("/rest/v1/profiles?$query", session = session)
