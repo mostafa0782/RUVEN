@@ -1084,6 +1084,7 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
     var title by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
+    var showHomeworkComposer by remember { mutableStateOf(true) }
     val filteredHomework = homework.withIndex().filter { (_, entry) ->
         search.isBlank() || entry.contains(search, ignoreCase = true)
     }
@@ -1098,15 +1099,23 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
         if (canSeeHomeworkForm) item {
             Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("إضافة واجب", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("إضافة واجب", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            Text("أنشئ الواجب ثم راجعه قبل النشر", color = Muted, fontSize = 11.sp)
+                        }
+                        TextButton(onClick = { showHomeworkComposer = !showHomeworkComposer }) { Text(if (showHomeworkComposer) "طيّ النموذج" else "إضافة واجب") }
+                    }
+                    if (showHomeworkComposer) {
                     OutlinedTextField(subject, { subject = it }, label = { Text("المادة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     if (role == SchoolRole.TEACHER) Text("بالنسخة النهائية، الخادم يتحقق أن المادة مسندة لهذا المدرس.", color = Muted, fontSize = 11.sp)
                     OutlinedTextField(title, { title = it }, label = { Text("عنوان الواجب") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(details, { details = it }, label = { Text("التفاصيل") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                     Button(onClick = {
                         homework.add(subject + ": " + title + if (details.isBlank()) "" else " — " + details)
-                        subject = ""; title = ""; details = ""
-                    }, enabled = canCreate && subject.isNotBlank() && title.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("نشر في المعاينة") }
+                        subject = ""; title = ""; details = ""; showHomeworkComposer = false
+                    }, enabled = canCreate && subject.isNotBlank() && title.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("حفظ الواجب في المعاينة") }
+                    }
                 }
             }
         } else item { EmptyCard("عرض الواجبات", "المدرس ينشر لمادته، والإدارة تدير المحتوى حسب الصلاحيات.") }
@@ -1175,7 +1184,7 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
             item { SectionHeading("البلاغات الإدارية", "محفوظة على هذا الجهاز") }
             itemsIndexed(reports) { i, report -> ContentCard(report, "بلاغ " + (i + 1), Icons.Rounded.Description) }
         }
-        item { Text("الأدوار هنا للمعاينة فقط؛ التطبيق لا يملك تسجيل دخول أو خادماً بعد.", color = Muted, fontSize = 11.sp) }
+        item { Text("ملاحظة: قائمة الواجبات والبلاغات في هذه الشاشة تجريبية ومحلية حالياً؛ لا تُرسل إلى بقية المستخدمين.", color = Muted, fontSize = 11.sp, lineHeight = 16.sp) }
     }
 }
 
@@ -1185,6 +1194,7 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
+    var showPreparationComposer by remember { mutableStateOf(true) }
     val filteredPreparations = preparations.withIndex().filter { (_, entry) ->
         search.isBlank() || entry.contains(search, ignoreCase = true)
     }
@@ -1194,22 +1204,25 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
         item {
             Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFE8F2FF)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Description, contentDescription = null, tint = Blue)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
+                            Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFE8F2FF)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Rounded.Description, contentDescription = null, tint = Blue)
+                            }
+                            Column {
+                                Text("إضافة تحضير", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                Text("للمدرسين ضمن موادهم المسندة", color = Muted, fontSize = 11.sp)
+                            }
                         }
-                        Column {
-                            Text("إضافة تحضير", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                            Text("للمدرسين ضمن موادهم المسندة", color = Muted, fontSize = 11.sp)
-                        }
+                        if (role == SchoolRole.TEACHER) TextButton(onClick = { showPreparationComposer = !showPreparationComposer }) { Text(if (showPreparationComposer) "طيّ" else "إضافة") }
                     }
-                    if (role == SchoolRole.TEACHER) {
+                    if (role == SchoolRole.TEACHER && showPreparationComposer) {
                         OutlinedTextField(subject, { subject = it }, label = { Text("المادة المسندة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(title, { title = it }, label = { Text("عنوان التحضير") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(content, { content = it }, label = { Text("أهداف الدرس وخطوات الشرح والواجب") }, modifier = Modifier.fillMaxWidth(), minLines = 4)
                         Button(onClick = {
                             preparations.add(subject + " — " + title + ": " + content)
-                            subject = ""; title = ""; content = ""
+                            subject = ""; title = ""; content = ""; showPreparationComposer = false
                         }, enabled = canCreate && subject.isNotBlank() && title.isNotBlank() && content.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Rounded.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text("حفظ التحضير في المعاينة")
                         }
