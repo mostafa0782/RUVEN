@@ -48,6 +48,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import iq.ruven.app.data.remote.SupabaseBackend
 import kotlinx.coroutines.launch
 
@@ -96,7 +97,7 @@ fun SupabaseLoginScreen(onAuthenticated: (SupabaseBackend.Session, SupabaseBacke
                             color = Color.White,
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 3
+                            letterSpacing = 3.sp
                         )
                         Text(
                             "كل منظومتك المدرسية بمكان واحد",
