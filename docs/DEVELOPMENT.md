@@ -18,20 +18,27 @@ From a terminal with Gradle 8.11.1 installed, run:
 gradle :app:assembleDebug
 ```
 
-The GitHub Actions workflow performs the same debug-APK assembly on pushes to `main` and `feature/ruven-foundation`, and on pull requests targeting `main`. Check the workflow run itself for the actual result; a configured workflow is not proof of a successful build.
+GitHub Actions runs unit tests before assembling a debug APK. Check the actual workflow run for the result.
 
 ## Current implementation status
 - Native Android Kotlin + Jetpack Compose + Material 3 shell.
-- Arabic-first UI with explicit RTL layout.
-- Navigation shell for home, timetable, homework, and announcements.
-- Typed domain models, input-validation helpers, and a repository contract for school content.
-- Unit tests for lesson, homework, and announcement record validation; CI runs `:app:testDebugUnitTest` before packaging.
-- No login, backend/API, database, live school data, messaging, or push notifications.
+- Arabic-first RTL layout with blue/cyan styling.
+- Home, timetable, homework, preparations, and announcements navigation.
+- Timetable UI can select PDF/image files and accept typed schedule text; the file is not uploaded.
+- Local preview forms for homework, preparations, and administrative reports.
+- Typed domain models, input-validation helpers, repository contract, role policy helpers, and unit tests.
+- No login, backend/API, database, live school data, messaging, push notifications, or persistent content storage.
 - No Gradle wrapper has been committed yet.
-- Do not treat the project as production-ready until the debug build is green, tests are added and run, and authentication/authorization and backend security have been implemented and reviewed.
+
+## Role-policy intent
+- Teachers publish homework and preparations for assigned subjects only.
+- Class monitor can manage timetable entries and report homework to the principal, but does not directly delete homework.
+- Principal and assistant principals manage timetable entries and moderate homework.
+- Role selection in the UI is a preview control, not authentication or a security boundary.
 
 ## Security rules
 - Do not commit credentials, tokens, private keys, or real student information.
-- Treat client-side school and user identifiers as untrusted input.
-- Enforce identity, role, school membership, class access, and conversation participant access on the server.
+- Treat client-supplied roles, subjects, school IDs, and user IDs as untrusted input.
+- Enforce identity, role, subject assignment, school membership, class access, and conversation participant access on the server.
 - Student-to-student messaging is excluded from version 1.
+- Do not treat the project as production-ready until CI passes and backend authentication/authorization and file upload security are implemented and reviewed.
