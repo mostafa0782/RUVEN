@@ -30,6 +30,15 @@ class SchoolPermissionsTest {
     }
 
     @Test
+    fun onlySchoolLeadershipCanPublishAnnouncements() {
+        assertTrue(SchoolPermissions.canPublishAnnouncements(SchoolRole.PRINCIPAL))
+        assertTrue(SchoolPermissions.canPublishAnnouncements(SchoolRole.ASSISTANT_PRINCIPAL))
+        assertFalse(SchoolPermissions.canPublishAnnouncements(SchoolRole.TEACHER))
+        assertFalse(SchoolPermissions.canPublishAnnouncements(SchoolRole.CLASS_MONITOR))
+        assertFalse(SchoolPermissions.canPublishAnnouncements(SchoolRole.STUDENT))
+    }
+
+    @Test
     fun studentsCannotPublishSchoolContent() {
         assertFalse(SchoolPermissions.canCreateHomework(SchoolRole.STUDENT))
         assertFalse(SchoolPermissions.canCreatePreparation(SchoolRole.STUDENT))
