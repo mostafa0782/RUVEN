@@ -6,7 +6,8 @@ enum class SchoolRole {
     CLASS_MONITOR,
     TEACHER,
     ASSISTANT_PRINCIPAL,
-    PRINCIPAL
+    PRINCIPAL,
+    OWNER
 }
 
 enum class SchoolContentType {
@@ -20,17 +21,17 @@ object SchoolPermissions {
     fun canCreateHomework(role: SchoolRole, assignedSubject: Boolean = false): Boolean =
         when (role) {
             SchoolRole.TEACHER -> assignedSubject
-            SchoolRole.CLASS_MONITOR, SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.PRINCIPAL -> true
+            SchoolRole.CLASS_MONITOR, SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.PRINCIPAL, SchoolRole.OWNER -> true
             SchoolRole.STUDENT -> false
         }
 
     fun canEditOrDeleteHomework(role: SchoolRole): Boolean =
-        role == SchoolRole.PRINCIPAL || role == SchoolRole.ASSISTANT_PRINCIPAL
+        role == SchoolRole.PRINCIPAL || role == SchoolRole.ASSISTANT_PRINCIPAL || role == SchoolRole.OWNER
 
     fun canManageTimetable(role: SchoolRole): Boolean =
         role == SchoolRole.CLASS_MONITOR ||
             role == SchoolRole.ASSISTANT_PRINCIPAL ||
-            role == SchoolRole.PRINCIPAL
+            role == SchoolRole.PRINCIPAL || role == SchoolRole.OWNER
 
     fun canUploadTimetableFile(role: SchoolRole): Boolean = canManageTimetable(role)
 
