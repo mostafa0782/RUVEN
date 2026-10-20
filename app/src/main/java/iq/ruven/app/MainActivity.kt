@@ -97,11 +97,13 @@ private fun RuvenApp() {
     val schedules = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "schedules")) } }
     val scheduleFiles = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "schedule_files")) } }
     val reports = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "reports")) } }
+    val announcements = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "announcements")) } }
     LaunchedEffect(homework.toList()) { writeLocalItems(prefs, "homework", homework.toList()) }
     LaunchedEffect(preparations.toList()) { writeLocalItems(prefs, "preparations", preparations.toList()) }
     LaunchedEffect(schedules.toList()) { writeLocalItems(prefs, "schedules", schedules.toList()) }
     LaunchedEffect(scheduleFiles.toList()) { writeLocalItems(prefs, "schedule_files", scheduleFiles.toList()) }
     LaunchedEffect(reports.toList()) { writeLocalItems(prefs, "reports", reports.toList()) }
+    LaunchedEffect(announcements.toList()) { writeLocalItems(prefs, "announcements", announcements.toList()) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(containerColor = Canvas, bottomBar = {
             NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
@@ -147,7 +149,7 @@ private fun RuvenApp() {
                         1 -> ScheduleScreen(role, schedules, scheduleFiles)
                         2 -> HomeworkScreen(role, homework, reports)
                         3 -> PreparationsScreen(role, preparations)
-                        else -> NoticesScreen()
+                        else -> NoticesScreen(role, announcements)
                     }
                 }
             }
@@ -397,10 +399,43 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
 }
 
 @Composable
-private fun NoticesScreen() {
+private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) {
+    var title by remember { mutableStateOf("") }
+    var body by remember { mutableStateOf("") }
+    val canPublish = role == SchoolRole.PRINCIPAL || role == SchoolRole.ASSISTANT_PRINCIPAL
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-        item { PageHeader("الإعلانات المدرسية", "الإعلانات الرسمية تظهر بعد ربط خادم المدرسة.") }
-        item { EmptyCard("ماكو إعلانات حالياً", "الشاشة جاهزة بصرياً لكنها لا تستقبل إعلانات حقيقية بعد.") }
+        item { PageHeader("الإعلانات المدرسية", "إعلانات محلية تجريبية؛ لا تصل إلى أجهزة الطلاب الآخرين.") }
+        if (canPublish) item {
+            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("إنشاء إعلان", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    OutlinedTextField(title, { title = it }, label = { Text("عنوان الإعلان") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(body, { body = it }, label = { Text("نص الإعلان") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+                    Button(onClick = {
+                        announcements.add(0, title.trim() + "\n" + body.trim())
+                        title = ""; body = ""
+                    }, enabled = title.isNotBlank() && body.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Rounded.Add, contentDescription = null)
+                        Spacer(Modifier.width(7.dp))
+                        Text("نشر الإعلان محلياً")
+                    }
+                }
+            }
+        }
+        item { SectionHeading("الإعلانات المنشورة", "محفوظة على هذا الجهاز فقط") }
+        if (announcements.isEmpty()) item {
+            EmptyCard("ماكو إعلانات حالياً", if (canPublish) "أنشئ إعلاناً تجريبياً ليظهر هنا." else "ستظهر الإعلانات بعد إضافتها في المعاينة أو ربط خادم المدرسة.")
+        } else itemsIndexed(announcements) { index, announcement ->
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("إعلان مدرسي " + (index + 1), color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(announcement.substringBefore("\n"), color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(announcement.substringAfter("\n", ""), color = Muted, fontSize = 13.sp, lineHeight = 20.sp)
+                    if (canPublish) TextButton(onClick = { announcements.removeAt(index) }, modifier = Modifier.align(Alignment.End)) { Text("حذف الإعلان") }
+                }
+            }
+        }
+        item { Text("تنبيه: دور المستخدم قابل للتغيير من واجهة المعاينة، لذلك هذا ليس نظام صلاحيات آمناً.", color = Muted, fontSize = 11.sp) }
     }
 }
 
