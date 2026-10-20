@@ -41,6 +41,13 @@ class SupabaseBackend(
         val className: String?
     )
 
+    data class ManagedSection(
+        val id: String,
+        val gradeName: String,
+        val sectionCode: String,
+        val isOpen: Boolean
+    )
+
     data class SchoolItem(
         val id: String,
         val itemType: String,
@@ -81,6 +88,28 @@ class SupabaseBackend(
             className = row.optString("class_name").takeIf { it.isNotBlank() && it != "null" },
             isOwner = row.optBoolean("is_owner", false)
         )
+    }
+
+    /** The database only returns closed sections to the owner; ordinary users see open sections only. */
+    suspend fun loadManagedSections(session: Session): List<ManagedSection> = withContext(Dispatchers.IO) {
+        val rows = requestArray("/rest/v1/class_sections?select=id,grade_name,section_code,is_open&order=grade_name.asc,section_code.asc&limit=100", session = session)
+        (0 until rows.length()).map { i ->
+            val row = rows.getJSONObject(i)
+            ManagedSection(row.getString("id"), row.getString("grade_name"), row.getString("section_code"), row.optBoolean("is_open", false))
+        }
+    }
+
+    suspend fun createManagedSection(session: Session, gradeName: String, sectionCode: String, isOpen: Boolean) = withContext(Dispatchers.IO) {
+        require(gradeName.trim().length in 1..80) { "اسم الصف مطلوب." }
+        require(sectionCode in setOf("A", "B", "C", "D", "E", "F")) { "الشعبة يجب أن تكون من A إلى F." }
+        val payload = JSONObject().put("grade_name", gradeName.trim()).put("section_code", sectionCode).put("is_open", isOpen)
+        requestRaw("/rest/v1/class_sections", "POST", payload, session)
+        Unit
+    }
+
+    suspend fun setManagedSectionOpen(session: Session, sectionId: String, isOpen: Boolean) = withContext(Dispatchers.IO) {
+        requestRaw("/rest/v1/class_sections?id=eq.${encode(sectionId)}", "PATCH", JSONObject().put("is_open", isOpen), session)
+        Unit
     }
 
     /** Create a login account through the server-side owner-only Edge Function. No service-role key is shipped in Android. */
