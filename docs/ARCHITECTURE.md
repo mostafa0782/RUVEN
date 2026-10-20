@@ -1,17 +1,30 @@
-# RUVEN Architecture — Initial Foundation
+# RUVEN Architecture — Foundation and UI Prototype
 
 ## Current client
 
-The Android client is a native Kotlin application built with Jetpack Compose and Material 3. The current UI is an initial shell: it has navigation and explicit empty states, but no account system or live school data.
+The Android client is a native Kotlin application built with Jetpack Compose and Material 3. It has Arabic-first RTL screens for home, timetable, homework, preparations, and announcements. Content creation is currently a local UI preview, not a connected service.
 
 ## Source boundaries
 
-- `iq.ruven.app`: Android entry point and initial Compose UI.
-- `iq.ruven.app.data.model`: typed models for lessons, homework, and school announcements.
-- `iq.ruven.app.data.model`: typed lesson, homework, and announcement records plus validation rules for API data.
-- `iq.ruven.app.data.repository`: `SchoolContentRepository`, the suspendable contract for an authenticated data source, and `ValidatedSchoolContentRepository`, which rejects malformed records before presentation.
+- `iq.ruven.app`: Android entry point and Compose UI.
+- `iq.ruven.app.data.model`: typed lesson, homework, announcement, preparation, and school-role models.
+- `SchoolModelValidation`: input-quality validation for untrusted school records.
+- `SchoolPermissions`: pure role-policy helpers for unit tests; these helpers are not authorization.
+- `iq.ruven.app.data.repository`: `SchoolContentRepository` contract and `ValidatedSchoolContentRepository` decorator.
 
-The repository contract is deliberately not backed by hard-coded demo content. UI features should represent loading, empty, and error states distinctly once a data source is connected.
+## Intended school-content permissions
+
+- Teachers create homework and preparations only for subjects assigned to their authenticated account.
+- Class monitors can submit homework and timetable content and report content that requires administrative review; they cannot delete or edit homework directly.
+- The principal and assistant principals can manage timetable content and moderate homework.
+- The timetable UI supports text entry and selecting PDF/image files.
+- The current role dropdown is a prototype-only way to preview screens. It does not authenticate users, and no selected file is uploaded yet.
+
+The future backend must check the authenticated principal, assigned subjects, school/class membership, and action-specific permission for every read/write. Never accept a client-provided role or subject name as proof of permission.
+
+## Data and authorization
+
+The current UI has no backend and contains no real student data. Every protected operation must be authorized server-side and scoped to the authenticated user's school and class. The client repository API does not accept arbitrary student or school IDs for content queries; the future data source must derive identity from the authenticated session.
 
 ## Planned feature boundaries
 
@@ -20,6 +33,7 @@ As the app grows, move UI state and data access into feature modules/packages:
 - feature/home
 - feature/timetable
 - feature/homework
+- feature/preparations
 - feature/announcements
 - feature/messages
 - feature/profile
@@ -28,11 +42,7 @@ As the app grows, move UI state and data access into feature modules/packages:
 - core/network
 - core/database
 
-Introduce ViewModels, Room, DataStore, and a network client when a concrete feature needs them. Avoid unused infrastructure before requirements are known.
-
-## Data and authorization
-
-The current UI has no backend and contains no real student data. Every protected operation must be authorized server-side and scoped to the authenticated user's school, role, class, and relevant conversation. The client repository API does not accept arbitrary student or school IDs for content queries; the future data source must derive identity from the authenticated session. Any server-side client-supplied identifier is never proof of authorization.
+Introduce ViewModels, Room, DataStore, and a network client when a concrete feature needs them.
 
 ## Messaging policy
 
