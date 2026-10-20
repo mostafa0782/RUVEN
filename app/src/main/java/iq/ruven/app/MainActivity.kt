@@ -4,6 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import iq.ruven.app.data.monitor.BackendHealthWorker
+import java.util.concurrent.TimeUnit
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -66,8 +71,25 @@ private fun writeLocalItems(prefs: SharedPreferences, key: String, values: List<
 }
 
 class MainActivity : ComponentActivity() {
+    private fun scheduleBackendHealthChecks() {
+        // Health monitoring is enabled only after project URL and publishable key are configured.
+        // It checks backend availability; it is not a guarantee against provider auto-pausing.
+        if (BuildConfig.SUPABASE_URL.isBlank() || BuildConfig.SUPABASE_PUBLISHABLE_KEY.isBlank()) return
+        val request = PeriodicWorkRequestBuilder<BackendHealthWorker>(2, TimeUnit.HOURS)
+            .setConstraints(androidx.work.Constraints.Builder()
+                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                .build())
+            .build()
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            BackendHealthWorker.UNIQUE_WORK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        scheduleBackendHealthChecks()
         setContent { RuvenTheme { RuvenApp() } }
     }
 }
