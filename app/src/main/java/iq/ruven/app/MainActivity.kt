@@ -402,7 +402,7 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
 private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) {
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
-    val canPublish = role == SchoolRole.PRINCIPAL || role == SchoolRole.ASSISTANT_PRINCIPAL
+    val canPublish = SchoolPermissions.canPublishAnnouncements(role)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         item { PageHeader("الإعلانات المدرسية", "إعلانات محلية تجريبية؛ لا تصل إلى أجهزة الطلاب الآخرين.") }
         if (canPublish) item {
