@@ -34,3 +34,12 @@ values (
 - The Android app contains only the Supabase project URL and publishable key. Never put a `service_role` or secret key in Android, GitHub, or any client app.
 - Profile insert is intentionally disabled for ordinary authenticated clients, so users cannot assign themselves a role or class.
 - Review the security advisor findings before production rollout.
+
+
+## RUVEN notification layer (current implementation)
+
+- Android creates a dedicated high-importance **تحديثات المدرسة** notification channel with vibration and a visible app badge.
+- After the first successful login sync, the app records the current published item IDs silently so students are not spammed with old content.
+- Use the refresh icon in the signed-in header to sync published content. Newly discovered homework, preparations, timetable changes, reports, and announcements generate rich expandable Android notifications, with the title, subject/section where available, and the post body.
+- Notification IDs are stable per content item to avoid duplicate alerts for the same item. Android 13+ asks for the notification permission at runtime.
+- **Important limitation:** this is sync-triggered notification delivery, not remote push. It can notify about new items when a user opens or refreshes RUVEN, but it cannot guarantee instant delivery while the app is closed. True closed-app delivery requires a Firebase Cloud Messaging project, app-specific Firebase configuration, device-token registration, and a trusted server/Edge Function to send pushes. No Firebase credentials or service-role secrets should be placed in the Android app or committed to GitHub.
