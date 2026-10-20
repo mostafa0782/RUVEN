@@ -420,6 +420,7 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
     var gradeName by remember { mutableStateOf("الثالث متوسط") }
     var sectionCode by remember { mutableStateOf("A") }
     var sectionMenu by remember { mutableStateOf(false) }
+    var showCreateForm by remember { mutableStateOf(false) }
     var openOnCreate by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
@@ -454,7 +455,16 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
         item {
             Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("إضافة شعبة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("إضافة شعبة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            Text(if (showCreateForm) "أدخل الصف ورمز الشعبة المطلوبة" else "افتح النموذج عند الحاجة فقط", color = Muted, fontSize = 12.sp)
+                        }
+                        TextButton(onClick = { showCreateForm = !showCreateForm }) {
+                            Text(if (showCreateForm) "إغلاق ▲" else "إضافة +")
+                        }
+                    }
+                    if (showCreateForm) {
                     OutlinedTextField(gradeName, { gradeName = it }, label = { Text("الصف الدراسي") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     Box {
                         OutlinedButton(onClick = { sectionMenu = true }, modifier = Modifier.fillMaxWidth()) { Text("الشعبة: $sectionCode") }
@@ -476,6 +486,7 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
                                     backend.createManagedSection(session, gradeName, sectionCode, openOnCreate)
                                     notice = "تم إنشاء الشعبة $sectionCode."
                                     sections = backend.loadManagedSections(session)
+                                    showCreateForm = false
                                 } catch (e: Exception) { error = e.message ?: "تعذر إنشاء الشعبة." }
                                 finally { saving = false }
                             }
@@ -483,6 +494,7 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
                         enabled = !saving && gradeName.isNotBlank(),
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(if (saving) "جارٍ الإنشاء..." else "إنشاء الشعبة") }
+                    }
                 }
             }
         }
