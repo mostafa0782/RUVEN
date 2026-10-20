@@ -2,7 +2,7 @@
 
 ## Current client
 
-The Android client is a native Kotlin application built with Jetpack Compose and Material 3. It has Arabic-first RTL screens for home, timetable, homework, preparations, and announcements. Content creation is currently a local UI preview, not a connected service. Homework, timetable descriptions and selected document URIs, preparations, and reports are persisted on-device through SharedPreferences.
+The Android client is a native Kotlin application built with Jetpack Compose and Material 3. It has Arabic-first RTL screens for home, timetable, homework, preparations, and announcements. Content creation is currently a local UI preview, not a connected service. Principals and assistant principals can create/delete local announcement entries; this does not publish to other devices. Homework, timetable descriptions and selected document URIs, preparations, and reports are persisted on-device through SharedPreferences.
 
 ## Source boundaries
 
