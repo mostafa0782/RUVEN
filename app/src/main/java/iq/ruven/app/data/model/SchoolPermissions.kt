@@ -38,4 +38,7 @@ object SchoolPermissions {
         role == SchoolRole.TEACHER && assignedSubject
 
     fun canReportToPrincipal(role: SchoolRole): Boolean = role == SchoolRole.CLASS_MONITOR
+
+    fun canPublishAnnouncements(role: SchoolRole): Boolean =
+        role == SchoolRole.PRINCIPAL || role == SchoolRole.ASSISTANT_PRINCIPAL
 }
