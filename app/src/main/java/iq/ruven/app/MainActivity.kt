@@ -112,7 +112,7 @@ private fun RuvenTheme(content: @Composable () -> Unit) {
 
 private enum class RuvenTab(val title: String) {
     Home("الرئيسية"), Schedule("الجدول"), Homework("الواجبات"),
-    Preparations("التحاضير"), Notices("الإعلانات"), Admin("الحسابات")
+    Preparations("التحاضير"), Notices("الإعلانات"), Admin("الحسابات"), Sections("الشعب")
 }
 
 @Composable
@@ -228,7 +228,10 @@ private fun RuvenAuthenticatedApp(
                     add(RuvenTab.Homework to Icons.AutoMirrored.Rounded.MenuBook)
                     add(RuvenTab.Preparations to Icons.Rounded.Description)
                     add(RuvenTab.Notices to Icons.AutoMirrored.Rounded.Announcement)
-                    if (role == SchoolRole.OWNER) add(RuvenTab.Admin to Icons.Rounded.School)
+                    if (role == SchoolRole.OWNER) {
+                        add(RuvenTab.Admin to Icons.Rounded.School)
+                        add(RuvenTab.Sections to Icons.Rounded.Group)
+                    }
                 }
                 tabs.forEachIndexed { i, item ->
                     NavigationBarItem(selected = tab == i, onClick = { tab = i },
@@ -268,7 +271,9 @@ private fun RuvenAuthenticatedApp(
                         2 -> HomeworkScreen(role, homework, reports)
                         3 -> PreparationsScreen(role, preparations)
                         4 -> NoticesScreen(role, announcements)
-                        else -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
+                        5 -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
+                            else NoticesScreen(role, announcements)
+                        else -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
                             else NoticesScreen(role, announcements)
                     }
                 }
@@ -304,6 +309,97 @@ private val managedRoleOptions = listOf(
     RoleOption("educational_counselor", "مرشد تربوي"),
     RoleOption("ministry_education_member", "عضو تربوي من وزارة التربية")
 )
+
+@Composable
+private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: SupabaseBackend) {
+    var sections by remember { mutableStateOf<List<SupabaseBackend.ManagedSection>>(emptyList()) }
+    var gradeName by remember { mutableStateOf("الثالث متوسط") }
+    var sectionCode by remember { mutableStateOf("A") }
+    var sectionMenu by remember { mutableStateOf(false) }
+    var openOnCreate by remember { mutableStateOf(true) }
+    var loading by remember { mutableStateOf(true) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    fun reload() {
+        scope.launch {
+            loading = true
+            try { sections = backend.loadManagedSections(session); error = null }
+            catch (e: Exception) { error = e.message ?: "تعذر تحميل الشعب." }
+            finally { loading = false }
+        }
+    }
+    LaunchedEffect(session.userId) { reload() }
+
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { PageHeader("إدارة الشعب", "الشعب A–F فقط. لا تُنشأ أي شعبة تلقائياً؛ الشعب المغلقة لا تظهر للمستخدمين العاديين.") }
+        item {
+            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("إضافة شعبة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(gradeName, { gradeName = it }, label = { Text("الصف الدراسي") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    Box {
+                        OutlinedButton(onClick = { sectionMenu = true }, modifier = Modifier.fillMaxWidth()) { Text("الشعبة: $sectionCode") }
+                        DropdownMenu(expanded = sectionMenu, onDismissRequest = { sectionMenu = false }) {
+                            listOf("A", "B", "C", "D", "E", "F").forEach { code ->
+                                DropdownMenuItem(text = { Text(code) }, onClick = { sectionCode = code; sectionMenu = false })
+                            }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = openOnCreate, onCheckedChange = { openOnCreate = it })
+                        Text("فتح الشعبة مباشرة للطلاب والموظفين", color = Ink, fontSize = 13.sp)
+                    }
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                saving = true; error = null; notice = null
+                                try {
+                                    backend.createManagedSection(session, gradeName, sectionCode, openOnCreate)
+                                    notice = "تم إنشاء الشعبة $sectionCode."
+                                    sections = backend.loadManagedSections(session)
+                                } catch (e: Exception) { error = e.message ?: "تعذر إنشاء الشعبة." }
+                                finally { saving = false }
+                            }
+                        },
+                        enabled = !saving && gradeName.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(if (saving) "جارٍ الإنشاء..." else "إنشاء الشعبة") }
+                }
+            }
+        }
+        if (notice != null) item { Text(notice!!, color = Color(0xFF176B45), fontSize = 13.sp) }
+        if (error != null) item { EmptyCard("تعذر تنفيذ العملية", error!!) }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("الشعب المسجلة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                TextButton(onClick = { reload() }, enabled = !loading) { Text(if (loading) "تحميل..." else "تحديث") }
+            }
+        }
+        if (!loading && sections.isEmpty()) item { EmptyCard("ماكو شعب مسجلة", "أنشئ الشعبة المطلوبة فقط؛ الشعب الفارغة لا تنشأ وحدها.") }
+        itemsIndexed(sections, key = { _, section -> section.id }) { _, section ->
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("${section.gradeName} — شعبة ${section.sectionCode}", color = Ink, fontWeight = FontWeight.Bold)
+                        Text(if (section.isOpen) "مفتوحة للمستخدمين" else "مغلقة ومخفية", color = if (section.isOpen) Color(0xFF176B45) else Muted, fontSize = 12.sp)
+                    }
+                    Switch(checked = section.isOpen, onCheckedChange = { next ->
+                        scope.launch {
+                            try {
+                                backend.setManagedSectionOpen(session, section.id, next)
+                                sections = backend.loadManagedSections(session)
+                                error = null
+                            } catch (e: Exception) { error = e.message ?: "تعذر تغيير حالة الشعبة." }
+                        }
+                    })
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun OwnerAccountManagementScreen(
