@@ -83,6 +83,29 @@ class SupabaseBackend(
         )
     }
 
+    /** Create a login account through the server-side owner-only Edge Function. No service-role key is shipped in Android. */
+    suspend fun createManagedAccount(
+        session: Session,
+        fullName: String,
+        email: String,
+        password: String,
+        role: String,
+        className: String
+    ) = withContext(Dispatchers.IO) {
+        require(role in setOf(
+            "student", "class_monitor", "parliament_member", "teacher", "class_supervisor",
+            "assistant_principal", "principal", "educational_counselor", "ministry_education_member"
+        )) { "نوع الحساب غير مسموح." }
+        val payload = JSONObject()
+            .put("full_name", fullName.trim())
+            .put("email", email.trim())
+            .put("password", password)
+            .put("role", role)
+            .put("class_name", className.trim().uppercase())
+        requestRaw("/functions/v1/owner-create-account", "POST", payload, session)
+        Unit
+    }
+
     /** Visible to the owner through profiles RLS; other roles cannot enumerate the school. */
     suspend fun loadManagedProfiles(session: Session): List<ManagedProfile> = withContext(Dispatchers.IO) {
         val query = "select=id,email,full_name,role,class_name&order=full_name.asc&limit=500"
