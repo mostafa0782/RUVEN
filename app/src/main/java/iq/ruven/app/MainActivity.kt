@@ -180,9 +180,13 @@ private fun RuvenApp() {
 
 private fun schoolRoleFromDatabase(value: String): SchoolRole = when (value.lowercase()) {
     "class_monitor" -> SchoolRole.CLASS_MONITOR
+    "parliament_member" -> SchoolRole.PARLIAMENT_MEMBER
     "teacher" -> SchoolRole.TEACHER
+    "class_supervisor" -> SchoolRole.CLASS_SUPERVISOR
     "assistant_principal" -> SchoolRole.ASSISTANT_PRINCIPAL
     "principal" -> SchoolRole.PRINCIPAL
+    "educational_counselor" -> SchoolRole.EDUCATIONAL_COUNSELOR
+    "ministry_education_member" -> SchoolRole.MINISTRY_EDUCATION_MEMBER
     "owner" -> SchoolRole.OWNER
     else -> SchoolRole.STUDENT
 }
@@ -269,9 +273,13 @@ private fun RuvenAuthenticatedApp(
 private fun roleLabel(role: SchoolRole): String = when (role) {
     SchoolRole.STUDENT -> "طالب"
     SchoolRole.CLASS_MONITOR -> "مراقب الشعبة"
-    SchoolRole.TEACHER -> "مدرّس"
+    SchoolRole.PARLIAMENT_MEMBER -> "عضو برلمان الطلبة"
+    SchoolRole.TEACHER -> "أستاذ"
+    SchoolRole.CLASS_SUPERVISOR -> "أستاذ مشرف شعبة"
     SchoolRole.ASSISTANT_PRINCIPAL -> "معاون المدير"
     SchoolRole.PRINCIPAL -> "المدير"
+    SchoolRole.EDUCATIONAL_COUNSELOR -> "مرشد تربوي"
+    SchoolRole.MINISTRY_EDUCATION_MEMBER -> "عضو تربوي من وزارة التربية"
     SchoolRole.OWNER -> "المالك"
 }
 
