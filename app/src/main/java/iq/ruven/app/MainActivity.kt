@@ -19,6 +19,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -31,6 +32,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Announcement
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Home
@@ -353,7 +358,7 @@ private fun RuvenAuthenticatedApp(
                 AnimatedContent(targetState = tab, transitionSpec = { fadeIn() togetherWith fadeOut() },
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
                     when (current) {
-                        0 -> HomeScreen(role, homework.size, preparations.size, schedules.size, remoteItems, feedError)
+                        0 -> HomeScreen(role, homework.size, preparations.size, schedules.size, remoteItems, feedError) { tab = it }
                         1 -> ScheduleScreen(role, schedules, scheduleFiles)
                         2 -> HomeworkScreen(role, homework, reports)
                         3 -> PreparationsScreen(role, preparations)
@@ -657,41 +662,173 @@ private fun OwnerAccountManagementScreen(
 @Composable
 private fun HomeScreen(
     role: SchoolRole, homeworkCount: Int, prepCount: Int, scheduleCount: Int,
-    remoteItems: List<SupabaseBackend.SchoolItem>, feedError: String?
+    remoteItems: List<SupabaseBackend.SchoolItem>, feedError: String?,
+    onNavigate: (Int) -> Unit
 ) {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
+    var search by remember { mutableStateOf("") }
+    var showAllStats by remember { mutableStateOf(false) }
+    val filteredItems = remember(remoteItems, search) {
+        remoteItems.filter { item ->
+            search.isBlank() || item.title.contains(search, ignoreCase = true) ||
+                item.body.contains(search, ignoreCase = true) ||
+                (item.subjectName?.contains(search, ignoreCase = true) == true)
+        }
+    }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text("هلا بيك", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    Text("كل تفاصيل يومك الدراسي بمكان واحد.", color = Muted, fontSize = 13.sp)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("هلا بيك 👋", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("خلّ يومك الدراسي أوضح وأسهل.", color = Muted, fontSize = 13.sp)
+                    Spacer(Modifier.height(3.dp))
+                    Surface(color = Color(0xFFE5F1FF), shape = RoundedCornerShape(50)) {
+                        Row(
+                            Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(Modifier.size(7.dp).clip(RoundedCornerShape(50)).background(Color(0xFF20A879)))
+                            Text(roleLabel(role), color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
-                Box(Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Blue, Cyan))),
-                    contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.School, contentDescription = "RUVEN", tint = Color.White, modifier = Modifier.size(29.dp))
+                Box(
+                    Modifier.size(62.dp).clip(RoundedCornerShape(22.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFF173D85), Blue, Cyan))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Rounded.School, contentDescription = "RUVEN", tint = Color.White, modifier = Modifier.size(32.dp))
                 }
             }
         }
         item {
-            Card(shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), modifier = Modifier.fillMaxWidth()) {
-                Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF163C80), Blue, Cyan))).padding(22.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text("مساحتك الدراسية", color = Color.White.copy(alpha = .82f), fontSize = 13.sp)
-                        Text("دراستك،\nبترتيب أذكى.", color = Color.White, fontSize = 27.sp, lineHeight = 35.sp, fontWeight = FontWeight.Bold)
-                        Text("الجدول والواجبات والتحاضير والإعلانات.", color = Color.White, fontSize = 13.sp)
+            Card(
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    Modifier.fillMaxWidth()
+                        .background(Brush.linearGradient(listOf(Color(0xFF112B54), Color(0xFF245DC4), Color(0xFF25A8C7))))
+                        .padding(21.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Surface(color = Color.White.copy(alpha = .16f), shape = RoundedCornerShape(50)) {
+                                Text("RUVEN • مدرستك بذكاء", color = Color.White, fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
+                            }
+                            Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = Color(0xFFFFE8A3), modifier = Modifier.size(25.dp))
+                        }
+                        Text("كل شي يخص دراستك،\nبمكان واحد.", color = Color.White, fontSize = 27.sp,
+                            lineHeight = 35.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("تابع الواجبات، افتح الجدول، وابقَ على اطلاع بآخر إعلانات المدرسة.", color = Color.White.copy(alpha = .88f),
+                            fontSize = 13.sp, lineHeight = 21.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Button(
+                                onClick = { onNavigate(2) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF173D85)),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("شوف واجباتك", fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = { onNavigate(1) },
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .65f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Icon(Icons.Rounded.CalendarMonth, contentDescription = null, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("الجدول")
+                            }
+                        }
                     }
                 }
             }
         }
         item {
-            SectionHeading("محتوى المدرسة من الخادم", "المنشورات المنشورة في قاعدة بيانات RUVEN")
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionHeading("اختصارات سريعة", "اختَر شنو تحتاج هسه")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickActionCard("الجدول", "حصصك ومواعيدك", Icons.Rounded.CalendarMonth, Color(0xFFE7F0FF), Blue, Modifier.weight(1f)) { onNavigate(1) }
+                    QuickActionCard("الواجبات", "لا يفوتك شي", Icons.AutoMirrored.Rounded.MenuBook, Color(0xFFFFF0DD), Color(0xFFB66A12), Modifier.weight(1f)) { onNavigate(2) }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickActionCard("التحاضير", "محتوى الدروس", Icons.Rounded.Description, Color(0xFFE5F8F1), Color(0xFF168A70), Modifier.weight(1f)) { onNavigate(3) }
+                    QuickActionCard("الإعلانات", "آخر المستجدات", Icons.AutoMirrored.Rounded.Announcement, Color(0xFFF0E9FF), Color(0xFF7651C9), Modifier.weight(1f)) { onNavigate(4) }
+                }
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("ملخصك الدراسي", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text("عدادات العناصر المحفوظة محلياً", color = Muted, fontSize = 11.sp)
+                    }
+                    TextButton(onClick = { showAllStats = !showAllStats }) {
+                        Text(if (showAllStats) "عرض أقل" else "تفاصيل", fontSize = 12.sp)
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
+                    SummaryCard("الجدول", scheduleCount.toString(), "جداول", Icons.Rounded.CalendarMonth, Modifier.weight(1f))
+                    SummaryCard("الواجبات", homeworkCount.toString(), "واجبات", Icons.AutoMirrored.Rounded.MenuBook, Modifier.weight(1f))
+                    SummaryCard("التحاضير", prepCount.toString(), "تحاضير", Icons.Rounded.Description, Modifier.weight(1f))
+                }
+                androidx.compose.animation.AnimatedVisibility(visible = showAllStats) {
+                    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("تفاصيل المساحة", color = Ink, fontWeight = FontWeight.Bold)
+                            Text("منشورات الخادم: ${remoteItems.size}", color = Muted, fontSize = 12.sp)
+                            Text("الواجبات المحلية: $homeworkCount", color = Muted, fontSize = 12.sp)
+                            Text("التحاضير المحلية: $prepCount", color = Muted, fontSize = 12.sp)
+                            Text("الجداول المحلية: $scheduleCount", color = Muted, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionHeading("آخر منشورات المدرسة", "واجبات وتحاضير وإعلانات منشورة من الخادم")
+                OutlinedTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    placeholder = { Text("ابحث باسم الواجب أو المادة…") },
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
+                    trailingIcon = {
+                        if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
+                            Icon(Icons.Rounded.Close, contentDescription = "مسح البحث")
+                        }
+                    }
+                )
+            }
         }
         if (feedError != null) {
             item { EmptyCard("تعذر تحميل المحتوى", feedError) }
-        } else if (remoteItems.isEmpty()) {
-            item { EmptyCard("ماكو منشورات منشورة بعد", "تسجيل الدخول نجح، لكن لا توجد عناصر منشورة مرئية لهذا الحساب.") }
+        } else if (filteredItems.isEmpty()) {
+            item {
+                EmptyCard(
+                    if (search.isNotBlank()) "ما لقينا نتيجة" else "ماكو منشورات بعد",
+                    if (search.isNotBlank()) "جرّب كلمة ثانية أو امسح البحث." else "من تنشر المدرسة واجباً أو إعلاناً، راح يظهر هنا."
+                )
+            }
         } else {
-            itemsIndexed(remoteItems) { index, item ->
+            itemsIndexed(filteredItems) { index, item ->
                 ContentCard(
                     title = item.title + (item.subjectName?.let { " • $it" } ?: ""),
                     subtitle = item.itemType + (item.body.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""),
@@ -704,35 +841,57 @@ private fun HomeScreen(
                 )
             }
         }
-        item { SectionHeading("ملخص المساحة", "أعداد المعاينة المحلية فقط") }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                SummaryCard("الجدول", scheduleCount.toString(), "عناصر محلية", Icons.Rounded.CalendarMonth, Modifier.weight(1f))
-                SummaryCard("الواجبات", homeworkCount.toString(), "واجبات محلية", Icons.AutoMirrored.Rounded.MenuBook, Modifier.weight(1f))
-                SummaryCard("التحاضير", prepCount.toString(), "تحاضير محلية", Icons.Rounded.Description, Modifier.weight(1f))
-            }
-        }
         item {
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("دورك الحالي", color = Muted, fontSize = 12.sp)
-                    Text(roleLabel(role), color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                    Text(when (role) {
-                        SchoolRole.STUDENT -> "عرض الجدول والواجبات والتحاضير المنشورة لشعبتك."
-                        SchoolRole.CLASS_MONITOR -> "متابعة شؤون الشعبة وإرسال البلاغات للإدارة."
-                        SchoolRole.PARLIAMENT_MEMBER -> "تمثيل الطلبة ورفع المقترحات والبلاغات؛ لا تمنح العضوية صلاحيات إدارية."
-                        SchoolRole.TEACHER -> "نشر واجبات وتحاضير المواد المسندة إليك فقط."
-                        SchoolRole.CLASS_SUPERVISOR -> "متابعة الشعبة المكلّف بها بعد تحديد نطاق صلاحياتها."
-                        SchoolRole.ASSISTANT_PRINCIPAL -> "إدارة المحتوى المدرسي وفق الصلاحيات المعتمدة."
-                        SchoolRole.PRINCIPAL -> "الإشراف الإداري على شؤون المدرسة."
-                        SchoolRole.EDUCATIONAL_COUNSELOR -> "متابعة الشؤون التربوية ضمن صلاحيات تحمي خصوصية الطلبة."
-                        SchoolRole.MINISTRY_EDUCATION_MEMBER -> "دور رقابي تربوي مستقل؛ لا تُمنح صلاحيات الإدارة تلقائياً."
-                        SchoolRole.OWNER -> "إدارة النظام والحسابات والإعدادات بصلاحيات المالك."
-                    }, color = Muted, fontSize = 13.sp, lineHeight = 20.sp)
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp).background(Color(0xFFE7F0FF)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Person, contentDescription = null, tint = Blue)
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("مساحتك وصلاحياتك", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(roleLabel(role), color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(when (role) {
+                            SchoolRole.STUDENT -> "تقدر تتابع الجدول والواجبات المنشورة لشعبتك."
+                            SchoolRole.CLASS_MONITOR -> "تابع شؤون الشعبة وبلّغ الإدارة عند الحاجة."
+                            SchoolRole.PARLIAMENT_MEMBER -> "مثّل الطلبة وارفع المقترحات ضمن صلاحياتك."
+                            SchoolRole.TEACHER -> "تابع التحاضير والواجبات ضمن موادك المسندة."
+                            SchoolRole.CLASS_SUPERVISOR -> "تابع الشعبة المكلّف بها."
+                            SchoolRole.ASSISTANT_PRINCIPAL -> "تابع المحتوى المدرسي حسب الصلاحيات."
+                            SchoolRole.PRINCIPAL -> "إشراف إداري على شؤون المدرسة."
+                            SchoolRole.EDUCATIONAL_COUNSELOR -> "متابعة الشؤون التربوية مع مراعاة الخصوصية."
+                            SchoolRole.MINISTRY_EDUCATION_MEMBER -> "دور رقابي تربوي ضمن الصلاحيات المعتمدة."
+                            SchoolRole.OWNER -> "إدارة النظام والحسابات والإعدادات."
+                        }, color = Muted, fontSize = 12.sp, lineHeight = 19.sp)
+                    }
                 }
             }
         }
-        item { Text("نسخة تأسيسية • ماكو اتصال بخادم المدرسة بعد", color = Muted, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
+        item {
+            Text("RUVEN • نسخة قيد التطوير", color = Muted, fontSize = 10.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp))
+        }
+    }
+}
+
+@Composable
+private fun QuickActionCard(
+    title: String, subtitle: String, icon: ImageVector, tint: Color, iconTint: Color,
+    modifier: Modifier = Modifier, onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 112.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(13.dp)).background(tint), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+            }
+            Text(title, color = Ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(subtitle, color = Muted, fontSize = 10.sp, maxLines = 1)
+        }
     }
 }
 
