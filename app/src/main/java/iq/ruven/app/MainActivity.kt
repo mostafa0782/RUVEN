@@ -844,7 +844,7 @@ private fun HomeScreen(
         item {
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp).background(Color(0xFFE7F0FF)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFE7F0FF)), contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.Person, contentDescription = null, tint = Blue)
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
