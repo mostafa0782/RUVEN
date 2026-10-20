@@ -49,17 +49,34 @@ jobs:
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
+      - name: Verify release signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || (echo "Missing GitHub secret ANDROID_KEYSTORE_BASE64" && exit 1)
+          test -n "$KEYSTORE_PASSWORD" || (echo "Missing GitHub secret ANDROID_KEYSTORE_PASSWORD" && exit 1)
+          test -n "$KEY_ALIAS" || (echo "Missing GitHub secret ANDROID_KEY_ALIAS" && exit 1)
+          test -n "$KEY_PASSWORD" || (echo "Missing GitHub secret ANDROID_KEY_PASSWORD" && exit 1)
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/ruven-release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/ruven-release.jks" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+
       - name: Run unit tests
         run: gradle :app:testDebugUnitTest -PVERSION_CODE=${{ steps.version.outputs.version_code }} -PVERSION_NAME=${{ steps.version.outputs.version_name }}
 
-      - name: Build update APK
-        run: gradle :app:assembleDebug -PVERSION_CODE=${{ steps.version.outputs.version_code }} -PVERSION_NAME=${{ steps.version.outputs.version_name }}
+      - name: Build signed update APK
+        run: gradle :app:assembleRelease -PVERSION_CODE=${{ steps.version.outputs.version_code }} -PVERSION_NAME=${{ steps.version.outputs.version_name }}
 
       - name: Publish GitHub Release with APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk RUVEN.apk
+          cp app/build/outputs/apk/release/app-release.apk RUVEN.apk
           gh release create "${GITHUB_REF_NAME}" RUVEN.apk \
             --title "RUVEN ${{ steps.version.outputs.version_name }}" \
             --generate-notes
