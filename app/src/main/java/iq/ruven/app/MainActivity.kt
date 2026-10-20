@@ -1,5 +1,7 @@
 package iq.ruven.app
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -32,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,12 +43,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import iq.ruven.app.data.model.SchoolPermissions
 import iq.ruven.app.data.model.SchoolRole
+import org.json.JSONArray
 
 private val Ink = Color(0xFF10253F)
 private val Blue = Color(0xFF2867D8)
 private val Cyan = Color(0xFF56C7E8)
 private val Canvas = Color(0xFFF4F7FC)
 private val Muted = Color(0xFF718096)
+
+private fun readLocalItems(prefs: SharedPreferences, key: String): List<String> = runCatching {
+    val array = JSONArray(prefs.getString(key, "[]") ?: "[]")
+    (0 until array.length()).mapNotNull { index ->
+        array.optString(index).takeIf { it.isNotBlank() && it != "null" }
+    }
+}.getOrDefault(emptyList())
+
+private fun writeLocalItems(prefs: SharedPreferences, key: String, values: List<String>) {
+    val array = JSONArray()
+    values.forEach(array::put)
+    prefs.edit().putString(key, array.toString()).apply()
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,10 +89,16 @@ private fun RuvenApp() {
     var tab by remember { mutableIntStateOf(0) }
     var role by remember { mutableStateOf(SchoolRole.STUDENT) }
     var roleMenu by remember { mutableStateOf(false) }
-    val homework = remember { mutableStateListOf<String>() }
-    val preparations = remember { mutableStateListOf<String>() }
-    val schedules = remember { mutableStateListOf<String>() }
-    val reports = remember { mutableStateListOf<String>() }
+    val context = LocalContext.current
+    val prefs = remember(context) { context.getSharedPreferences("ruven_local_data", Context.MODE_PRIVATE) }
+    val homework = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "homework")) } }
+    val preparations = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "preparations")) } }
+    val schedules = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "schedules")) } }
+    val reports = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "reports")) } }
+    LaunchedEffect(homework.toList()) { writeLocalItems(prefs, "homework", homework.toList()) }
+    LaunchedEffect(preparations.toList()) { writeLocalItems(prefs, "preparations", preparations.toList()) }
+    LaunchedEffect(schedules.toList()) { writeLocalItems(prefs, "schedules", schedules.toList()) }
+    LaunchedEffect(reports.toList()) { writeLocalItems(prefs, "reports", reports.toList()) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(containerColor = Canvas, bottomBar = {
             NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
@@ -230,7 +253,7 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>) {
                 }
             }
         }
-        item { SectionHeading("الجداول المضافة", "تظهر خلال جلسة المعاينة") }
+        item { SectionHeading("الجداول المضافة", "محفوظة على هذا الجهاز") }
         if (schedules.isEmpty()) item { EmptyCard("ماكو جدول مضاف", "أضف جدولاً تجريبياً حتى يظهر هنا.") }
         else itemsIndexed(schedules) { i, entry -> ContentCard(entry, "جدول محلي " + (i + 1), Icons.Rounded.CalendarMonth) }
     }
@@ -241,6 +264,8 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
     var subject by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
+    var editingIndex by remember { mutableIntStateOf(-1) }
+    var editingText by remember { mutableStateOf("") }
     val canCreate = SchoolPermissions.canCreateHomework(role, assignedSubject = role == SchoolRole.TEACHER && subject.isNotBlank())
     val canSeeHomeworkForm = role != SchoolRole.STUDENT
     val canModerate = SchoolPermissions.canEditOrDeleteHomework(role)
@@ -261,31 +286,43 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
                     }, enabled = canCreate && subject.isNotBlank() && title.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("نشر في المعاينة") }
                 }
             }
-        } else if (canReport) item {
+        } else item { EmptyCard("عرض الواجبات", "المدرس ينشر لمادته، والإدارة تدير المحتوى حسب الصلاحيات.") }
+        if (canReport) item {
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("متابعة الواجبات", color = Ink, fontWeight = FontWeight.Bold)
-                    Text("مراقب الشعبة يبلغ المدير إذا احتاج واجب إلى تعديل أو حذف، ولا يحذفه بنفسه.", color = Muted, fontSize = 12.sp)
+                    Text("مراقب الشعبة يرسل بلاغاً للمدير إذا احتاج واجب إلى تعديل أو حذف، ولا يحذفه بنفسه.", color = Muted, fontSize = 12.sp)
                     Button(onClick = { reports.add("بلاغ من مراقب الشعبة: مراجعة الواجبات المنشورة") }, modifier = Modifier.fillMaxWidth()) { Text("إرسال بلاغ للمدير") }
                 }
             }
-        } else item { EmptyCard("عرض الواجبات", "المدرس ينشر لمادته، والإدارة تدير المحتوى حسب الصلاحيات.") }
-        item { SectionHeading("قائمة الواجبات", "المحتوى المحلي في هذه المعاينة") }
+        }
+        item { SectionHeading("قائمة الواجبات", "المحتوى المحلي المحفوظ على هذا الجهاز") }
         if (homework.isEmpty()) item { EmptyCard("ماكو واجبات مضافة", "الواجبات تظهر هنا بعد إضافة بيانات تجريبية أو ربط الخادم.") }
         else itemsIndexed(homework) { i, entry ->
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(entry, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     Text("واجب تجريبي " + (i + 1), color = Muted, fontSize = 11.sp)
-                    if (canModerate) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { reports.add("طلب تعديل: " + entry) }) { Text("طلب تعديل") }
-                        TextButton(onClick = { homework.removeAt(i) }) { Text("حذف محلي") }
+                    if (canModerate) {
+                        if (editingIndex == i) {
+                            OutlinedTextField(editingText, { editingText = it }, label = { Text("تعديل الواجب") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(onClick = { editingIndex = -1; editingText = "" }) { Text("إلغاء") }
+                                TextButton(onClick = {
+                                    if (editingText.isNotBlank()) homework[i] = editingText.trim()
+                                    editingIndex = -1; editingText = ""
+                                }) { Text("حفظ التعديل") }
+                            }
+                        } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            TextButton(onClick = { editingIndex = i; editingText = entry }) { Text("تعديل") }
+                            TextButton(onClick = { homework.removeAt(i); if (editingIndex == i) editingIndex = -1 }) { Text("حذف") }
+                        }
                     } else if (canReport) TextButton(onClick = { reports.add("بلاغ من مراقب الشعبة عن: " + entry) }) { Text("إبلاغ المدير") }
                 }
             }
         }
         if (reports.isNotEmpty()) {
-            item { SectionHeading("البلاغات الإدارية", "محفوظة محلياً") }
+            item { SectionHeading("البلاغات الإدارية", "محفوظة على هذا الجهاز") }
             itemsIndexed(reports) { i, report -> ContentCard(report, "بلاغ " + (i + 1), Icons.Rounded.Description) }
         }
         item { Text("الأدوار هنا للمعاينة فقط؛ التطبيق لا يملك تسجيل دخول أو خادماً بعد.", color = Muted, fontSize = 11.sp) }
@@ -327,7 +364,7 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
                 }
             }
         }
-        item { SectionHeading("دفتر التحاضير", "التحاضير المضافة في هذه الجلسة") }
+        item { SectionHeading("دفتر التحاضير", "التحاضير المحفوظة على هذا الجهاز") }
         if (preparations.isEmpty()) item { EmptyCard("دفتر التحاضير فارغ", "تظهر هنا التحاضير التي أُضيفت في المعاينة.") }
         else itemsIndexed(preparations) { i, entry -> ContentCard(entry, "تحضير " + (i + 1), Icons.Rounded.Description) }
     }
