@@ -59,6 +59,10 @@ object RuvenNotifications {
             return 0
         }
 
+        // Keep unseen IDs pending if Android notifications are disabled, so enabling
+        // permission later does not silently discard announcements received in the meantime.
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return 0
+
         val fresh = items.filter { it.id !in previouslySeen }
         fresh.asReversed().forEachIndexed { index, item ->
             post(context, item, index)
