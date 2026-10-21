@@ -5,8 +5,8 @@
 - After sign-in, it loads the caller's own row from `public.profiles`.
 - The home screen fetches published school items from `public.school_items`; RLS remains the authority for which rows are visible.
 - A missing profile blocks entry. This is intentional: the app must not let a user choose their own role or class.
-- Session tokens are currently kept in memory only, so closing/restarting the app requires signing in again. Secure encrypted session persistence is a follow-up task.
-- The compose forms in other tabs are still local preview data and are not yet writing to Supabase. Do not use this build as the school's production app.
+- The app stores the rotating refresh token in app-private SharedPreferences and refreshes the session on startup. This token is not encrypted by the app yet; encrypted token storage should be completed before a production rollout.
+- Published school items are loaded from Supabase. Several compose forms and tabs still use local preview data and are not yet writing to Supabase. Do not use this build as the school's production app.
 
 ## Provision the first trusted school administrator
 Do this only with the school's authorization.
