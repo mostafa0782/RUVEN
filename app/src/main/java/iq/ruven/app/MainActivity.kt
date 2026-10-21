@@ -205,7 +205,7 @@ private fun RuvenSplashGate(content: @Composable () -> Unit) {
                                     tint = Color(0xFFFFE7A3),
                                     modifier = Modifier.size(43.dp)
                                 )
-                                Text("١٤٤٥  •  ٢٠٢٣", color = Color(0xFFFFE7A3), fontSize = 7.sp)
+                                Text(translated("١٤٤٥  •  ٢٠٢٣"), color = Color(0xFFFFE7A3), fontSize = 7.sp)
                             }
                         }
                     }
@@ -242,8 +242,8 @@ private fun RuvenSplashGate(content: @Composable () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(9.dp)
                     ) {
-                        Text("Developed by", color = Color(0xFFB8B8B8), fontSize = 11.sp)
-                        Text("MOSTAFA PY", color = Color(0xFFF4E7CD), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(translated("Developed by"), color = Color(0xFFB8B8B8), fontSize = 11.sp)
+                        Text(translated("MOSTAFA PY"), color = Color(0xFFF4E7CD), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
                             Box(
                                 Modifier.size(width = 16.dp, height = 12.dp)
@@ -288,6 +288,268 @@ private enum class RuvenTab(val title: String, val englishTitle: String) {
 }
 
 @Composable
+private val ruvenEnglishLabels = mapOf(
+    "الله أكبر" to "God is greatest",
+    "الرئيسية" to "Home",
+    "الجدول" to "Timetable",
+    "الواجبات" to "Homework",
+    "التحاضير" to "Preparations",
+    "الإعلانات" to "Announcements",
+    "العمليات المدرسية" to "School workflows",
+    "الحسابات" to "Accounts",
+    "الشعب" to "Sections",
+    "الإشعارات" to "Notifications",
+    "الإعدادات" to "Settings",
+    "تعذر تحميل محتوى المدرسة." to "Could not load school content.",
+    "جارٍ استعادة جلسة الدخول…" to "Restoring sign-in session…",
+    "جارٍ فحص الإصدارات الرسمية…" to "Checking official releases…",
+    "افتح التحديث من التطبيق مباشرة." to "Open the update directly from the app.",
+    "تم تنزيل التحديث. أكمل التثبيت من نافذة أندرويد." to "Update downloaded. Finish installation in Android.",
+    "تعذر فحص التحديثات." to "Could not check for updates.",
+    "تعذر تحديث محتوى المدرسة." to "Could not refresh school content.",
+    "تحديث RUVEN" to "Update RUVEN",
+    "حسناً" to "OK",
+    "خلفية RUVEN" to "RUVEN wallpaper",
+    "منظومتك المدرسية" to "Your school system",
+    "تحديث المحتوى والإشعارات" to "Refresh content and notifications",
+    "جارٍ الفحص…" to "Checking…",
+    "تحقق من التحديثات" to "Check for updates",
+    "خروج" to "Sign out",
+    "الجدول الدراسي" to "Timetable",
+    "الجداول المنشورة من إدارة المدرسة." to "Timetables published by school administration.",
+    "الواجبات المنشورة حسب المادة والشعبة." to "Homework published by subject and class.",
+    "تحاضير الدروس المنشورة من المدرسين والإدارة." to "Lesson preparations published by teachers and administration.",
+    "الإعلانات المدرسية" to "School announcements",
+    "الإعلانات المنشورة من إدارة المدرسة." to "Announcements published by school administration.",
+    "تعذر تحميل الإشعارات." to "Could not load notifications.",
+    "إشعارات فعلية من قاعدة البيانات: قرارات الإدارة وحالة الإجازات." to "Database notifications: school decisions and leave status.",
+    "تحديث" to "Refresh",
+    "ما عندك إشعارات حاليًا." to "You have no notifications right now.",
+    "جديد" to "New",
+    "تعذر تحديث الإشعار." to "Could not update notification.",
+    "تحديد كمقروء" to "Mark as read",
+    "الإجازات" to "Leave requests",
+    "الدليل" to "Directory",
+    "المالك" to "Owner",
+    "الإدارة المدرسية" to "School administration",
+    "القرارات" to "Decisions",
+    "التقرير اليومي" to "Daily report",
+    "الأختام" to "Seals",
+    "تعذر تحميل بيانات العمليات المدرسية." to "Could not load school workflow data.",
+    "تعذر تنفيذ العملية." to "Could not complete the action.",
+    "الدليل، القرارات المختومة، طلبات الإجازة، والتقرير اليومي المتصل بالخادم." to "Directory, sealed decisions, leave requests, and server-backed daily reports.",
+    "قائمة الأسماء متاحة للمراقبين والإدارة. الطلاب يقدمون الإجازات ويتابعون التقارير من الأقسام الأخرى." to "The directory is available to monitors and administrators. Students can submit leave requests and view reports in other sections.",
+    "عرض المدرسين والهيئة التربوية فقط" to "Show teachers and educational staff only",
+    "قرار" to "Decision",
+    "إدارة الأختام متاحة للمالك وأعضاء الإدارة المخوّلين فقط." to "Seal management is limited to the owner and authorized administrators.",
+    "اسم الختم" to "Seal name",
+    "صفة صاحب الختم" to "Seal holder title",
+    "إنشاء قرار إداري" to "Create an administrative decision",
+    "الطالب المستهدف" to "Target student",
+    "بدون شعبة" to "No section",
+    "نوع القرار" to "Decision type",
+    "نقل" to "Transfer",
+    "حذف" to "Remove",
+    "قبول" to "Accept",
+    "آخر" to "Other",
+    "الشعبة الحالية" to "Current section",
+    "الشعبة الجديدة (إن وجدت)" to "New section (if any)",
+    "السبب والتعليمات" to "Reason and instructions",
+    "ختم القرار" to "Decision seal",
+    "لا يوجد ختم باسم حسابك. أنشئ ختمًا من تبويب الأختام أولًا." to "No seal is assigned to your account. Create a seal in the Seals tab first.",
+    "تعيين مراقب للتنفيذ" to "Assign a monitor to execute",
+    "ماكو قرارات ظاهرة لهذا الحساب." to "No decisions are available for this account.",
+    "ملاحظة التنفيذ (اختيارية)" to "Execution note (optional)",
+    "تم تأكيد استلام القرار." to "Decision receipt acknowledged.",
+    "استلام" to "Acknowledge",
+    "تم التنفيذ" to "Completed",
+    "تم تسجيل تنفيذ القرار." to "Decision execution recorded.",
+    "طلب إجازة" to "Leave request",
+    "سبب الإجازة" to "Leave reason",
+    "طلبات بانتظار قرار الإدارة" to "Requests awaiting an administrative decision",
+    "ماكو طلبات إجازة ظاهرة حاليًا." to "No leave requests are currently available.",
+    "أنشئ ختمًا باسم حسابك أولًا حتى توافق على الطلب." to "Create a seal for your account before approving a request.",
+    "تمت الموافقة على الإجازة وأُرسل إشعار للطالب." to "Leave approved and the student was notified.",
+    "موافقة" to "Approve",
+    "تم رفض الإجازة وإشعار الطالب." to "Leave rejected and the student was notified.",
+    "رفض" to "Reject",
+    "تم تسجيل الحضور." to "Attendance recorded.",
+    "حاضر" to "Present",
+    "تم تسجيل الغياب." to "Absence recorded.",
+    "غائب" to "Absent",
+    "أهم أحداث اليوم" to "Key events today",
+    "وعود الإدارة أو الأمور المقررة" to "Administrative commitments or planned items",
+    "أمور لم تُنفّذ بعد" to "Items not yet completed",
+    "ماكو تقارير يومية منشورة حاليًا." to "No daily reports have been published.",
+    "أحداث اليوم" to "Today's events",
+    "وعود الإدارة" to "Administrative commitments",
+    "لم يُنفّذ بعد" to "Not yet completed",
+    "تحديث بيانات الخادم" to "Refresh server data",
+    "آخر تحديثات المدرسة المنشورة. اسحب التحديث من الخادم بزر التحديث." to "Latest published school updates. Refresh from the server using the update button.",
+    "تحديث الإشعارات" to "Refresh notifications",
+    "ماكو إشعارات منشورة حاليًا" to "No notifications have been published.",
+    "تظهر هنا تحديثات المدرسة المتاحة لحسابك." to "School updates available to your account appear here.",
+    "كحلي زجاجي" to "Glass navy",
+    "ليل داكن" to "Midnight",
+    "فاتح" to "Light",
+    "نعناعي" to "Mint",
+    "خصص تجربة RUVEN على هذا الجهاز." to "Customize your RUVEN experience on this device.",
+    "اللغة / Language" to "Language",
+    "العربية" to "Arabic",
+    "Mixed • عناوين إنجليزية وشرح عربي" to "Mixed • English headings and Arabic details",
+    "المظهر" to "Appearance",
+    "داكن" to "Dark",
+    "زجاجي" to "Glass",
+    "الخلفية" to "Background",
+    "حفظ الإعدادات" to "Save settings",
+    "انحفظت تفضيلاتك على هذا الجهاز." to "Preferences saved on this device.",
+    "طالب" to "Student",
+    "مراقب الشعبة" to "Class monitor",
+    "عضو برلمان الطلبة" to "Student parliament member",
+    "أستاذ" to "Teacher",
+    "أستاذ مشرف شعبة" to "Class supervisor",
+    "معاون المدير" to "Assistant principal",
+    "المدير" to "Principal",
+    "مرشد تربوي" to "Educational counselor",
+    "عضو تربوي من وزارة التربية" to "Ministry of Education member",
+    "مراقب شعبة" to "Class monitor",
+    "معاون" to "Assistant principal",
+    "مدير" to "Principal",
+    "الثالث متوسط" to "Third intermediate",
+    "تعذر تحميل الشعب." to "Could not load sections.",
+    "إدارة الشعب" to "Section management",
+    "إدارة مرئية للشعب المفتوحة والمغلقة، مع منع إنشاء الشعب غير المطلوبة." to "Manage open and closed sections; avoid creating unneeded sections.",
+    "إجمالي الشعب" to "Total sections",
+    "مفتوحة" to "Open",
+    "مغلقة" to "Closed",
+    "إضافة شعبة" to "Add section",
+    "أدخل الصف ورمز الشعبة المطلوبة" to "Enter the grade and section code",
+    "افتح النموذج عند الحاجة فقط" to "Open the form only when needed",
+    "إغلاق ▲" to "Close ▲",
+    "إضافة +" to "Add +",
+    "الصف الدراسي" to "Grade",
+    "فتح الشعبة مباشرة للطلاب والموظفين" to "Make the section visible to students and staff immediately",
+    "تعذر إنشاء الشعبة." to "Could not create the section.",
+    "جارٍ الإنشاء..." to "Creating…",
+    "إنشاء الشعبة" to "Create section",
+    "تعذر تنفيذ العملية" to "Could not complete the action",
+    "بحث بالصف أو رمز الشعبة" to "Search by grade or section",
+    "تحميل..." to "Loading…",
+    "ماكو شعب مسجلة" to "No sections registered",
+    "أنشئ الشعبة المطلوبة فقط؛ الشعب الفارغة لا تنشأ وحدها." to "Create only the sections you need; empty sections are not created automatically.",
+    "ما لقينا شعبة مطابقة" to "No matching section found",
+    "ابحث باسم الصف أو رمز الشعبة A–F." to "Search by grade or section code A–F.",
+    "مفتوحة للمستخدمين" to "Visible to users",
+    "مغلقة ومخفية" to "Closed and hidden",
+    "تعذر تغيير حالة الشعبة." to "Could not change section status.",
+    "تعذر تحميل الحسابات." to "Could not load accounts.",
+    "إدارة الحسابات" to "Account management",
+    "لوحة موحّدة لإدارة المستخدمين والأدوار والشعب." to "Manage users, roles and sections in one place.",
+    "كل الحسابات" to "All accounts",
+    "طلاب" to "Students",
+    "موظفون" to "Staff",
+    "بحث بالاسم أو البريد أو الدور" to "Search by name, email or role",
+    "إنشاء حساب جديد" to "Create account",
+    "أدخل بيانات الحساب الجديد" to "Enter the new account details",
+    "إنشاء حساب طالب أو موظف بصلاحيات محددة" to "Create a student or staff account with defined permissions",
+    "ينشئ حساب دخول حقيقياً. لا يمكن إنشاء مالك آخر، وكلمة المرور لا تُعرض ضمن قائمة الحسابات." to "Creates a real sign-in account. A second owner cannot be created, and passwords are never shown in account lists.",
+    "اسم الطالب أو الموظف" to "Student or staff name",
+    "البريد الإلكتروني" to "Email address",
+    "كلمة مرور مؤقتة (8 أحرف على الأقل)" to "Temporary password (at least 8 characters)",
+    "الشعبة (A–F)، إلزامية للطالب" to "Section (A–F), required for students",
+    "اكتب A أو B أو C أو D أو E أو F؛ يمكن تركها فارغة للموظفين." to "Enter A, B, C, D, E or F; staff may leave it blank.",
+    "تم إنشاء الحساب. احفظ البريد وكلمة المرور المؤقتة وأرسلها لصاحب الحساب بأمان." to "Account created. Save the email and temporary password and share them securely with the account holder.",
+    "تعذر إنشاء الحساب." to "Could not create account.",
+    "جارٍ إنشاء الحساب..." to "Creating account…",
+    "إنشاء الحساب" to "Create account",
+    "جارٍ التحديث..." to "Refreshing…",
+    "تحديث قائمة الحسابات" to "Refresh account list",
+    "تعذر تحميل الحسابات" to "Could not load accounts",
+    "ماكو حسابات إضافية" to "No additional accounts",
+    "تظهر الحسابات هنا بعد تسجيلها في Supabase Auth." to "Accounts appear here after registration in Supabase Auth.",
+    "ما لقينا حساب مطابق" to "No matching account found",
+    "جرّب الاسم أو البريد أو الدور أو الشعبة." to "Try the name, email, role or section.",
+    "الدور الحالي: " to "Current role: ",
+    "حساب المالك محمي ولا يمكن تغيير دوره من هذه اللوحة." to "The owner account is protected and its role cannot be changed here.",
+    "الدور الجديد: " to "New role: ",
+    "الصف والشعبة (مثال: الثالث متوسط - A)" to "Grade and section (example: Third intermediate - A)",
+    "تم تحديث الحساب بنجاح." to "Account updated successfully.",
+    "تعذر حفظ صلاحيات الحساب." to "Could not save account permissions.",
+    "جارٍ الحفظ..." to "Saving…",
+    "حفظ الدور والشعبة" to "Save role and section",
+    "هلا بيك 👋" to "Welcome 👋",
+    "خلّ يومك الدراسي أوضح وأسهل." to "Make your school day clearer and easier.",
+    "RUVEN • مدرستك بذكاء" to "RUVEN • Your school, smarter",
+    "تابع الواجبات، افتح الجدول، وابقَ على اطلاع بآخر إعلانات المدرسة." to "Track homework, check the timetable, and stay up to date with school announcements.",
+    "شوف واجباتك" to "View homework",
+    "اختصارات سريعة" to "Quick shortcuts",
+    "اختَر شنو تحتاج هسه" to "Choose what you need",
+    "حصصك ومواعيدك" to "Classes and times",
+    "لا يفوتك شي" to "Stay on top of tasks",
+    "محتوى الدروس" to "Lesson content",
+    "آخر المستجدات" to "Latest updates",
+    "ملخصك الدراسي" to "Your study summary",
+    "عدادات العناصر المحفوظة محلياً" to "Locally saved item counts",
+    "عرض أقل" to "Show less",
+    "تفاصيل" to "Details",
+    "جداول" to "timetables",
+    "واجبات" to "tasks",
+    "تحاضير" to "preparations",
+    "تفاصيل المساحة" to "Workspace details",
+    "منشورات الخادم: " to "Server posts: ",
+    "الواجبات المحلية: " to "Local homework: ",
+    "التحاضير المحلية: " to "Local preparations: ",
+    "الجداول المحلية: " to "Local timetables: ",
+    "آخر منشورات المدرسة" to "Latest school posts",
+    "واجبات وتحاضير وإعلانات منشورة من الخادم" to "Homework, preparations and announcements published by the server",
+    "الكل" to "All",
+    "الجداول" to "Timetables",
+    "ابحث باسم الواجب أو المادة…" to "Search homework or subject…",
+    "مسح البحث" to "Clear search",
+    "تعذر تحميل المحتوى" to "Could not load content",
+    "ما لقينا نتيجة" to "No results found",
+    "ماكو منشورات بعد" to "No posts yet",
+    "جرّب كلمة ثانية أو امسح البحث." to "Try another word or clear the search.",
+    "من تنشر المدرسة واجباً أو إعلاناً، راح يظهر هنا." to "School homework and announcements will appear here when published.",
+    "مساحتك وصلاحياتك" to "Your space and permissions",
+    "تقدر تتابع الجدول والواجبات المنشورة لشعبتك." to "You can follow the timetable and homework published for your section.",
+    "تابع شؤون الشعبة وبلّغ الإدارة عند الحاجة." to "Follow section matters and contact administration when needed.",
+    "مثّل الطلبة وارفع المقترحات ضمن صلاحياتك." to "Represent students and submit suggestions within your permissions.",
+    "تابع التحاضير والواجبات ضمن موادك المسندة." to "Follow preparations and homework for your assigned subjects.",
+    "تابع الشعبة المكلّف بها." to "Follow your assigned section.",
+    "تابع المحتوى المدرسي حسب الصلاحيات." to "Follow school content according to your permissions.",
+    "إشراف إداري على شؤون المدرسة." to "Administrative oversight of school matters.",
+    "متابعة الشؤون التربوية مع مراعاة الخصوصية." to "Support educational matters while respecting privacy.",
+    "دور رقابي تربوي ضمن الصلاحيات المعتمدة." to "Educational oversight within approved permissions.",
+    "إدارة النظام والحسابات والإعدادات." to "Manage the system, accounts and settings.",
+    "RUVEN • نسخة قيد التطوير" to "RUVEN • Development build",
+    "تحديث من خادم المدرسة" to "Refresh from school server",
+    "إضافة محتوى رسمي" to "Add official content",
+    "سيُرسل إلى خادم المدرسة، وتطبّق صلاحيات قاعدة البيانات." to "Sent to the school server; database permissions apply.",
+    "إغلاق" to "Close",
+    "إنشاء" to "Create",
+    "المادة" to "Subject",
+    "الشعبة / الصف" to "Section / grade",
+    "العنوان" to "Title",
+    "التفاصيل" to "Details",
+    "إرفاق ملف من الجهاز (اختياري)" to "Attach a file from device (optional)",
+    "نشر على خادم المدرسة" to "Publish to school server",
+    "جارٍ الإرسال…" to "Uploading…",
+    "تم إرسال المحتوى إلى الخادم." to "Content sent to the server.",
+    "تعذر نشر المحتوى. تحقّق من الصلاحيات والاتصال." to "Could not publish content. Check permissions and connection.",
+    "بحث" to "Search",
+    "ابحث بالعنوان أو المادة أو الشعبة" to "Search by title, subject or section",
+    "ماكو محتوى منشور بهذا القسم حالياً." to "No content has been published in this section yet.",
+    "ماكو نتائج مطابقة للبحث." to "No matching search results.",
+    "اسحب تحديث المحتوى من الخادم للتأكد من آخر البيانات." to "Refresh from the server to check for the latest data.",
+    "فتح / تنزيل الملف المرفق" to "Open / download attachment"
+)
+
+@Composable
+private fun translated(ar: String): String = if (LocalEnglish.current) ruvenEnglishLabels[ar] ?: ar else ar
+
+private val LocalEnglish = androidx.compose.runtime.staticCompositionLocalOf { false }
+
 private fun ruvenText(ar: String, en: String, english: Boolean): String = if (english) en else ar
 
 @Composable
@@ -335,7 +597,7 @@ private fun RuvenApp() {
         Box(Modifier.fillMaxSize().background(Canvas), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CircularProgressIndicator()
-                Text("جارٍ استعادة جلسة الدخول…", color = Ink)
+                Text(translated("جارٍ استعادة جلسة الدخول…"), color = Ink)
             }
         }
     } else if (session == null || profile == null) {
@@ -503,14 +765,14 @@ private fun RuvenAuthenticatedApp(
     if (updateMessage != null) {
         AlertDialog(
             onDismissRequest = onDismissUpdateMessage,
-            title = { Text("تحديث RUVEN") },
+            title = { Text(translated("تحديث RUVEN")) },
             text = { Text(updateMessage) },
             confirmButton = {
-                TextButton(onClick = onDismissUpdateMessage) { Text("حسناً") }
+                TextButton(onClick = onDismissUpdateMessage) { Text(translated("حسناً")) }
             }
         )
     }
-    CompositionLocalProvider(LocalLayoutDirection provides (if (isEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl), LocalDensity provides androidx.compose.ui.unit.Density(LocalDensity.current.density, settingsSnapshot.second)) {
+    CompositionLocalProvider(LocalEnglish provides isEnglish, LocalLayoutDirection provides (if (isEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl), LocalDensity provides androidx.compose.ui.unit.Density(LocalDensity.current.density, settingsSnapshot.second)) {
         Box(Modifier.fillMaxSize()) {
             if (wallpaperBitmap != null) {
                 Image(
@@ -561,15 +823,15 @@ private fun RuvenAuthenticatedApp(
                 Row(Modifier.fillMaxWidth().background(appSurface).padding(horizontal = 18.dp, vertical = 9.dp),
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
-                        Text("RUVEN", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                        Text(ruvenText("منظومتك المدرسية", "Your school system", isEnglish), color = Muted, fontSize = 11.sp)
+                        Text(translated("RUVEN"), color = Blue, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+                        Text(ruvenText(translated("منظومتك المدرسية"), "Your school system", isEnglish), color = Muted, fontSize = 11.sp)
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(profile.fullName, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(roleLabel(role), color = Blue, fontSize = 11.sp)
                             IconButton(onClick = onRefresh) {
-                                Icon(Icons.Rounded.Refresh, contentDescription = ruvenText("تحديث المحتوى والإشعارات", "Refresh content and notifications", isEnglish), tint = Blue)
+                                Icon(Icons.Rounded.Refresh, contentDescription = ruvenText(translated("تحديث المحتوى والإشعارات"), "Refresh content and notifications", isEnglish), tint = Blue)
                             }
                             TextButton(
                                 onClick = onCheckUpdates,
@@ -592,13 +854,13 @@ private fun RuvenAuthenticatedApp(
                                 }
                                 Spacer(Modifier.width(5.dp))
                                 Text(
-                                    if (checkingUpdate) ruvenText("جارٍ الفحص…", "Checking…", isEnglish) else ruvenText("تحقق من التحديثات", "Check for updates", isEnglish),
+                                    if (checkingUpdate) ruvenText(translated("جارٍ الفحص…"), "Checking…", isEnglish) else ruvenText(translated("تحقق من التحديثات"), "Check for updates", isEnglish),
                                     color = Blue,
                                     fontSize = 11.sp,
                                     maxLines = 1
                                 )
                             }
-                            TextButton(onClick = onSignOut) { Text("خروج", color = Blue, fontSize = 11.sp) }
+                            TextButton(onClick = onSignOut) { Text(translated("خروج"), color = Blue, fontSize = 11.sp) }
                         }
                     }
                 }
@@ -625,10 +887,10 @@ private fun RuvenAuthenticatedApp(
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
                     when (current) {
                         0 -> HomeScreen(role, remoteItems.count { it.itemType == "homework" }, remoteItems.count { it.itemType == "preparation" }, remoteItems.count { it.itemType == "timetable" }, remoteItems, feedError, isEnglish) { tab = it }
-                        1 -> ServerSchoolItemsScreen(session, backend, remoteItems, "timetable", ruvenText("الجدول الدراسي", "Timetable", isEnglish), ruvenText("الجداول المنشورة من إدارة المدرسة.", "Timetables published by school administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
-                        2 -> ServerSchoolItemsScreen(session, backend, remoteItems, "homework", ruvenText("الواجبات", "Homework", isEnglish), ruvenText("الواجبات المنشورة حسب المادة والشعبة.", "Homework published by subject and class.", isEnglish), role, profile.className, onRefresh, isEnglish)
-                        3 -> ServerSchoolItemsScreen(session, backend, remoteItems, "preparation", ruvenText("التحاضير", "Preparations", isEnglish), ruvenText("تحاضير الدروس المنشورة من المدرسين والإدارة.", "Lesson preparations published by teachers and administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
-                        4 -> ServerSchoolItemsScreen(session, backend, remoteItems, "announcement", ruvenText("الإعلانات المدرسية", "School announcements", isEnglish), ruvenText("الإعلانات المنشورة من إدارة المدرسة.", "Announcements published by school administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
+                        1 -> ServerSchoolItemsScreen(session, backend, remoteItems, "timetable", ruvenText(translated("الجدول الدراسي"), "Timetable", isEnglish), ruvenText(translated("الجداول المنشورة من إدارة المدرسة."), "Timetables published by school administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
+                        2 -> ServerSchoolItemsScreen(session, backend, remoteItems, "homework", ruvenText(translated("الواجبات"), "Homework", isEnglish), ruvenText(translated("الواجبات المنشورة حسب المادة والشعبة."), "Homework published by subject and class.", isEnglish), role, profile.className, onRefresh, isEnglish)
+                        3 -> ServerSchoolItemsScreen(session, backend, remoteItems, "preparation", ruvenText(translated("التحاضير"), "Preparations", isEnglish), ruvenText(translated("تحاضير الدروس المنشورة من المدرسين والإدارة."), "Lesson preparations published by teachers and administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
+                        4 -> ServerSchoolItemsScreen(session, backend, remoteItems, "announcement", ruvenText(translated("الإعلانات المدرسية"), "School announcements", isEnglish), ruvenText(translated("الإعلانات المنشورة من إدارة المدرسة."), "Announcements published by school administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
                         5 -> SchoolWorkflowsScreen(profile, session, backend, role)
                         6 -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
                             else ServerNotificationsScreen(session, backend)
@@ -669,22 +931,22 @@ private fun ServerNotificationsScreen(session: SupabaseBackend.Session, backend:
     LaunchedEffect(session.userId) { reload() }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { PageHeader("الإشعارات", "إشعارات فعلية من قاعدة البيانات: قرارات الإدارة وحالة الإجازات.") }
-        item { OutlinedButton(onClick = { reload() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.Refresh, null); Spacer(Modifier.width(8.dp)); Text("تحديث") } }
+        item { OutlinedButton(onClick = { reload() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.Refresh, null); Spacer(Modifier.width(8.dp)); Text(translated("تحديث")) } }
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         if (error != null) item { Text(error!!, color = MaterialTheme.colorScheme.error) }
-        if (!loading && notifications.isEmpty() && error == null) item { Text("ما عندك إشعارات حاليًا.", color = Muted) }
+        if (!loading && notifications.isEmpty() && error == null) item { Text(translated("ما عندك إشعارات حاليًا."), color = Muted) }
         items(notifications, key = { it.id }) { n ->
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (n.readAt == null) Color(0xFFEAF2FF) else Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(n.title, color = Ink, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        if (n.readAt == null) Text("جديد", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        if (n.readAt == null) Text(translated("جديد"), color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                     Text(n.body, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
                     Text(n.createdAt, color = Muted, fontSize = 10.sp)
                     if (n.readAt == null) TextButton(onClick = {
                         scope.launch { try { backend.markNotificationRead(session, n.id); notifications = notifications.map { if (it.id == n.id) it.copy(readAt = localIsoDate()) else it } } catch (e: Exception) { error = e.message ?: "تعذر تحديث الإشعار." } }
-                    }) { Text("تحديد كمقروء") }
+                    }) { Text(translated("تحديد كمقروء")) }
                 }
             }
         }
@@ -771,36 +1033,36 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
         if (notice != null) item { Text(notice!!, color = Color(0xFF16845B), fontSize = 12.sp) }
         when (section) {
             "الدليل" -> {
-                if (!admin && !monitor) item { Text("قائمة الأسماء متاحة للمراقبين والإدارة. الطلاب يقدمون الإجازات ويتابعون التقارير من الأقسام الأخرى.", color = Muted, fontSize = 12.sp) }
+                if (!admin && !monitor) item { Text(translated("قائمة الأسماء متاحة للمراقبين والإدارة. الطلاب يقدمون الإجازات ويتابعون التقارير من الأقسام الأخرى."), color = Muted, fontSize = 12.sp) }
                 if (admin || monitor) {
-                    item { Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = filterTeachers, onCheckedChange = { filterTeachers = it }); Text("عرض المدرسين والهيئة التربوية فقط", color = Ink, fontSize = 12.sp) } }
+                    item { Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = filterTeachers, onCheckedChange = { filterTeachers = it }); Text(translated("عرض المدرسين والهيئة التربوية فقط"), color = Ink, fontSize = 12.sp) } }
                     val visibleProfiles = profiles.filter { p -> if (filterTeachers) p.role in setOf("teacher","class_supervisor","assistant_principal","principal","educational_counselor") else true }
                     items(visibleProfiles, key = { it.id }) { p ->
                         Card(shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                     Text(p.fullName, color = Ink, fontWeight = FontWeight.SemiBold)
-                                    Text("${p.role} • ${p.className ?: "بدون شعبة"}", color = Muted, fontSize = 11.sp)
+                                    Text(translated("${p.role} • ${p.className ?: ")بدون شعبة"}", color = Muted, fontSize = 11.sp)
                                 }
-                                if (admin) TextButton(onClick = { selectedStudent = p.id; section = "القرارات" }, enabled = p.role == "student") { Text("قرار") }
+                                if (admin) TextButton(onClick = { selectedStudent = p.id; section = "القرارات" }, enabled = p.role == "student") { Text(translated("قرار")) }
                             }
                         }
                     }
                 }
             }
             "الأختام" -> {
-                if (!admin) item { Text("إدارة الأختام متاحة للمالك وأعضاء الإدارة المخوّلين فقط.", color = Muted) }
+                if (!admin) item { Text(translated("إدارة الأختام متاحة للمالك وأعضاء الإدارة المخوّلين فقط."), color = Muted) }
                 if (admin) {
-                    item { OutlinedTextField(sealName, { sealName = it }, label = { Text("اسم الختم") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                    item { OutlinedTextField(sealTitle, { sealTitle = it }, label = { Text("صفة صاحب الختم") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(sealName, { sealName = it }, label = { Text(translated("اسم الختم")) }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(sealTitle, { sealTitle = it }, label = { Text(translated("صفة صاحب الختم")) }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                     item { Button(onClick = { perform({ backend.createSchoolSeal(session,sealName,sealTitle); sealName = "" }, "تم إنشاء الختم.") }, enabled = !busy && sealName.trim().length >= 2 && sealTitle.trim().length >= 2, modifier = Modifier.fillMaxWidth()) { Text(if (busy) "جارٍ الحفظ…" else "إنشاء ختم") } }
-                    items(seals, key = { it.id }) { seal -> Card(colors = CardDefaults.cardColors(containerColor = Color.White)) { Column(Modifier.fillMaxWidth().padding(12.dp)) { Text("ختم: ${seal.name}", color = Ink, fontWeight = FontWeight.Bold); Text(seal.title, color = Muted, fontSize = 12.sp); Text("معرّف: ${seal.id.take(8)}…", color = Muted, fontSize = 10.sp) } } }
+                    items(seals, key = { it.id }) { seal -> Card(colors = CardDefaults.cardColors(containerColor = Color.White)) { Column(Modifier.fillMaxWidth().padding(12.dp)) { Text(translated("ختم: ${seal.name}"), color = Ink, fontWeight = FontWeight.Bold); Text(seal.title, color = Muted, fontSize = 12.sp); Text(translated("معرّف: ${seal.id.take(8)}…"), color = Muted, fontSize = 10.sp) } } }
                 }
             }
             "القرارات" -> {
                 if (admin) {
-                    item { Text("إنشاء قرار إداري", color = Ink, fontWeight = FontWeight.Bold) }
-                    item { Text("الطالب المستهدف", color = Muted, fontSize = 12.sp) }
+                    item { Text(translated("إنشاء قرار إداري"), color = Ink, fontWeight = FontWeight.Bold) }
+                    item { Text(translated("الطالب المستهدف"), color = Muted, fontSize = 12.sp) }
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             profiles.filter { it.role == "student" }.take(100).forEach { p ->
@@ -811,34 +1073,34 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
                             }
                         }
                     }
-                    item { Text("نوع القرار", color = Ink, fontWeight = FontWeight.SemiBold) }
+                    item { Text(translated("نوع القرار"), color = Ink, fontWeight = FontWeight.SemiBold) }
                     item { Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         listOf("transfer_student" to "نقل", "remove_student" to "حذف", "accept_request" to "قبول", "other" to "آخر").forEach { (v,l) -> FilterChip(selected = decisionType == v, onClick = { decisionType = v }, label = { Text(l) }) }
                     } }
-                    item { OutlinedTextField(sourceClass, { sourceClass = it }, label = { Text("الشعبة الحالية") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                    item { OutlinedTextField(targetClass, { targetClass = it }, label = { Text("الشعبة الجديدة (إن وجدت)") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                    item { OutlinedTextField(decisionReason, { decisionReason = it }, label = { Text("السبب والتعليمات") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
-                    item { Text("ختم القرار", color = Ink, fontWeight = FontWeight.SemiBold) }
-                    item { Column { mySeals.forEach { seal -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedSeal == seal.id, onClick = { selectedSeal = seal.id }); Text("${seal.name} • ${seal.title}", color = Ink, fontSize = 12.sp) } }; if (mySeals.isEmpty()) Text("لا يوجد ختم باسم حسابك. أنشئ ختمًا من تبويب الأختام أولًا.", color = Muted, fontSize = 11.sp) } }
-                    item { Text("تعيين مراقب للتنفيذ", color = Ink, fontWeight = FontWeight.SemiBold) }
-                    item { Column { profiles.filter { it.role == "class_monitor" }.forEach { p -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedMonitor == p.id, onClick = { selectedMonitor = p.id }); Text("${p.fullName} • ${p.className ?: "بدون شعبة"}", color = Ink, fontSize = 12.sp) } } } }
-                    item { Button(onClick = { val p = profiles.firstOrNull { it.id == selectedStudent }; perform({ backend.createSchoolDecision(session,decisionType,selectedStudent,sourceClass.ifBlank { p?.className },targetClass,decisionReason,selectedMonitor,selectedSeal); decisionReason = "" }, "تم إرسال القرار المختوم للمراقب.") }, enabled = !busy && selectedStudent.isNotBlank() && selectedSeal.isNotBlank() && decisionReason.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text("إصدار القرار وإشعار المراقب") } }
+                    item { OutlinedTextField(sourceClass, { sourceClass = it }, label = { Text(translated("الشعبة الحالية")) }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(targetClass, { targetClass = it }, label = { Text(translated("الشعبة الجديدة (إن وجدت)")) }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(decisionReason, { decisionReason = it }, label = { Text(translated("السبب والتعليمات")) }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { Text(translated("ختم القرار"), color = Ink, fontWeight = FontWeight.SemiBold) }
+                    item { Column { mySeals.forEach { seal -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedSeal == seal.id, onClick = { selectedSeal = seal.id }); Text(translated("${seal.name} • ${seal.title}"), color = Ink, fontSize = 12.sp) } }; if (mySeals.isEmpty()) Text(translated("لا يوجد ختم باسم حسابك. أنشئ ختمًا من تبويب الأختام أولًا."), color = Muted, fontSize = 11.sp) } }
+                    item { Text(translated("تعيين مراقب للتنفيذ"), color = Ink, fontWeight = FontWeight.SemiBold) }
+                    item { Column { profiles.filter { it.role == "class_monitor" }.forEach { p -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedMonitor == p.id, onClick = { selectedMonitor = p.id }); Text(translated("${p.fullName} • ${p.className ?: ")بدون شعبة"}", color = Ink, fontSize = 12.sp) } } } }
+                    item { Button(onClick = { val p = profiles.firstOrNull { it.id == selectedStudent }; perform({ backend.createSchoolDecision(session,decisionType,selectedStudent,sourceClass.ifBlank { p?.className },targetClass,decisionReason,selectedMonitor,selectedSeal); decisionReason = "" }, "تم إرسال القرار المختوم للمراقب.") }, enabled = !busy && selectedStudent.isNotBlank() && selectedSeal.isNotBlank() && decisionReason.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text(translated("إصدار القرار وإشعار المراقب")) } }
                 }
-                if (decisions.isEmpty()) item { Text("ماكو قرارات ظاهرة لهذا الحساب.", color = Muted, fontSize = 12.sp) }
+                if (decisions.isEmpty()) item { Text(translated("ماكو قرارات ظاهرة لهذا الحساب."), color = Muted, fontSize = 12.sp) }
                 items(decisions, key = { it.id }) { d ->
                     val studentName = profiles.firstOrNull { it.id == d.studentId }?.fullName ?: d.studentId.take(8)
                     val seal = seals.firstOrNull { it.id == d.sealId }
                     Card(shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text("${when(d.type) { "transfer_student" -> "قرار نقل"; "remove_student" -> "قرار حذف"; "accept_request" -> "قرار قبول"; else -> "قرار إداري" }} • $studentName", color = Ink, fontWeight = FontWeight.Bold)
+                            Text(translated("${when(d.type) { ")transfer_student" -> "قرار نقل"; "remove_student" -> "قرار حذف"; "accept_request" -> "قرار قبول"; else -> "قرار إداري" }} • $studentName", color = Ink, fontWeight = FontWeight.Bold)
                             Text(d.reason, color = Muted, fontSize = 12.sp)
-                            Text("الحالة: ${d.status} • الختم: ${seal?.name ?: "قرار مختوم"}", color = Blue, fontSize = 11.sp)
-                            if (d.targetClass != null) Text("من ${d.sourceClass ?: "غير محدد"} إلى ${d.targetClass}", color = Muted, fontSize = 11.sp)
+                            Text(translated("الحالة: ${d.status} • الختم: ${seal?.name ?: ")قرار مختوم"}", color = Blue, fontSize = 11.sp)
+                            if (d.targetClass != null) Text(translated("من ${d.sourceClass ?: ")غير محدد"} إلى ${d.targetClass}", color = Muted, fontSize = 11.sp)
                             if (monitor && d.assignedMonitor == session.userId && d.status in setOf("pending","acknowledged")) {
-                                OutlinedTextField(executionNote, { executionNote = it }, label = { Text("ملاحظة التنفيذ (اختيارية)") }, modifier = Modifier.fillMaxWidth(), minLines = 1)
+                                OutlinedTextField(executionNote, { executionNote = it }, label = { Text(translated("ملاحظة التنفيذ (اختيارية)")) }, modifier = Modifier.fillMaxWidth(), minLines = 1)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedButton(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"acknowledged",executionNote) }, "تم تأكيد استلام القرار.") }, modifier = Modifier.weight(1f)) { Text("استلام") }
-                                    Button(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"completed",executionNote.ifBlank { "تم التنفيذ" }) }, "تم تسجيل تنفيذ القرار.") }, modifier = Modifier.weight(1f)) { Text("تم التنفيذ") }
+                                    OutlinedButton(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"acknowledged",executionNote) }, "تم تأكيد استلام القرار.") }, modifier = Modifier.weight(1f)) { Text(translated("استلام")) }
+                                    Button(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"completed",executionNote.ifBlank { "تم التنفيذ" }) }, "تم تسجيل تنفيذ القرار.") }, modifier = Modifier.weight(1f)) { Text(translated("تم التنفيذ")) }
                                 }
                             }
                         }
@@ -847,35 +1109,35 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
             }
             "الإجازات" -> {
                 if (student) {
-                    item { Text("طلب إجازة", color = Ink, fontWeight = FontWeight.Bold) }
-                    item { OutlinedTextField(leaveStart, { leaveStart = it }, label = { Text("من تاريخ YYYY-MM-DD") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                    item { OutlinedTextField(leaveEnd, { leaveEnd = it }, label = { Text("إلى تاريخ YYYY-MM-DD") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                    item { OutlinedTextField(leaveReason, { leaveReason = it }, label = { Text("سبب الإجازة") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
-                    item { Button(onClick = { perform({ backend.createLeaveRequest(session,profile.className ?: "",leaveStart,leaveEnd,leaveReason); leaveReason = "" }, "تم إرسال طلب الإجازة للإدارة.") }, enabled = !busy && !profile.className.isNullOrBlank() && leaveReason.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text("إرسال طلب الإجازة") } }
+                    item { Text(translated("طلب إجازة"), color = Ink, fontWeight = FontWeight.Bold) }
+                    item { OutlinedTextField(leaveStart, { leaveStart = it }, label = { Text(translated("من تاريخ YYYY-MM-DD")) }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(leaveEnd, { leaveEnd = it }, label = { Text(translated("إلى تاريخ YYYY-MM-DD")) }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(leaveReason, { leaveReason = it }, label = { Text(translated("سبب الإجازة")) }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { Button(onClick = { perform({ backend.createLeaveRequest(session,profile.className ?: "",leaveStart,leaveEnd,leaveReason); leaveReason = "" }, "تم إرسال طلب الإجازة للإدارة.") }, enabled = !busy && !profile.className.isNullOrBlank() && leaveReason.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text(translated("إرسال طلب الإجازة")) } }
                 }
-                if (admin && leaves.any { it.status == "pending" }) item { Text("طلبات بانتظار قرار الإدارة", color = Ink, fontWeight = FontWeight.Bold) }
-                if (leaves.isEmpty()) item { Text("ماكو طلبات إجازة ظاهرة حاليًا.", color = Muted, fontSize = 12.sp) }
+                if (admin && leaves.any { it.status == "pending" }) item { Text(translated("طلبات بانتظار قرار الإدارة"), color = Ink, fontWeight = FontWeight.Bold) }
+                if (leaves.isEmpty()) item { Text(translated("ماكو طلبات إجازة ظاهرة حاليًا."), color = Muted, fontSize = 12.sp) }
                 items(leaves, key = { it.id }) { l ->
                     val studentName = profiles.firstOrNull { it.id == l.studentId }?.fullName ?: if (l.studentId == session.userId) profile.fullName else l.studentId.take(8)
                     val seal = seals.firstOrNull { it.id == l.sealId }
                     Card(shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Text(studentName, color = Ink, fontWeight = FontWeight.Bold)
-                            Text("${l.startsOn} → ${l.endsOn} • ${l.className}", color = Blue, fontSize = 11.sp)
-                            Text("السبب: ${l.reason}", color = Muted, fontSize = 12.sp)
-                            Text("الحالة: ${l.status} • الحضور: ${l.attendanceStatus}", color = Ink, fontSize = 11.sp)
-                            if (l.status == "approved") Text("تمت الموافقة بختم: ${seal?.name ?: "ختم الإدارة"}", color = Color(0xFF16845B), fontSize = 11.sp)
+                            Text(translated("${l.startsOn} → ${l.endsOn} • ${l.className}"), color = Blue, fontSize = 11.sp)
+                            Text(translated("السبب: ${l.reason}"), color = Muted, fontSize = 12.sp)
+                            Text(translated("الحالة: ${l.status} • الحضور: ${l.attendanceStatus}"), color = Ink, fontSize = 11.sp)
+                            if (l.status == "approved") Text(translated("تمت الموافقة بختم: ${seal?.name ?: ")ختم الإدارة"}", color = Color(0xFF16845B), fontSize = 11.sp)
                             if (admin && l.status == "pending") {
-                                if (mySeals.isEmpty()) Text("أنشئ ختمًا باسم حسابك أولًا حتى توافق على الطلب.", color = Muted, fontSize = 11.sp)
+                                if (mySeals.isEmpty()) Text(translated("أنشئ ختمًا باسم حسابك أولًا حتى توافق على الطلب."), color = Muted, fontSize = 11.sp)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(onClick = { perform({ backend.reviewLeaveRequest(session,l.id,true,mySeals.firstOrNull()?.id) }, "تمت الموافقة على الإجازة وأُرسل إشعار للطالب.") }, enabled = !busy && mySeals.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("موافقة") }
-                                    OutlinedButton(onClick = { perform({ backend.reviewLeaveRequest(session,l.id,false,null) }, "تم رفض الإجازة وإشعار الطالب.") }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("رفض") }
+                                    Button(onClick = { perform({ backend.reviewLeaveRequest(session,l.id,true,mySeals.firstOrNull()?.id) }, "تمت الموافقة على الإجازة وأُرسل إشعار للطالب.") }, enabled = !busy && mySeals.isNotEmpty(), modifier = Modifier.weight(1f)) { Text(translated("موافقة")) }
+                                    OutlinedButton(onClick = { perform({ backend.reviewLeaveRequest(session,l.id,false,null) }, "تم رفض الإجازة وإشعار الطالب.") }, enabled = !busy, modifier = Modifier.weight(1f)) { Text(translated("رفض")) }
                                 }
                             }
                             if (monitor && l.status == "approved" && l.className == profile.className && l.attendanceStatus == "not_recorded") {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedButton(onClick = { perform({ backend.markLeaveAttendance(session,l.id,"present") }, "تم تسجيل الحضور.") }, modifier = Modifier.weight(1f)) { Text("حاضر") }
-                                    Button(onClick = { perform({ backend.markLeaveAttendance(session,l.id,"absent") }, "تم تسجيل الغياب.") }, modifier = Modifier.weight(1f)) { Text("غائب") }
+                                    OutlinedButton(onClick = { perform({ backend.markLeaveAttendance(session,l.id,"present") }, "تم تسجيل الحضور.") }, modifier = Modifier.weight(1f)) { Text(translated("حاضر")) }
+                                    Button(onClick = { perform({ backend.markLeaveAttendance(session,l.id,"absent") }, "تم تسجيل الغياب.") }, modifier = Modifier.weight(1f)) { Text(translated("غائب")) }
                                 }
                             }
                         }
@@ -884,26 +1146,26 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
             }
             "التقرير اليومي" -> {
                 if (monitor) {
-                    item { OutlinedTextField(reportDate, { reportDate = it }, label = { Text("تاريخ التقرير YYYY-MM-DD") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                    item { OutlinedTextField(reportEvents, { reportEvents = it }, label = { Text("أهم أحداث اليوم") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
-                    item { OutlinedTextField(reportPromises, { reportPromises = it }, label = { Text("وعود الإدارة أو الأمور المقررة") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
-                    item { OutlinedTextField(reportUnresolved, { reportUnresolved = it }, label = { Text("أمور لم تُنفّذ بعد") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
-                    item { Button(onClick = { perform({ backend.createDailyReport(session,profile.className ?: "",reportDate,reportEvents,reportPromises,reportUnresolved,true); reportEvents = ""; reportPromises = ""; reportUnresolved = "" }, "نُشر التقرير اليومي لطلاب الشعبة.") }, enabled = !busy && !profile.className.isNullOrBlank() && (reportEvents.isNotBlank() || reportPromises.isNotBlank() || reportUnresolved.isNotBlank()), modifier = Modifier.fillMaxWidth()) { Text("نشر التقرير للطلاب") } }
+                    item { OutlinedTextField(reportDate, { reportDate = it }, label = { Text(translated("تاريخ التقرير YYYY-MM-DD")) }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(reportEvents, { reportEvents = it }, label = { Text(translated("أهم أحداث اليوم")) }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { OutlinedTextField(reportPromises, { reportPromises = it }, label = { Text(translated("وعود الإدارة أو الأمور المقررة")) }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { OutlinedTextField(reportUnresolved, { reportUnresolved = it }, label = { Text(translated("أمور لم تُنفّذ بعد")) }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { Button(onClick = { perform({ backend.createDailyReport(session,profile.className ?: "",reportDate,reportEvents,reportPromises,reportUnresolved,true); reportEvents = ""; reportPromises = ""; reportUnresolved = "" }, "نُشر التقرير اليومي لطلاب الشعبة.") }, enabled = !busy && !profile.className.isNullOrBlank() && (reportEvents.isNotBlank() || reportPromises.isNotBlank() || reportUnresolved.isNotBlank()), modifier = Modifier.fillMaxWidth()) { Text(translated("نشر التقرير للطلاب")) } }
                 }
-                if (dailyReports.isEmpty()) item { Text("ماكو تقارير يومية منشورة حاليًا.", color = Muted, fontSize = 12.sp) }
+                if (dailyReports.isEmpty()) item { Text(translated("ماكو تقارير يومية منشورة حاليًا."), color = Muted, fontSize = 12.sp) }
                 items(dailyReports, key = { it.id }) { report ->
                     Card(shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Text("${report.className} • ${report.reportDate}", color = Ink, fontWeight = FontWeight.Bold)
-                            if (report.events.isNotBlank()) { Text("أحداث اليوم", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp); Text(report.events, color = Ink, fontSize = 12.sp) }
-                            if (report.promises.isNotBlank()) { Text("وعود الإدارة", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp); Text(report.promises, color = Ink, fontSize = 12.sp) }
-                            if (report.unresolved.isNotBlank()) { Text("لم يُنفّذ بعد", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp); Text(report.unresolved, color = Ink, fontSize = 12.sp) }
+                            Text(translated("${report.className} • ${report.reportDate}"), color = Ink, fontWeight = FontWeight.Bold)
+                            if (report.events.isNotBlank()) { Text(translated("أحداث اليوم"), color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp); Text(report.events, color = Ink, fontSize = 12.sp) }
+                            if (report.promises.isNotBlank()) { Text(translated("وعود الإدارة"), color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp); Text(report.promises, color = Ink, fontSize = 12.sp) }
+                            if (report.unresolved.isNotBlank()) { Text(translated("لم يُنفّذ بعد"), color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp); Text(report.unresolved, color = Ink, fontSize = 12.sp) }
                         }
                     }
                 }
             }
         }
-        item { OutlinedButton(onClick = { reload() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.Refresh, null); Spacer(Modifier.width(8.dp)); Text("تحديث بيانات الخادم") } }
+        item { OutlinedButton(onClick = { reload() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.Refresh, null); Spacer(Modifier.width(8.dp)); Text(translated("تحديث بيانات الخادم")) } }
     }
 }
 
@@ -925,7 +1187,7 @@ private fun NotificationsScreen(
             OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Rounded.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("تحديث الإشعارات")
+                Text(translated("تحديث الإشعارات"))
             }
         }
         if (error != null) item {
@@ -942,8 +1204,8 @@ private fun NotificationsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(Icons.Rounded.Notifications, contentDescription = null, tint = Blue, modifier = Modifier.size(32.dp))
-                    Text("ماكو إشعارات منشورة حاليًا", fontWeight = FontWeight.SemiBold, color = Ink)
-                    Text("تظهر هنا تحديثات المدرسة المتاحة لحسابك.", color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center)
+                    Text(translated("ماكو إشعارات منشورة حاليًا"), fontWeight = FontWeight.SemiBold, color = Ink)
+                    Text(translated("تظهر هنا تحديثات المدرسة المتاحة لحسابك."), color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center)
                 }
             }
         } else items(items, key = { it.id }) { item ->
@@ -990,7 +1252,7 @@ private fun SettingsScreen(prefs: SharedPreferences, onSaved: () -> Unit) {
         item {
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("اللغة / Language", color = Ink, fontWeight = FontWeight.Bold)
+                    Text(translated("اللغة / Language"), color = Ink, fontWeight = FontWeight.Bold)
                     listOf("ar" to "العربية", "en" to "English", "mixed" to "Mixed • عناوين إنجليزية وشرح عربي").forEach { (value, label) ->
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             RadioButton(selected = language == value, onClick = { language = value; saved = false })
@@ -998,7 +1260,7 @@ private fun SettingsScreen(prefs: SharedPreferences, onSaved: () -> Unit) {
                         }
                     }
                     HorizontalDivider()
-                    Text("المظهر", color = Ink, fontWeight = FontWeight.Bold)
+                    Text(translated("المظهر"), color = Ink, fontWeight = FontWeight.Bold)
                     listOf("dark" to "داكن", "light" to "فاتح", "glass" to "زجاجي").forEach { (value, label) ->
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             RadioButton(selected = appearance == value, onClick = { appearance = value; saved = false })
@@ -1006,9 +1268,9 @@ private fun SettingsScreen(prefs: SharedPreferences, onSaved: () -> Unit) {
                         }
                     }
                     HorizontalDivider()
-                    Text("حجم الخط: ${(fontScale * 100).toInt()}%", color = Ink, fontWeight = FontWeight.Bold)
+                    Text(translated("حجم الخط: ${(fontScale * 100).toInt()}%"), color = Ink, fontWeight = FontWeight.Bold)
                     Slider(value = fontScale, onValueChange = { fontScale = it; saved = false }, valueRange = 0.85f..1.3f)
-                    Text("الخلفية", color = Ink, fontWeight = FontWeight.Bold)
+                    Text(translated("الخلفية"), color = Ink, fontWeight = FontWeight.Bold)
                     backgroundOptions.forEach { (value, pair) ->
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             RadioButton(selected = background == value, onClick = { background = value; saved = false })
@@ -1030,10 +1292,10 @@ private fun SettingsScreen(prefs: SharedPreferences, onSaved: () -> Unit) {
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("حفظ الإعدادات")
+                        Text(translated("حفظ الإعدادات"))
                     }
                     AnimatedVisibility(visible = saved, enter = fadeIn() + slideInVertically { it / 3 }, exit = fadeOut()) {
-                        Text("انحفظت تفضيلاتك على هذا الجهاز.", color = Color(0xFF16845B), fontSize = 12.sp)
+                        Text(translated("انحفظت تفضيلاتك على هذا الجهاز."), color = Color(0xFF16845B), fontSize = 12.sp)
                     }
                 }
             }
@@ -1119,7 +1381,7 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("إضافة شعبة", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            Text(translated("إضافة شعبة"), color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                             Text(if (showCreateForm) "أدخل الصف ورمز الشعبة المطلوبة" else "افتح النموذج عند الحاجة فقط", color = Muted, fontSize = 12.sp)
                         }
                         TextButton(onClick = { showCreateForm = !showCreateForm }) {
@@ -1127,9 +1389,9 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
                         }
                     }
                     if (showCreateForm) {
-                    OutlinedTextField(gradeName, { gradeName = it }, label = { Text("الصف الدراسي") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(gradeName, { gradeName = it }, label = { Text(translated("الصف الدراسي")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     Box {
-                        OutlinedButton(onClick = { sectionMenu = true }, modifier = Modifier.fillMaxWidth()) { Text("الشعبة: $sectionCode") }
+                        OutlinedButton(onClick = { sectionMenu = true }, modifier = Modifier.fillMaxWidth()) { Text(translated("الشعبة: $sectionCode")) }
                         DropdownMenu(expanded = sectionMenu, onDismissRequest = { sectionMenu = false }) {
                             listOf("A", "B", "C", "D", "E", "F").forEach { code ->
                                 DropdownMenuItem(text = { Text(code) }, onClick = { sectionCode = code; sectionMenu = false })
@@ -1138,7 +1400,7 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = openOnCreate, onCheckedChange = { openOnCreate = it })
-                        Text("فتح الشعبة مباشرة للطلاب والموظفين", color = Ink, fontSize = 13.sp)
+                        Text(translated("فتح الشعبة مباشرة للطلاب والموظفين"), color = Ink, fontSize = 13.sp)
                     }
                     Button(
                         onClick = {
@@ -1166,14 +1428,14 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
             OutlinedTextField(
                 value = sectionSearch, onValueChange = { sectionSearch = it },
                 modifier = Modifier.fillMaxWidth(), singleLine = true,
-                label = { Text("بحث بالصف أو رمز الشعبة") },
+                label = { Text(translated("بحث بالصف أو رمز الشعبة")) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 shape = RoundedCornerShape(16.dp)
             )
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("الشعب المسجلة (${sections.size})", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(translated("الشعب المسجلة (${sections.size})"), color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 TextButton(onClick = { reload() }, enabled = !loading) { Text(if (loading) "تحميل..." else "تحديث") }
             }
         }
@@ -1188,7 +1450,7 @@ private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: Supab
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("${section.gradeName} — شعبة ${section.sectionCode}", color = Ink, fontWeight = FontWeight.Bold)
+                        Text(translated("${section.gradeName} — شعبة ${section.sectionCode}"), color = Ink, fontWeight = FontWeight.Bold)
                         Text(if (section.isOpen) "مفتوحة للمستخدمين" else "مغلقة ومخفية", color = if (section.isOpen) Color(0xFF176B45) else Muted, fontSize = 12.sp)
                     }
                     Switch(checked = section.isOpen, enabled = !updating, onCheckedChange = { next ->
@@ -1268,7 +1530,7 @@ private fun OwnerAccountManagementScreen(
                 onValueChange = { accountSearch = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("بحث بالاسم أو البريد أو الدور") },
+                label = { Text(translated("بحث بالاسم أو البريد أو الدور")) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 shape = RoundedCornerShape(16.dp)
             )
@@ -1278,7 +1540,7 @@ private fun OwnerAccountManagementScreen(
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("إنشاء حساب جديد", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            Text(translated("إنشاء حساب جديد"), color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                             Text(if (showCreateAccountForm) "أدخل بيانات الحساب الجديد" else "إنشاء حساب طالب أو موظف بصلاحيات محددة", color = Muted, fontSize = 12.sp)
                         }
                         TextButton(onClick = { showCreateAccountForm = !showCreateAccountForm }) {
@@ -1286,13 +1548,13 @@ private fun OwnerAccountManagementScreen(
                         }
                     }
                     if (showCreateAccountForm) {
-                    Text("ينشئ حساب دخول حقيقياً. لا يمكن إنشاء مالك آخر، وكلمة المرور لا تُعرض ضمن قائمة الحسابات.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
-                    OutlinedTextField(newFullName, { newFullName = it }, label = { Text("اسم الطالب أو الموظف") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(newEmail, { newEmail = it }, label = { Text("البريد الإلكتروني") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(newPassword, { newPassword = it }, label = { Text("كلمة مرور مؤقتة (8 أحرف على الأقل)") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+                    Text(translated("ينشئ حساب دخول حقيقياً. لا يمكن إنشاء مالك آخر، وكلمة المرور لا تُعرض ضمن قائمة الحسابات."), color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+                    OutlinedTextField(newFullName, { newFullName = it }, label = { Text(translated("اسم الطالب أو الموظف")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(newEmail, { newEmail = it }, label = { Text(translated("البريد الإلكتروني")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(newPassword, { newPassword = it }, label = { Text(translated("كلمة مرور مؤقتة (8 أحرف على الأقل)")) }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
                     Box {
                         OutlinedButton(onClick = { newRoleMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text("نوع الحساب: " + (managedRoleOptions.firstOrNull { it.value == newRole }?.label ?: newRole))
+                            Text(translated("نوع الحساب: ") + (managedRoleOptions.firstOrNull { it.value == newRole }?.label ?: newRole))
                         }
                         DropdownMenu(expanded = newRoleMenu, onDismissRequest = { newRoleMenu = false }) {
                             managedRoleOptions.forEach { option ->
@@ -1302,8 +1564,8 @@ private fun OwnerAccountManagementScreen(
                     }
                     OutlinedTextField(
                         newClassName, { newClassName = it.uppercase().filter { ch -> ch in 'A'..'F' || ch.isWhitespace() || ch == '-' } },
-                        label = { Text("الشعبة (A–F)، إلزامية للطالب") },
-                        supportingText = { Text("اكتب A أو B أو C أو D أو E أو F؛ يمكن تركها فارغة للموظفين.") },
+                        label = { Text(translated("الشعبة (A–F)، إلزامية للطالب")) },
+                        supportingText = { Text(translated("اكتب A أو B أو C أو D أو E أو F؛ يمكن تركها فارغة للموظفين.")) },
                         modifier = Modifier.fillMaxWidth(), singleLine = true
                     )
                     Button(
@@ -1370,13 +1632,13 @@ private fun OwnerAccountManagementScreen(
                 ) {
                     Text(account.fullName, color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(account.email ?: account.id, color = Muted, fontSize = 11.sp)
-                    Text("الدور الحالي: " + (managedRoleOptions.firstOrNull { it.value == account.role }?.label ?: account.role), color = Blue, fontSize = 12.sp)
+                    Text(translated("الدور الحالي: ") + (managedRoleOptions.firstOrNull { it.value == account.role }?.label ?: account.role), color = Blue, fontSize = 12.sp)
                     if (account.role == "owner") {
-                        Text("حساب المالك محمي ولا يمكن تغيير دوره من هذه اللوحة.", color = Muted, fontSize = 12.sp)
+                        Text(translated("حساب المالك محمي ولا يمكن تغيير دوره من هذه اللوحة."), color = Muted, fontSize = 12.sp)
                     } else {
                         Box {
                             OutlinedButton(onClick = { menuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text("الدور الجديد: " + (managedRoleOptions.firstOrNull { it.value == selectedRole }?.label ?: selectedRole))
+                                Text(translated("الدور الجديد: ") + (managedRoleOptions.firstOrNull { it.value == selectedRole }?.label ?: selectedRole))
                             }
                             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                 managedRoleOptions.forEach { option ->
@@ -1390,7 +1652,7 @@ private fun OwnerAccountManagementScreen(
                         OutlinedTextField(
                             value = className,
                             onValueChange = { className = it },
-                            label = { Text("الصف والشعبة (مثال: الثالث متوسط - A)") },
+                            label = { Text(translated("الصف والشعبة (مثال: الثالث متوسط - A)")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )
@@ -1457,8 +1719,8 @@ private fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(ruvenText("هلا بيك 👋", "Welcome 👋", isEnglish), color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(ruvenText("خلّ يومك الدراسي أوضح وأسهل.", "Make your school day clearer and easier.", isEnglish), color = Muted, fontSize = 13.sp)
+                    Text(ruvenText(translated("هلا بيك 👋"), "Welcome 👋", isEnglish), color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(ruvenText(translated("خلّ يومك الدراسي أوضح وأسهل."), "Make your school day clearer and easier.", isEnglish), color = Muted, fontSize = 13.sp)
                     Spacer(Modifier.height(3.dp))
                     Surface(color = Color(0xFFE5F1FF), shape = RoundedCornerShape(50)) {
                         Row(
@@ -1494,14 +1756,14 @@ private fun HomeScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Surface(color = Color.White.copy(alpha = .16f), shape = RoundedCornerShape(50)) {
-                                Text(ruvenText("RUVEN • مدرستك بذكاء", "RUVEN • Your school, smarter", isEnglish), color = Color.White, fontSize = 10.sp,
+                                Text(ruvenText(translated("RUVEN • مدرستك بذكاء"), "RUVEN • Your school, smarter", isEnglish), color = Color.White, fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
                             }
                             Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = Color(0xFFFFE8A3), modifier = Modifier.size(25.dp))
                         }
-                        Text("كل شي يخص دراستك،\nبمكان واحد.", color = Color.White, fontSize = 27.sp,
+                        Text(translated("كل شي يخص دراستك،\nبمكان واحد."), color = Color.White, fontSize = 27.sp,
                             lineHeight = 35.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(ruvenText("تابع الواجبات، افتح الجدول، وابقَ على اطلاع بآخر إعلانات المدرسة.", "Track homework, check the timetable, and stay up to date with school announcements.", isEnglish), color = Color.White.copy(alpha = .88f),
+                        Text(ruvenText(translated("تابع الواجبات، افتح الجدول، وابقَ على اطلاع بآخر إعلانات المدرسة."), "Track homework, check the timetable, and stay up to date with school announcements.", isEnglish), color = Color.White.copy(alpha = .88f),
                             fontSize = 13.sp, lineHeight = 21.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             Button(
@@ -1511,7 +1773,7 @@ private fun HomeScreen(
                             ) {
                                 Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, modifier = Modifier.size(17.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(ruvenText("شوف واجباتك", "View homework", isEnglish), fontWeight = FontWeight.Bold)
+                                Text(ruvenText(translated("شوف واجباتك"), "View homework", isEnglish), fontWeight = FontWeight.Bold)
                             }
                             OutlinedButton(
                                 onClick = { onNavigate(1) },
@@ -1521,7 +1783,7 @@ private fun HomeScreen(
                             ) {
                                 Icon(Icons.Rounded.CalendarMonth, contentDescription = null, modifier = Modifier.size(17.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("الجدول")
+                                Text(translated("الجدول"))
                             }
                         }
                     }
@@ -1530,14 +1792,14 @@ private fun HomeScreen(
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionHeading(ruvenText("اختصارات سريعة", "Quick shortcuts", isEnglish), ruvenText("اختَر شنو تحتاج هسه", "Choose what you need", isEnglish))
+                SectionHeading(ruvenText(translated("اختصارات سريعة"), "Quick shortcuts", isEnglish), ruvenText(translated("اختَر شنو تحتاج هسه"), "Choose what you need", isEnglish))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickActionCard(ruvenText("الجدول", "Timetable", isEnglish), ruvenText("حصصك ومواعيدك", "Classes and times", isEnglish), Icons.Rounded.CalendarMonth, Color(0xFFE7F0FF), Blue, Modifier.weight(1f)) { onNavigate(1) }
-                    QuickActionCard(ruvenText("الواجبات", "Homework", isEnglish), ruvenText("لا يفوتك شي", "Stay on top of tasks", isEnglish), Icons.AutoMirrored.Rounded.MenuBook, Color(0xFFFFF0DD), Color(0xFFB66A12), Modifier.weight(1f)) { onNavigate(2) }
+                    QuickActionCard(ruvenText(translated("الجدول"), "Timetable", isEnglish), ruvenText(translated("حصصك ومواعيدك"), "Classes and times", isEnglish), Icons.Rounded.CalendarMonth, Color(0xFFE7F0FF), Blue, Modifier.weight(1f)) { onNavigate(1) }
+                    QuickActionCard(ruvenText(translated("الواجبات"), "Homework", isEnglish), ruvenText(translated("لا يفوتك شي"), "Stay on top of tasks", isEnglish), Icons.AutoMirrored.Rounded.MenuBook, Color(0xFFFFF0DD), Color(0xFFB66A12), Modifier.weight(1f)) { onNavigate(2) }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickActionCard(ruvenText("التحاضير", "Preparations", isEnglish), ruvenText("محتوى الدروس", "Lesson content", isEnglish), Icons.Rounded.Description, Color(0xFFE5F8F1), Color(0xFF168A70), Modifier.weight(1f)) { onNavigate(3) }
-                    QuickActionCard(ruvenText("الإعلانات", "Announcements", isEnglish), ruvenText("آخر المستجدات", "Latest updates", isEnglish), Icons.AutoMirrored.Rounded.Announcement, Color(0xFFF0E9FF), Color(0xFF7651C9), Modifier.weight(1f)) { onNavigate(4) }
+                    QuickActionCard(ruvenText(translated("التحاضير"), "Preparations", isEnglish), ruvenText(translated("محتوى الدروس"), "Lesson content", isEnglish), Icons.Rounded.Description, Color(0xFFE5F8F1), Color(0xFF168A70), Modifier.weight(1f)) { onNavigate(3) }
+                    QuickActionCard(ruvenText(translated("الإعلانات"), "Announcements", isEnglish), ruvenText(translated("آخر المستجدات"), "Latest updates", isEnglish), Icons.AutoMirrored.Rounded.Announcement, Color(0xFFF0E9FF), Color(0xFF7651C9), Modifier.weight(1f)) { onNavigate(4) }
                 }
             }
         }
@@ -1545,26 +1807,26 @@ private fun HomeScreen(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(ruvenText("ملخصك الدراسي", "Your study summary", isEnglish), color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                        Text(ruvenText("عدادات العناصر المحفوظة محلياً", "Locally saved item counts", isEnglish), color = Muted, fontSize = 11.sp)
+                        Text(ruvenText(translated("ملخصك الدراسي"), "Your study summary", isEnglish), color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text(ruvenText(translated("عدادات العناصر المحفوظة محلياً"), "Locally saved item counts", isEnglish), color = Muted, fontSize = 11.sp)
                     }
                     TextButton(onClick = { showAllStats = !showAllStats }) {
-                        Text(if (showAllStats) ruvenText("عرض أقل", "Show less", isEnglish) else ruvenText("تفاصيل", "Details", isEnglish), fontSize = 12.sp)
+                        Text(if (showAllStats) ruvenText(translated("عرض أقل"), "Show less", isEnglish) else ruvenText(translated("تفاصيل"), "Details", isEnglish), fontSize = 12.sp)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
-                    SummaryCard(ruvenText("الجدول", "Timetable", isEnglish), scheduleCount.toString(), ruvenText("جداول", "timetables", isEnglish), Icons.Rounded.CalendarMonth, Modifier.weight(1f))
-                    SummaryCard(ruvenText("الواجبات", "Homework", isEnglish), homeworkCount.toString(), ruvenText("واجبات", "tasks", isEnglish), Icons.AutoMirrored.Rounded.MenuBook, Modifier.weight(1f))
-                    SummaryCard(ruvenText("التحاضير", "Preparations", isEnglish), prepCount.toString(), ruvenText("تحاضير", "preparations", isEnglish), Icons.Rounded.Description, Modifier.weight(1f))
+                    SummaryCard(ruvenText(translated("الجدول"), "Timetable", isEnglish), scheduleCount.toString(), ruvenText(translated("جداول"), "timetables", isEnglish), Icons.Rounded.CalendarMonth, Modifier.weight(1f))
+                    SummaryCard(ruvenText(translated("الواجبات"), "Homework", isEnglish), homeworkCount.toString(), ruvenText(translated("واجبات"), "tasks", isEnglish), Icons.AutoMirrored.Rounded.MenuBook, Modifier.weight(1f))
+                    SummaryCard(ruvenText(translated("التحاضير"), "Preparations", isEnglish), prepCount.toString(), ruvenText(translated("تحاضير"), "preparations", isEnglish), Icons.Rounded.Description, Modifier.weight(1f))
                 }
                 androidx.compose.animation.AnimatedVisibility(visible = showAllStats) {
                     Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(ruvenText("تفاصيل المساحة", "Workspace details", isEnglish), color = Ink, fontWeight = FontWeight.Bold)
-                            Text("منشورات الخادم: ${remoteItems.size}", color = Muted, fontSize = 12.sp)
-                            Text("الواجبات المحلية: $homeworkCount", color = Muted, fontSize = 12.sp)
-                            Text("التحاضير المحلية: $prepCount", color = Muted, fontSize = 12.sp)
-                            Text("الجداول المحلية: $scheduleCount", color = Muted, fontSize = 12.sp)
+                            Text(ruvenText(translated("تفاصيل المساحة"), "Workspace details", isEnglish), color = Ink, fontWeight = FontWeight.Bold)
+                            Text(translated("منشورات الخادم: ${remoteItems.size}"), color = Muted, fontSize = 12.sp)
+                            Text(translated("الواجبات المحلية: $homeworkCount"), color = Muted, fontSize = 12.sp)
+                            Text(translated("التحاضير المحلية: $prepCount"), color = Muted, fontSize = 12.sp)
+                            Text(translated("الجداول المحلية: $scheduleCount"), color = Muted, fontSize = 12.sp)
                         }
                     }
                 }
@@ -1572,7 +1834,7 @@ private fun HomeScreen(
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionHeading(ruvenText("آخر منشورات المدرسة", "Latest school posts", isEnglish), ruvenText("واجبات وتحاضير وإعلانات منشورة من الخادم", "Homework, preparations and announcements from the server", isEnglish))
+                SectionHeading(ruvenText(translated("آخر منشورات المدرسة"), "Latest school posts", isEnglish), ruvenText(translated("واجبات وتحاضير وإعلانات منشورة من الخادم"), "Homework, preparations and announcements from the server", isEnglish))
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1598,11 +1860,11 @@ private fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
-                    placeholder = { Text(ruvenText("ابحث باسم الواجب أو المادة…", "Search homework or subject…", isEnglish)) },
+                    placeholder = { Text(ruvenText(translated("ابحث باسم الواجب أو المادة…"), "Search homework or subject…", isEnglish)) },
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
                     trailingIcon = {
                         if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
-                            Icon(Icons.Rounded.Close, contentDescription = ruvenText("مسح البحث", "Clear search", isEnglish))
+                            Icon(Icons.Rounded.Close, contentDescription = ruvenText(translated("مسح البحث"), "Clear search", isEnglish))
                         }
                     }
                 )
@@ -1638,7 +1900,7 @@ private fun HomeScreen(
                         Icon(Icons.Rounded.Person, contentDescription = null, tint = Blue)
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(ruvenText("مساحتك وصلاحياتك", "Your space and permissions", isEnglish), color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(ruvenText(translated("مساحتك وصلاحياتك"), "Your space and permissions", isEnglish), color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Text(roleLabel(role), color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Text(when (role) {
                             SchoolRole.STUDENT -> "تقدر تتابع الجدول والواجبات المنشورة لشعبتك."
@@ -1657,7 +1919,7 @@ private fun HomeScreen(
             }
         }
         item {
-            Text(ruvenText("RUVEN • نسخة قيد التطوير", "RUVEN • Development build", isEnglish), color = Muted, fontSize = 10.sp,
+            Text(ruvenText(translated("RUVEN • نسخة قيد التطوير"), "RUVEN • Development build", isEnglish), color = Muted, fontSize = 10.sp,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp))
         }
     }
@@ -1744,7 +2006,7 @@ private fun ServerSchoolItemsScreen(
             OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth(), enabled = !busy) {
                 Icon(Icons.Rounded.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("تحديث من خادم المدرسة")
+                Text(translated("تحديث من خادم المدرسة"))
             }
         }
         if (canCreate) item {
@@ -1752,19 +2014,19 @@ private fun ServerSchoolItemsScreen(
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.weight(1f)) {
-                            Text("إضافة محتوى رسمي", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text("سيُرسل إلى خادم المدرسة، وتطبّق صلاحيات قاعدة البيانات.", color = Muted, fontSize = 11.sp)
+                            Text(translated("إضافة محتوى رسمي"), color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(translated("سيُرسل إلى خادم المدرسة، وتطبّق صلاحيات قاعدة البيانات."), color = Muted, fontSize = 11.sp)
                         }
                         TextButton(onClick = { composerOpen = !composerOpen }) { Text(if (composerOpen) "إغلاق" else "إنشاء") }
                     }
                     androidx.compose.animation.AnimatedVisibility(visible = composerOpen) {
                         Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                             if (needsSubjectAndClass) {
-                                OutlinedTextField(subject, { subject = it }, label = { Text("المادة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                                OutlinedTextField(targetClass, { targetClass = it.trim().uppercase() }, label = { Text("الشعبة / الصف") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                                OutlinedTextField(subject, { subject = it }, label = { Text(translated("المادة")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                                OutlinedTextField(targetClass, { targetClass = it.trim().uppercase() }, label = { Text(translated("الشعبة / الصف")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             }
-                            OutlinedTextField(entryTitle, { entryTitle = it }, label = { Text("العنوان") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                            OutlinedTextField(body, { body = it }, label = { Text("التفاصيل") }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8)
+                            OutlinedTextField(entryTitle, { entryTitle = it }, label = { Text(translated("العنوان")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(body, { body = it }, label = { Text(translated("التفاصيل")) }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8)
                             OutlinedButton(onClick = { attachmentPicker.launch(arrayOf("application/pdf", "image/*", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Rounded.UploadFile, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
@@ -1819,8 +2081,8 @@ private fun ServerSchoolItemsScreen(
             OutlinedTextField(
                 value = search, onValueChange = { search = it },
                 modifier = Modifier.fillMaxWidth(), singleLine = true,
-                label = { Text("بحث") },
-                placeholder = { Text("ابحث بالعنوان أو المادة أو الشعبة") },
+                label = { Text(translated("بحث")) },
+                placeholder = { Text(translated("ابحث بالعنوان أو المادة أو الشعبة")) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) }
             )
         }
@@ -1829,7 +2091,7 @@ private fun ServerSchoolItemsScreen(
                 Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Rounded.CloudOff, contentDescription = null, tint = Muted, modifier = Modifier.size(28.dp))
                     Text(if (search.isBlank()) "ماكو محتوى منشور بهذا القسم حالياً." else "ماكو نتائج مطابقة للبحث.", color = Ink, fontWeight = FontWeight.SemiBold)
-                    Text("اسحب تحديث المحتوى من الخادم للتأكد من آخر البيانات.", color = Muted, fontSize = 11.sp)
+                    Text(translated("اسحب تحديث المحتوى من الخادم للتأكد من آخر البيانات."), color = Muted, fontSize = 11.sp)
                 }
             }
         }
@@ -1849,7 +2111,7 @@ private fun ServerSchoolItemsScreen(
                                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                                 } catch (e: Exception) { message = e.message ?: "تعذر فتح الملف المرفق." }
                             }
-                        }) { Icon(Icons.Rounded.Download, contentDescription = null); Spacer(Modifier.width(6.dp)); Text("فتح / تنزيل الملف المرفق") }
+                        }) { Icon(Icons.Rounded.Download, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(translated("فتح / تنزيل الملف المرفق")) }
                     }
                     Text(item.createdAt.replace("T", " ").take(16), color = Muted, fontSize = 10.sp)
                 }
@@ -1885,20 +2147,20 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>, sch
                 Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("إضافة جدول", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                            Text("للمخولين بإدارة الجدول", color = Muted, fontSize = 11.sp)
+                            Text(translated("إضافة جدول"), color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            Text(translated("للمخولين بإدارة الجدول"), color = Muted, fontSize = 11.sp)
                         }
                         TextButton(onClick = { showComposer = !showComposer }) {
                             Text(if (showComposer) "إخفاء" else "إضافة")
                         }
                     }
                     if (canManage && showComposer) {
-                        OutlinedTextField(title, { title = it }, label = { Text("عنوان الجدول") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(details, { details = it }, label = { Text("الجدول كتابةً (اختياري)") }, placeholder = { Text("الأحد: رياضيات، عربي، كيمياء...") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+                        OutlinedTextField(title, { title = it }, label = { Text(translated("عنوان الجدول")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(details, { details = it }, label = { Text(translated("الجدول كتابةً (اختياري)")) }, placeholder = { Text(translated("الأحد: رياضيات، عربي، كيمياء...")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
                         Button(onClick = { picker.launch(arrayOf("application/pdf", "image/*")) }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Rounded.UploadFile, contentDescription = null); Spacer(Modifier.width(7.dp)); Text("اختيار PDF أو صورة")
+                            Icon(Icons.Rounded.UploadFile, contentDescription = null); Spacer(Modifier.width(7.dp)); Text(translated("اختيار PDF أو صورة"))
                         }
-                        if (fileName != null) Text("الملف المختار: " + fileName, color = Color(0xFF168A70), fontSize = 12.sp)
+                        if (fileName != null) Text(translated("الملف المختار: ") + fileName, color = Color(0xFF168A70), fontSize = 12.sp)
                         Button(onClick = {
                             val entry = (title.ifBlank { "جدول دراسي" }) +
                                 (if (details.isBlank()) "" else " — " + details) +
@@ -1909,21 +2171,21 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>, sch
                                 title = ""; details = ""; fileName = null; selectedUri = null
                             }
                         }, enabled = title.isNotBlank() || details.isNotBlank() || selectedUri != null, modifier = Modifier.fillMaxWidth()) {
-                            Text("إضافة للمعاينة")
+                            Text(translated("إضافة للمعاينة"))
                         }
-                        Text("حالياً نحفظ وصفاً محلياً فقط؛ الملف نفسه لا يُرفع لخادم لأن الخادم لم يُبنَ بعد.", color = Muted, fontSize = 11.sp)
-                    } else Text("هذه الميزة متاحة لمراقب الشعبة والمدير والمعاونين.", color = Muted, fontSize = 13.sp)
+                        Text(translated("حالياً نحفظ وصفاً محلياً فقط؛ الملف نفسه لا يُرفع لخادم لأن الخادم لم يُبنَ بعد."), color = Muted, fontSize = 11.sp)
+                    } else Text(translated("هذه الميزة متاحة لمراقب الشعبة والمدير والمعاونين."), color = Muted, fontSize = 13.sp)
                 }
             }
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("الجداول المضافة", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("${schedules.size} جدول محفوظ محلياً", color = Muted, fontSize = 11.sp)
+                    Text(translated("الجداول المضافة"), color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(translated("${schedules.size} جدول محفوظ محلياً"), color = Muted, fontSize = 11.sp)
                 }
                 Surface(color = Color(0xFFEAF2FF), shape = RoundedCornerShape(50)) {
-                    Text("الجدول", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    Text(translated("الجدول"), color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
                 }
             }
@@ -1932,7 +2194,7 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>, sch
             OutlinedTextField(
                 value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, shape = RoundedCornerShape(16.dp),
-                placeholder = { Text("ابحث في الجداول…") },
+                placeholder = { Text(translated("ابحث في الجداول…")) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
                 trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
                     Icon(Icons.Rounded.Close, contentDescription = "مسح البحث")
@@ -1949,7 +2211,7 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>, sch
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(entry, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 21.sp)
-                    Text("جدول محلي " + (i + 1), color = Muted, fontSize = 11.sp)
+                    Text(translated("جدول محلي ") + (i + 1), color = Muted, fontSize = 11.sp)
                     val fileUri = scheduleFiles.getOrNull(i)?.takeIf { it.isNotBlank() }?.let(Uri::parse)
                     if (fileUri != null) {
                         TextButton(onClick = {
@@ -1958,7 +2220,7 @@ private fun ScheduleScreen(role: SchoolRole, schedules: MutableList<String>, sch
                                 context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(fileUri, mime)
                                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
                             }
-                        }) { Text("فتح الملف المرفق") }
+                        }) { Text(translated("فتح الملف المرفق")) }
                     }
                 }
             }
@@ -1989,20 +2251,20 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
                 Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("إضافة واجب", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                            Text("أنشئ الواجب ثم راجعه قبل النشر", color = Muted, fontSize = 11.sp)
+                            Text(translated("إضافة واجب"), color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            Text(translated("أنشئ الواجب ثم راجعه قبل النشر"), color = Muted, fontSize = 11.sp)
                         }
                         TextButton(onClick = { showHomeworkComposer = !showHomeworkComposer }) { Text(if (showHomeworkComposer) "طيّ النموذج" else "إضافة واجب") }
                     }
                     if (showHomeworkComposer) {
-                    OutlinedTextField(subject, { subject = it }, label = { Text("المادة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    if (role == SchoolRole.TEACHER) Text("بالنسخة النهائية، الخادم يتحقق أن المادة مسندة لهذا المدرس.", color = Muted, fontSize = 11.sp)
-                    OutlinedTextField(title, { title = it }, label = { Text("عنوان الواجب") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(details, { details = it }, label = { Text("التفاصيل") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                    OutlinedTextField(subject, { subject = it }, label = { Text(translated("المادة")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    if (role == SchoolRole.TEACHER) Text(translated("بالنسخة النهائية، الخادم يتحقق أن المادة مسندة لهذا المدرس."), color = Muted, fontSize = 11.sp)
+                    OutlinedTextField(title, { title = it }, label = { Text(translated("عنوان الواجب")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(details, { details = it }, label = { Text(translated("التفاصيل")) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                     Button(onClick = {
                         homework.add(subject + ": " + title + if (details.isBlank()) "" else " — " + details)
                         subject = ""; title = ""; details = ""; showHomeworkComposer = false
-                    }, enabled = canCreate && subject.isNotBlank() && title.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("حفظ الواجب في المعاينة") }
+                    }, enabled = canCreate && subject.isNotBlank() && title.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(translated("حفظ الواجب في المعاينة")) }
                     }
                 }
             }
@@ -2010,20 +2272,20 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
         if (canReport) item {
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("متابعة الواجبات", color = Ink, fontWeight = FontWeight.Bold)
-                    Text("مراقب الشعبة يرسل بلاغاً للمدير إذا احتاج واجب إلى تعديل أو حذف، ولا يحذفه بنفسه.", color = Muted, fontSize = 12.sp)
-                    Button(onClick = { reports.add("بلاغ من مراقب الشعبة: مراجعة الواجبات المنشورة") }, modifier = Modifier.fillMaxWidth()) { Text("إرسال بلاغ للمدير") }
+                    Text(translated("متابعة الواجبات"), color = Ink, fontWeight = FontWeight.Bold)
+                    Text(translated("مراقب الشعبة يرسل بلاغاً للمدير إذا احتاج واجب إلى تعديل أو حذف، ولا يحذفه بنفسه."), color = Muted, fontSize = 12.sp)
+                    Button(onClick = { reports.add("بلاغ من مراقب الشعبة: مراجعة الواجبات المنشورة") }, modifier = Modifier.fillMaxWidth()) { Text(translated("إرسال بلاغ للمدير")) }
                 }
             }
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("قائمة الواجبات", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("${homework.size} واجب محفوظ محلياً", color = Muted, fontSize = 11.sp)
+                    Text(translated("قائمة الواجبات"), color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(translated("${homework.size} واجب محفوظ محلياً"), color = Muted, fontSize = 11.sp)
                 }
                 Surface(color = Color(0xFFFFF0DD), shape = RoundedCornerShape(50)) {
-                    Text("واجبات", color = Color(0xFFB66A12), fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    Text(translated("واجبات"), color = Color(0xFFB66A12), fontSize = 10.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
                 }
             }
@@ -2032,7 +2294,7 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
             OutlinedTextField(
                 value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, shape = RoundedCornerShape(16.dp),
-                placeholder = { Text("ابحث عن واجب أو مادة…") },
+                placeholder = { Text(translated("ابحث عن واجب أو مادة…")) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
                 trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
                     Icon(Icons.Rounded.Close, contentDescription = "مسح البحث")
@@ -2049,22 +2311,22 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(entry, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                    Text("واجب تجريبي " + (i + 1), color = Muted, fontSize = 11.sp)
+                    Text(translated("واجب تجريبي ") + (i + 1), color = Muted, fontSize = 11.sp)
                     if (canModerate) {
                         if (editingIndex == i) {
-                            OutlinedTextField(editingText, { editingText = it }, label = { Text("تعديل الواجب") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                            OutlinedTextField(editingText, { editingText = it }, label = { Text(translated("تعديل الواجب")) }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                TextButton(onClick = { editingIndex = -1; editingText = "" }) { Text("إلغاء") }
+                                TextButton(onClick = { editingIndex = -1; editingText = "" }) { Text(translated("إلغاء")) }
                                 TextButton(onClick = {
                                     if (editingText.isNotBlank()) homework[i] = editingText.trim()
                                     editingIndex = -1; editingText = ""
-                                }) { Text("حفظ التعديل") }
+                                }) { Text(translated("حفظ التعديل")) }
                             }
                         } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            TextButton(onClick = { editingIndex = i; editingText = entry }) { Text("تعديل") }
-                            TextButton(onClick = { homework.removeAt(i); if (editingIndex == i) editingIndex = -1 }) { Text("حذف") }
+                            TextButton(onClick = { editingIndex = i; editingText = entry }) { Text(translated("تعديل")) }
+                            TextButton(onClick = { homework.removeAt(i); if (editingIndex == i) editingIndex = -1 }) { Text(translated("حذف")) }
                         }
-                    } else if (canReport) TextButton(onClick = { reports.add("بلاغ من مراقب الشعبة عن: " + entry) }) { Text("إبلاغ المدير") }
+                    } else if (canReport) TextButton(onClick = { reports.add("بلاغ من مراقب الشعبة عن: " + entry) }) { Text(translated("إبلاغ المدير")) }
                 }
             }
         }
@@ -2072,7 +2334,7 @@ private fun HomeworkScreen(role: SchoolRole, homework: MutableList<String>, repo
             item { SectionHeading("البلاغات الإدارية", "محفوظة على هذا الجهاز") }
             itemsIndexed(reports) { i, report -> ContentCard(report, "بلاغ " + (i + 1), Icons.Rounded.Description) }
         }
-        item { Text("ملاحظة: قائمة الواجبات والبلاغات في هذه الشاشة تجريبية ومحلية حالياً؛ لا تُرسل إلى بقية المستخدمين.", color = Muted, fontSize = 11.sp, lineHeight = 16.sp) }
+        item { Text(translated("ملاحظة: قائمة الواجبات والبلاغات في هذه الشاشة تجريبية ومحلية حالياً؛ لا تُرسل إلى بقية المستخدمين."), color = Muted, fontSize = 11.sp, lineHeight = 16.sp) }
     }
 }
 
@@ -2098,35 +2360,35 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
                                 Icon(Icons.Rounded.Description, contentDescription = null, tint = Blue)
                             }
                             Column {
-                                Text("إضافة تحضير", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                                Text("للمدرسين ضمن موادهم المسندة", color = Muted, fontSize = 11.sp)
+                                Text(translated("إضافة تحضير"), color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                Text(translated("للمدرسين ضمن موادهم المسندة"), color = Muted, fontSize = 11.sp)
                             }
                         }
                         if (role == SchoolRole.TEACHER) TextButton(onClick = { showPreparationComposer = !showPreparationComposer }) { Text(if (showPreparationComposer) "طيّ" else "إضافة") }
                     }
                     if (role == SchoolRole.TEACHER && showPreparationComposer) {
-                        OutlinedTextField(subject, { subject = it }, label = { Text("المادة المسندة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(title, { title = it }, label = { Text("عنوان التحضير") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(content, { content = it }, label = { Text("أهداف الدرس وخطوات الشرح والواجب") }, modifier = Modifier.fillMaxWidth(), minLines = 4)
+                        OutlinedTextField(subject, { subject = it }, label = { Text(translated("المادة المسندة")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(title, { title = it }, label = { Text(translated("عنوان التحضير")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(content, { content = it }, label = { Text(translated("أهداف الدرس وخطوات الشرح والواجب")) }, modifier = Modifier.fillMaxWidth(), minLines = 4)
                         Button(onClick = {
                             preparations.add(subject + " — " + title + ": " + content)
                             subject = ""; title = ""; content = ""; showPreparationComposer = false
                         }, enabled = canCreate && subject.isNotBlank() && title.isNotBlank() && content.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Rounded.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text("حفظ التحضير في المعاينة")
+                            Icon(Icons.Rounded.Add, contentDescription = null); Spacer(Modifier.width(6.dp)); Text(translated("حفظ التحضير في المعاينة"))
                         }
-                        Text("يُحفظ محلياً في هذه النسخة التجريبية فقط.", color = Muted, fontSize = 11.sp)
-                    } else Text("إضافة التحاضير للمدرس فقط؛ والخادم مستقبلاً يتحقق من المادة المسندة إليه.", color = Muted, fontSize = 13.sp)
+                        Text(translated("يُحفظ محلياً في هذه النسخة التجريبية فقط."), color = Muted, fontSize = 11.sp)
+                    } else Text(translated("إضافة التحاضير للمدرس فقط؛ والخادم مستقبلاً يتحقق من المادة المسندة إليه."), color = Muted, fontSize = 13.sp)
                 }
             }
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("دفتر التحاضير", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("${preparations.size} تحضير محفوظ محلياً", color = Muted, fontSize = 11.sp)
+                    Text(translated("دفتر التحاضير"), color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(translated("${preparations.size} تحضير محفوظ محلياً"), color = Muted, fontSize = 11.sp)
                 }
                 Surface(color = Color(0xFFE5F8F1), shape = RoundedCornerShape(50)) {
-                    Text("التحاضير", color = Color(0xFF168A70), fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    Text(translated("التحاضير"), color = Color(0xFF168A70), fontSize = 10.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
                 }
             }
@@ -2135,7 +2397,7 @@ private fun PreparationsScreen(role: SchoolRole, preparations: MutableList<Strin
             OutlinedTextField(
                 value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, shape = RoundedCornerShape(16.dp),
-                placeholder = { Text("ابحث باسم التحضير أو المادة…") },
+                placeholder = { Text(translated("ابحث باسم التحضير أو المادة…")) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
                 trailingIcon = { if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
                     Icon(Icons.Rounded.Close, contentDescription = "مسح البحث")
@@ -2187,8 +2449,8 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
                             Icon(Icons.Rounded.Add, contentDescription = null, tint = Color.White)
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("لوحة إنشاء إعلان", color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("اكتب عنواناً واضحاً ورسالة مختصرة", color = Muted, fontSize = 11.sp)
+                            Text(translated("لوحة إنشاء إعلان"), color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(translated("اكتب عنواناً واضحاً ورسالة مختصرة"), color = Muted, fontSize = 11.sp)
                         }
                         TextButton(onClick = { showComposer = !showComposer }) {
                             Text(if (showComposer) "إغلاق" else "إنشاء")
@@ -2199,8 +2461,8 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
                             OutlinedTextField(
                                 value = title,
                                 onValueChange = { title = it },
-                                label = { Text("عنوان الإعلان") },
-                                placeholder = { Text("مثال: تغيير موعد الامتحان") },
+                                label = { Text(translated("عنوان الإعلان")) },
+                                placeholder = { Text(translated("مثال: تغيير موعد الامتحان")) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 shape = RoundedCornerShape(15.dp)
@@ -2208,8 +2470,8 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
                             OutlinedTextField(
                                 value = body,
                                 onValueChange = { body = it },
-                                label = { Text("نص الإعلان") },
-                                placeholder = { Text("اكتب التفاصيل المهمة هنا…") },
+                                label = { Text(translated("نص الإعلان")) },
+                                placeholder = { Text(translated("اكتب التفاصيل المهمة هنا…")) },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 3,
                                 shape = RoundedCornerShape(15.dp)
@@ -2227,7 +2489,7 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
                             ) {
                                 Icon(Icons.Rounded.Add, contentDescription = null)
                                 Spacer(Modifier.width(7.dp))
-                                Text("نشر في المعاينة")
+                                Text(translated("نشر في المعاينة"))
                             }
                         }
                     }
@@ -2241,11 +2503,11 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("لوحة الإعلانات", color = Ink, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("${announcements.size} إعلان محفوظ على هذا الجهاز", color = Muted, fontSize = 11.sp)
+                    Text(translated("لوحة الإعلانات"), color = Ink, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text(translated("${announcements.size} إعلان محفوظ على هذا الجهاز"), color = Muted, fontSize = 11.sp)
                 }
                 Surface(color = Color(0xFFEAF2FF), shape = RoundedCornerShape(50)) {
-                    Text("محلي", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    Text(translated("محلي"), color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
                 }
             }
@@ -2257,7 +2519,7 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
-                placeholder = { Text("ابحث في الإعلانات…") },
+                placeholder = { Text(translated("ابحث في الإعلانات…")) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
                 trailingIcon = {
                     if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
@@ -2294,7 +2556,7 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
                                 Icon(Icons.AutoMirrored.Rounded.Announcement, contentDescription = null, tint = Color(0xFF7651C9))
                             }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text("إعلان مدرسي ${announcements.size - index}", color = Color(0xFF7651C9), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text(translated("إعلان مدرسي ${announcements.size - index}"), color = Color(0xFF7651C9), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 Text(announcement.substringBefore("\n"), color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 21.sp)
                             }
                             Icon(
@@ -2313,7 +2575,7 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
                         androidx.compose.animation.AnimatedVisibility(visible = expanded) {
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Divider(color = Color(0xFFE8EDF5))
-                                Text("نص الإعلان الكامل", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                Text(translated("نص الإعلان الكامل"), color = Blue, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                                 if (canPublish) {
                                     TextButton(
                                         onClick = { announcements.removeAt(index) },
@@ -2321,7 +2583,7 @@ private fun NoticesScreen(role: SchoolRole, announcements: MutableList<String>) 
                                     ) {
                                         Icon(Icons.Rounded.Close, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(4.dp))
-                                        Text("حذف الإعلان")
+                                        Text(translated("حذف الإعلان"))
                                     }
                                 }
                             }
@@ -2428,11 +2690,11 @@ private fun ContentCard(title: String, subtitle: String, icon: ImageVector) {
                             tint = Blue,
                             modifier = Modifier.size(16.dp)
                         )
-                        Text("اضغط للطي", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                        Text(translated("اضغط للطي"), color = Blue, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 if (!expanded) {
-                    Text("اضغط لعرض التفاصيل", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                    Text(translated("اضغط لعرض التفاصيل"), color = Blue, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             Icon(
