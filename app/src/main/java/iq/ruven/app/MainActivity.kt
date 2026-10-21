@@ -70,6 +70,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
@@ -502,7 +503,7 @@ private fun RuvenAuthenticatedApp(
             }
         )
     }
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl, LocalDensity provides LocalDensity.current.copy(fontScale = settingsSnapshot.second)) {
         Box(Modifier.fillMaxSize()) {
             if (wallpaperBitmap != null) {
                 Image(
