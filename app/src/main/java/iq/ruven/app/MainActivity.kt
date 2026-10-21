@@ -241,7 +241,7 @@ private fun RuvenTheme(content: @Composable () -> Unit) {
 private enum class RuvenTab(val title: String, val englishTitle: String) {
     Home("الرئيسية", "Home"), Schedule("الجدول", "Timetable"), Homework("الواجبات", "Homework"),
     Preparations("التحاضير", "Preparations"), Notices("الإعلانات", "Announcements"), Workflows("العمليات المدرسية", "School workflows"),
-    Admin("الحسابات", "Accounts"), Sections("الشعب", "Sections"), Notifications("الإشعارات", "Notifications"), Settings("الإعدادات", "Settings")
+    Admin("الحسابات", "Accounts"), Sections("الشعب", "Sections"), Roster("سجل الطلاب", "Student roster"), Notifications("الإشعارات", "Notifications"), Settings("الإعدادات", "Settings")
 }
 
 private val ruvenEnglishLabels = mapOf(
@@ -898,6 +898,7 @@ private fun RuvenAuthenticatedApp(
                     if (role == SchoolRole.OWNER) {
                         add(RuvenTab.Admin to Icons.Rounded.School)
                         add(RuvenTab.Sections to Icons.Rounded.School)
+                        add(RuvenTab.Roster to Icons.Rounded.Person)
                     }
                     add(RuvenTab.Notifications to Icons.Rounded.Notifications)
                     add(RuvenTab.Settings to Icons.Rounded.Settings)
@@ -986,7 +987,8 @@ private fun RuvenAuthenticatedApp(
                             else ServerNotificationsScreen(session, backend)
                         7 -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
                             else RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ }, onSignOut = onSignOut)
-                        8 -> ServerNotificationsScreen(session, backend)
+                        8 -> if (role == SchoolRole.OWNER) OwnerStudentRosterScreen(session, backend) else ServerNotificationsScreen(session, backend)
+                        9 -> ServerNotificationsScreen(session, backend)
                         else -> RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ }, onSignOut = onSignOut)
                     }
                 }
