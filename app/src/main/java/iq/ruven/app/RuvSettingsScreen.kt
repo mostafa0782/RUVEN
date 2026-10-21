@@ -33,7 +33,7 @@ private val SettingsBlue = Color(0xFF2867D8)
 private val SettingsMuted = Color(0xFF718096)
 
 @Composable
-fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session, backend: SupabaseBackend, onSaved: () -> Unit) {
+fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session, backend: SupabaseBackend, onSaved: () -> Unit, onSignOut: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var language by remember { mutableStateOf(prefs.getString("settings_language", "ar") ?: "ar") }
@@ -73,6 +73,7 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
         }
         item { SettingsGroup("الحساب والأمان", Icons.Rounded.Security) {
             SettingsAction("تغيير كلمة المرور", "تحديث كلمة مرور حسابك المدرسي", Icons.Rounded.Lock) { dialog = "password"; passwordMessage = null }
+            SettingsAction("تسجيل الخروج", "إنهاء جلسة هذا الحساب على الجهاز", Icons.Rounded.Logout) { dialog = "signout" }
         } }
         item { SettingsGroup("اللغة وإمكانية الوصول", Icons.Rounded.Language) {
             Text("لغة التطبيق", color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -157,6 +158,13 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
             if (saved) Text("تم حفظ التفضيلات على هذا الجهاز.", color = Color(0xFF16845B), fontSize = 12.sp)
         }
     }
+    if (dialog == "signout") AlertDialog(
+        onDismissRequest = { dialog = null },
+        title = { Text("تسجيل الخروج؟") },
+        text = { Text("سيتم إنهاء الجلسة على هذا الجهاز. يمكنك تسجيل الدخول مرة أخرى لاحقاً.") },
+        confirmButton = { TextButton(onClick = { dialog = null; onSignOut() }) { Text("تسجيل الخروج") } },
+        dismissButton = { TextButton(onClick = { dialog = null }) { Text("إلغاء") } }
+    )
     if (dialog == "password") AlertDialog(
         onDismissRequest = { if (!passwordBusy) dialog = null },
         title = { Text("تغيير كلمة المرور") },
