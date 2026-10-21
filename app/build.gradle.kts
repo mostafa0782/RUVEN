@@ -29,6 +29,12 @@ android {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }
+        // When a stable release keystore is configured in CI, sign debug artifacts
+        // with that same key so the first migration build can update an existing install.
+        // Without the keystore, debug builds keep Android's default debug signing.
+        if (!System.getenv("ANDROID_KEYSTORE_PATH").isNullOrBlank()) {
+            getByName("debug").signingConfig = signingConfigs.getByName("release")
+        }
     }
     buildFeatures {
         compose = true
