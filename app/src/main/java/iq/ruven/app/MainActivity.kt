@@ -287,7 +287,6 @@ private enum class RuvenTab(val title: String, val englishTitle: String) {
     Admin("الحسابات", "Accounts"), Sections("الشعب", "Sections"), Notifications("الإشعارات", "Notifications"), Settings("الإعدادات", "Settings")
 }
 
-@Composable
 private val ruvenEnglishLabels = mapOf(
     "الله أكبر" to "God is greatest",
     "الرئيسية" to "Home",
@@ -1051,7 +1050,7 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
                             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                     Text(p.fullName, color = Ink, fontWeight = FontWeight.SemiBold)
-                                    Text(translated("${p.role} • ${p.className ?: ")بدون شعبة"}", color = Muted, fontSize = 11.sp)
+                                    Text(translated("${p.role} • ${p.className ?: "بدون شعبة"}"), color = Muted, fontSize = 11.sp)
                                 }
                                 if (admin) TextButton(onClick = { selectedStudent = p.id; section = "القرارات" }, enabled = p.role == "student") { Text(translated("قرار")) }
                             }
@@ -1092,7 +1091,7 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
                     item { Text(translated("ختم القرار"), color = Ink, fontWeight = FontWeight.SemiBold) }
                     item { Column { mySeals.forEach { seal -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedSeal == seal.id, onClick = { selectedSeal = seal.id }); Text(translated("${seal.name} • ${seal.title}"), color = Ink, fontSize = 12.sp) } }; if (mySeals.isEmpty()) Text(translated("لا يوجد ختم باسم حسابك. أنشئ ختمًا من تبويب الأختام أولًا."), color = Muted, fontSize = 11.sp) } }
                     item { Text(translated("تعيين مراقب للتنفيذ"), color = Ink, fontWeight = FontWeight.SemiBold) }
-                    item { Column { profiles.filter { it.role == "class_monitor" }.forEach { p -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedMonitor == p.id, onClick = { selectedMonitor = p.id }); Text(translated("${p.fullName} • ${p.className ?: ")بدون شعبة"}", color = Ink, fontSize = 12.sp) } } } }
+                    item { Column { profiles.filter { it.role == "class_monitor" }.forEach { p -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedMonitor == p.id, onClick = { selectedMonitor = p.id }); Text(translated("${p.fullName} • ${p.className ?: "بدون شعبة"}"), color = Ink, fontSize = 12.sp) } } } }
                     item { Button(onClick = { val p = profiles.firstOrNull { it.id == selectedStudent }; perform({ backend.createSchoolDecision(session,decisionType,selectedStudent,sourceClass.ifBlank { p?.className },targetClass,decisionReason,selectedMonitor,selectedSeal); decisionReason = "" }, "تم إرسال القرار المختوم للمراقب.") }, enabled = !busy && selectedStudent.isNotBlank() && selectedSeal.isNotBlank() && decisionReason.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text(translated("إصدار القرار وإشعار المراقب")) } }
                 }
                 if (decisions.isEmpty()) item { Text(translated("ماكو قرارات ظاهرة لهذا الحساب."), color = Muted, fontSize = 12.sp) }
@@ -1101,10 +1100,10 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
                     val seal = seals.firstOrNull { it.id == d.sealId }
                     Card(shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text(translated("${when(d.type) { ")transfer_student" -> "قرار نقل"; "remove_student" -> "قرار حذف"; "accept_request" -> "قرار قبول"; else -> "قرار إداري" }} • $studentName", color = Ink, fontWeight = FontWeight.Bold)
+                            Text(translated("${when(d.type) { "transfer_student" -> "قرار نقل"; "remove_student" -> "قرار حذف"; "accept_request" -> "قرار قبول"; else -> "قرار إداري" }} • $studentName"), color = Ink, fontWeight = FontWeight.Bold)
                             Text(d.reason, color = Muted, fontSize = 12.sp)
-                            Text(translated("الحالة: ${d.status} • الختم: ${seal?.name ?: ")قرار مختوم"}", color = Blue, fontSize = 11.sp)
-                            if (d.targetClass != null) Text(translated("من ${d.sourceClass ?: ")غير محدد"} إلى ${d.targetClass}", color = Muted, fontSize = 11.sp)
+                            Text(translated("الحالة: ${d.status} • الختم: ${seal?.name ?: "قرار مختوم"}"), color = Blue, fontSize = 11.sp)
+                            if (d.targetClass != null) Text(translated("من ${d.sourceClass ?: "غير محدد"} إلى ${d.targetClass}"), color = Muted, fontSize = 11.sp)
                             if (monitor && d.assignedMonitor == session.userId && d.status in setOf("pending","acknowledged")) {
                                 OutlinedTextField(executionNote, { executionNote = it }, label = { Text(translated("ملاحظة التنفيذ (اختيارية)")) }, modifier = Modifier.fillMaxWidth(), minLines = 1)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1135,7 +1134,7 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
                             Text(translated("${l.startsOn} → ${l.endsOn} • ${l.className}"), color = Blue, fontSize = 11.sp)
                             Text(translated("السبب: ${l.reason}"), color = Muted, fontSize = 12.sp)
                             Text(translated("الحالة: ${l.status} • الحضور: ${l.attendanceStatus}"), color = Ink, fontSize = 11.sp)
-                            if (l.status == "approved") Text(translated("تمت الموافقة بختم: ${seal?.name ?: ")ختم الإدارة"}", color = Color(0xFF16845B), fontSize = 11.sp)
+                            if (l.status == "approved") Text(translated("تمت الموافقة بختم: ${seal?.name ?: "ختم الإدارة"}"), color = Color(0xFF16845B), fontSize = 11.sp)
                             if (admin && l.status == "pending") {
                                 if (mySeals.isEmpty()) Text(translated("أنشئ ختمًا باسم حسابك أولًا حتى توافق على الطلب."), color = Muted, fontSize = 11.sp)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
