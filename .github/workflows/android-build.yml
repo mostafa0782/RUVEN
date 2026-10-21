@@ -75,6 +75,9 @@ jobs:
       - name: Assemble signed release APK
         run: gradle :app:assembleRelease -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.${{ github.run_number }}
 
+      - name: Verify APK signature
+        run: apksigner verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+
       - name: Rename APK for the in-app updater
         shell: bash
         run: cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/RUVEN.apk
