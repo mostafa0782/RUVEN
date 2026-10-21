@@ -76,9 +76,20 @@ private fun st(ar: String, language: String): String = if (language != "en") ar 
     "أرسل اقتراحاً أو بلّغ عن مشكلة" -> "Suggest an improvement or report a problem"
     "حفظ جميع الإعدادات" -> "Save all settings"
     "تم حفظ التفضيلات على هذا الجهاز." -> "Preferences saved on this device."
+    "إلغاء" -> "Cancel"
+    "حجم النص" -> "Text size"
+    "شفافية الزجاج" -> "Glass opacity"
+    "تمويه الخلفية" -> "Background blur"
+    "لمعان الزجاج" -> "Glass glow"
     "تسجيل الخروج؟" -> "Sign out?"
     "سيتم إنهاء الجلسة على هذا الجهاز. يمكنك تسجيل الدخول مرة أخرى لاحقاً." -> "Your session on this device will end. You can sign in again later."
-    "إلغاء" -> "Cancel"
+    "كلمة المرور الجديدة" -> "New password"
+    "تأكيد كلمة المرور" -> "Confirm password"
+    "استخدم 8 محارف على الأقل." -> "Use at least 8 characters."
+    "كلمة المرور طويلة أكثر من اللازم." -> "The password is too long."
+    "كلمتا المرور غير متطابقتين." -> "The passwords do not match."
+    "تم تغيير كلمة المرور بنجاح." -> "Password changed successfully."
+    "تعذر تغيير كلمة المرور." -> "Could not change the password."
     "كلمة المرور الجديدة" -> "New password"
     "تأكيد كلمة المرور" -> "Confirm password"
     "استخدم 8 محارف على الأقل." -> "Use at least 8 characters."
@@ -152,7 +163,7 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
             }
             Text(st("تنبيه: تفضيل اللغة يُحفظ، لكن ترجمة جميع شاشات التطبيق لم تكتمل بعد.", language), color = SettingsMuted, fontSize = 11.sp)
             HorizontalDivider()
-            Text("حجم النص: ${(fontScale * 100).toInt()}%", color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(if (language == "en") "Text size: ${(fontScale * 100).toInt()}%" else "حجم النص: ${(fontScale * 100).toInt()}%", color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Slider(value = fontScale, onValueChange = { fontScale = it; saved = false }, valueRange = .85f..1.3f)
         } }
         item { SettingsGroup("المظهر والتخصيص", Icons.Rounded.Palette, language) {
@@ -227,38 +238,38 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
     }
     if (dialog == "signout") AlertDialog(
         onDismissRequest = { dialog = null },
-        title = { Text("تسجيل الخروج؟") },
-        text = { Text("سيتم إنهاء الجلسة على هذا الجهاز. يمكنك تسجيل الدخول مرة أخرى لاحقاً.") },
-        confirmButton = { TextButton(onClick = { dialog = null; onSignOut() }) { Text("تسجيل الخروج") } },
+        title = { Text(st("تسجيل الخروج؟", language)) },
+        text = { Text(st("سيتم إنهاء الجلسة على هذا الجهاز. يمكنك تسجيل الدخول مرة أخرى لاحقاً.", language)) },
+        confirmButton = { TextButton(onClick = { dialog = null; onSignOut() }) { Text(st("تسجيل الخروج", language)) } },
         dismissButton = { TextButton(onClick = { dialog = null }) { Text("إلغاء") } }
     )
     if (dialog == "password") AlertDialog(
         onDismissRequest = { if (!passwordBusy) dialog = null },
-        title = { Text("تغيير كلمة المرور") },
+        title = { Text(st("تغيير كلمة المرور", language)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(newPassword, { newPassword = it; passwordMessage = null }, label = { Text("كلمة المرور الجديدة") }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
-                OutlinedTextField(confirmPassword, { confirmPassword = it; passwordMessage = null }, label = { Text("تأكيد كلمة المرور") }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
+                OutlinedTextField(newPassword, { newPassword = it; passwordMessage = null }, label = { Text(st("كلمة المرور الجديدة", language)) }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
+                OutlinedTextField(confirmPassword, { confirmPassword = it; passwordMessage = null }, label = { Text(st("تأكيد كلمة المرور", language)) }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
                 passwordMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
             }
         },
         confirmButton = { TextButton(enabled = !passwordBusy, onClick = {
             when {
-                newPassword.length < 8 -> passwordMessage = "استخدم 8 محارف على الأقل."
-                newPassword.length > 72 -> passwordMessage = "كلمة المرور طويلة أكثر من اللازم."
-                newPassword != confirmPassword -> passwordMessage = "كلمتا المرور غير متطابقتين."
+                newPassword.length < 8 -> passwordMessage = st("استخدم 8 محارف على الأقل.", language)
+                newPassword.length > 72 -> passwordMessage = st("كلمة المرور طويلة أكثر من اللازم.", language)
+                newPassword != confirmPassword -> passwordMessage = st("كلمتا المرور غير متطابقتين.", language)
                 else -> scope.launch {
                     passwordBusy = true
                     try {
                         backend.updatePassword(session, newPassword)
-                        passwordMessage = "تم تغيير كلمة المرور بنجاح."
+                        passwordMessage = st("تم تغيير كلمة المرور بنجاح.", language)
                         newPassword = ""; confirmPassword = ""
-                    } catch (e: Exception) { passwordMessage = e.message ?: "تعذر تغيير كلمة المرور." }
+                    } catch (e: Exception) { passwordMessage = e.message ?: st("تعذر تغيير كلمة المرور.", language) }
                     finally { passwordBusy = false }
                 }
             }
-        }) { if (passwordBusy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp) else Text("تغيير") } },
-        dismissButton = { TextButton(onClick = { if (!passwordBusy) dialog = null }) { Text("إغلاق") } }
+        }) { if (passwordBusy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp) else Text(st("تغيير", language)) } },
+        dismissButton = { TextButton(onClick = { if (!passwordBusy) dialog = null }) { Text(st("إغلاق", language)) } }
     )
     val info = when (dialog) {
         "privacy" -> if (language == "en") """
