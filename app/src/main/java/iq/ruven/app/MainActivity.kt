@@ -22,6 +22,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -110,7 +111,115 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         scheduleBackendHealthChecks()
         RuvenNotifications.createChannel(this)
-        setContent { RuvenTheme { RuvenApp() } }
+        setContent { RuvenTheme { RuvenSplashGate { RuvenApp() } } }
+    }
+}
+
+@Composable
+private fun RuvenSplashGate(content: @Composable () -> Unit) {
+    var showSplash by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(2200)
+        showSplash = false
+    }
+    Box(Modifier.fillMaxSize()) {
+        content()
+        AnimatedVisibility(
+            visible = showSplash,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 30 }),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF11151B),
+                                Color(0xFF20252B),
+                                Color(0xFF090B0E)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 26.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(112.dp)
+                            .clip(RoundedCornerShape(56.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFFFFE6A3), Color(0xFFF8F1DC), Color(0xFFB88B35))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(RoundedCornerShape(50.dp))
+                                .background(Color(0xFF102B53)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.School,
+                                contentDescription = "School",
+                                tint = Color(0xFFFFE7A3),
+                                modifier = Modifier.size(58.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        "ثانوية المتفوقين الثانية في الناصرية",
+                        color = Color(0xFFF6EAD0),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        "Second Al-Mutafawigeen Secondary School in Nasiriyah",
+                        color = Color(0xFFC8C1B5),
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "RUVEN",
+                        color = Color(0xFFF4E7CD),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 43.sp,
+                        letterSpacing = 5.sp
+                    )
+                    Text(
+                        "Your School, Connected",
+                        color = Color(0xFFD4B779),
+                        fontSize = 12.sp,
+                        letterSpacing = 2.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(9.dp)
+                    ) {
+                        Text("Developed by", color = Color(0xFFB8B8B8), fontSize = 11.sp)
+                        Text("MOSTAFA PY", color = Color(0xFFF4E7CD), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("🐍", fontSize = 17.sp)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        Modifier.width(90.dp).height(2.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color(0xFFD4B779))
+                    )
+                }
+            }
+        }
     }
 }
 
