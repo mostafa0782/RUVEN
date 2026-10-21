@@ -516,9 +516,32 @@ private fun RuvenAuthenticatedApp(
                             IconButton(onClick = onRefresh) {
                                 Icon(Icons.Rounded.Refresh, contentDescription = "تحديث المحتوى والإشعارات", tint = Blue)
                             }
-                            TextButton(onClick = onCheckUpdates, enabled = !checkingUpdate) {
-                                if (checkingUpdate) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                else Text("تحديث التطبيق", color = Blue, fontSize = 11.sp)
+                            TextButton(
+                                onClick = onCheckUpdates,
+                                enabled = !checkingUpdate,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                            ) {
+                                if (checkingUpdate) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(15.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Blue
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Rounded.Refresh,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = Blue
+                                    )
+                                }
+                                Spacer(Modifier.width(5.dp))
+                                Text(
+                                    if (checkingUpdate) "جارٍ الفحص…" else "تحقق من التحديثات",
+                                    color = Blue,
+                                    fontSize = 11.sp,
+                                    maxLines = 1
+                                )
                             }
                             TextButton(onClick = onSignOut) { Text("خروج", color = Blue, fontSize = 11.sp) }
                         }
