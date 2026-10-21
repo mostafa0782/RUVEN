@@ -1242,7 +1242,10 @@ private fun OwnerAccountManagementScreen(
                                 } finally { creating = false }
                             }
                         },
-                        enabled = !creating && newFullName.isNotBlank() && newEmail.isNotBlank() && newPassword.length >= 8 &&
+                        enabled = !creating &&
+                            newFullName.trim().length in 2..100 &&
+                            newEmail.trim().matches(Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) &&
+                            newPassword.length in 8..72 &&
                             (newRole != "student" || newClassName.trim().uppercase() in setOf("A", "B", "C", "D", "E", "F")),
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(if (creating) "جارٍ إنشاء الحساب..." else "إنشاء الحساب") }
