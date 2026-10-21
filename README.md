@@ -12,7 +12,7 @@ RUVEN is an Android-first school services app for Al-Mutafawiqeen Secondary Scho
 - Owner-only management flows call server-side functions/RPCs for account creation and profile-role changes.
 - Local device persistence for selected school content and UI workflows; not every screen is server-synchronized.
 - Local notification processing for newly synchronized published items.
-- In-app update checker reads the latest GitHub Release and expects an asset named `RUVEN.apk`.
+- In-app update checker reads the latest GitHub Release, requires `RUVEN.apk` plus `RUVEN.apk.sha256`, and verifies the downloaded APK's SHA-256 before opening Android's installer.
 
 ## Important limitations before public deployment
 
@@ -43,7 +43,7 @@ The CI workflow runs unit tests, builds a signed release APK, and uploads it as 
 
 ## Versioning and publishing
 
-The build workflow uses `0.1.<GitHub Actions run number>` as the version name and the run number as Android `versionCode`. For the current `0.1.x` series, publish a matching numeric tag such as `v0.1.132` only after reviewing and testing that source. The tag workflow creates a GitHub Release with an APK named exactly `RUVEN.apk`, which the in-app updater expects.
+The build workflow uses `0.1.<GitHub Actions run number>` as the version name and the run number as Android `versionCode`. For the current `0.1.x` series, publish a matching numeric tag such as `v0.1.132` only after reviewing and testing that source. The tag workflow creates a GitHub Release with `RUVEN.apk` and its `RUVEN.apk.sha256` checksum. The updater rejects missing checksums and downloads from unexpected hosts.
 
 ## Security and release checklist
 
