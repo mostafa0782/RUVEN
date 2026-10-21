@@ -542,7 +542,113 @@ private val ruvenEnglishLabels = mapOf(
     "ماكو محتوى منشور بهذا القسم حالياً." to "No content has been published in this section yet.",
     "ماكو نتائج مطابقة للبحث." to "No matching search results.",
     "اسحب تحديث المحتوى من الخادم للتأكد من آخر البيانات." to "Refresh from the server to check for the latest data.",
-    "فتح / تنزيل الملف المرفق" to "Open / download attachment"
+    "فتح / تنزيل الملف المرفق" to "Open / download attachment",
+    "ختم: " to "Seal: ",
+    "معرّف: " to "ID: ",
+    "إصدار القرار وإشعار المراقب" to "Issue decision and notify monitor",
+    "من تاريخ YYYY-MM-DD" to "From date YYYY-MM-DD",
+    "إلى تاريخ YYYY-MM-DD" to "To date YYYY-MM-DD",
+    "إرسال طلب الإجازة" to "Submit leave request",
+    "السبب: " to "Reason: ",
+    "الحالة: " to "Status: ",
+    " • الحضور: " to " • Attendance: ",
+    "تمت الموافقة بختم: " to "Approved with seal: ",
+    "تاريخ التقرير YYYY-MM-DD" to "Report date YYYY-MM-DD",
+    "نشر التقرير للطلاب" to "Publish report to students",
+    "قائمة الأسماء متاحة للمراقبين والإدارة. الطلاب يقدمون الإجازات ويتابعون التقارير من الأقسام الأخرى." to "The directory is available to monitors and administrators. Students can submit leave requests and view reports in other sections.",
+    "العمليات المدرسية" to "School workflows",
+    "الدليل، القرارات المختومة، طلبات الإجازة، والتقرير اليومي المتصل بالخادم." to "Directory, sealed decisions, leave requests, and server-backed daily reports.",
+    "عرض المدرسين والهيئة التربوية فقط" to "Show teachers and educational staff only",
+    "إدارة الأختام متاحة للمالك وأعضاء الإدارة المخوّلين فقط." to "Seal management is restricted to the owner and authorized administrators.",
+    "إنشاء ختم" to "Create seal",
+    "جارٍ الحفظ…" to "Saving…",
+    "الطالب المستهدف" to "Target student",
+    "نوع القرار" to "Decision type",
+    "نقل" to "Transfer",
+    "حذف" to "Remove",
+    "قبول" to "Accept",
+    "آخر" to "Other",
+    "الشعبة الحالية" to "Current section",
+    "الشعبة الجديدة (إن وجدت)" to "New section (if applicable)",
+    "السبب والتعليمات" to "Reason and instructions",
+    "ختم القرار" to "Decision seal",
+    "لا يوجد ختم باسم حسابك. أنشئ ختمًا من تبويب الأختام أولًا." to "No seal is assigned to your account. Create a seal in the Seals tab first.",
+    "تعيين مراقب للتنفيذ" to "Assign a monitor to execute",
+    "ماكو قرارات ظاهرة لهذا الحساب." to "No decisions are available for this account.",
+    "ملاحظة التنفيذ (اختيارية)" to "Execution note (optional)",
+    "استلام" to "Acknowledge",
+    "تم التنفيذ" to "Completed",
+    "تم تأكيد استلام القرار." to "Decision receipt acknowledged.",
+    "تم تسجيل تنفيذ القرار." to "Decision execution recorded.",
+    "سبب الإجازة" to "Leave reason",
+    "طلبات بانتظار قرار الإدارة" to "Requests awaiting an administrative decision",
+    "ماكو طلبات إجازة ظاهرة حاليًا." to "No leave requests are currently available.",
+    "أنشئ ختمًا باسم حسابك أولًا حتى توافق على الطلب." to "Create a seal for your account before approving a request.",
+    "تمت الموافقة على الإجازة وأُرسل إشعار للطالب." to "Leave approved and the student was notified.",
+    "موافقة" to "Approve",
+    "تم رفض الإجازة وإشعار الطالب." to "Leave rejected and the student was notified.",
+    "حاضر" to "Present",
+    "غائب" to "Absent",
+    "تم تسجيل الحضور." to "Attendance recorded.",
+    "تم تسجيل الغياب." to "Absence recorded.",
+    "أهم أحداث اليوم" to "Key events today",
+    "وعود الإدارة أو الأمور المقررة" to "Administrative commitments or planned items",
+    "أمور لم تُنفّذ بعد" to "Items not yet completed",
+    "ماكو تقارير يومية منشورة حاليًا." to "No daily reports have been published.",
+    "أحداث اليوم" to "Today's events",
+    "وعود الإدارة" to "Administrative commitments",
+    "لم يُنفّذ بعد" to "Not completed yet",
+    "تحديث بيانات الخادم" to "Refresh server data",
+    "الإشعارات" to "Notifications",
+    "آخر تحديثات المدرسة المنشورة. اسحب التحديث من الخادم بزر التحديث." to "Latest published school updates. Refresh from the server using the button.",
+    "إشعارات فعلية من قاعدة البيانات: قرارات الإدارة وحالة الإجازات." to "Database notifications: administrative decisions and leave status.",
+    "كل شي يخص دراستك،\nبمكان واحد." to "Everything about your studies,\nin one place.",
+    "منشورات الخادم: " to "Server posts: ",
+    "الواجبات المحلية: " to "Local homework: ",
+    "التحاضير المحلية: " to "Local preparations: ",
+    "الجداول المحلية: " to "Local timetables: ",
+    "الجدول الدراسي" to "Timetable",
+    "الجداول المنشورة من إدارة المدرسة." to "Timetables published by school administration.",
+    "الواجبات المنشورة حسب المادة والشعبة." to "Homework published by subject and class.",
+    "تحاضير الدروس المنشورة من المدرسين والإدارة." to "Lesson preparations published by teachers and administration.",
+    "الإعلانات المدرسية" to "School announcements",
+    "الإعلانات المنشورة من إدارة المدرسة." to "Announcements published by school administration.",
+    "الإعدادات" to "Settings",
+    "خصص تجربة RUVEN على هذا الجهاز." to "Customize your RUVEN experience on this device.",
+    "RUVEN • نسخة قيد التطوير" to "RUVEN • Development build",
+    "حجم الخط: " to "Font size: ",
+    "الشعبة: " to "Section: ",
+    "الشعب المسجلة (" to "Registered sections (",
+    "نوع الحساب: " to "Account type: ",
+    "من " to "From ",
+    " إلى " to " to ",
+    "بدون شعبة" to "No section",
+    "غير محدد" to "Not specified",
+    "قرار مختوم" to "Sealed decision",
+    "ختم الإدارة" to "Administration seal",
+    "pending" to "Pending",
+    "acknowledged" to "Acknowledged",
+    "completed" to "Completed",
+    "approved" to "Approved",
+    "rejected" to "Rejected",
+    "not_recorded" to "Not recorded",
+    "present" to "Present",
+    "absent" to "Absent",
+    "student" to "Student",
+    "teacher" to "Teacher",
+    "class_monitor" to "Class monitor",
+    "class_supervisor" to "Class supervisor",
+    "assistant_principal" to "Assistant principal",
+    "principal" to "Principal",
+    "educational_counselor" to "Educational counselor",
+    "owner" to "Owner",
+    "student_parliament" to "Student parliament member",
+    "العربية" to "Arabic",
+    "كحلي زجاجي" to "Glass navy",
+    "ليل داكن" to "Midnight",
+    "فاتح" to "Light",
+    "نعناعي" to "Mint",
+    "إلغاء" to "Cancel"
 )
 
 @Composable
@@ -1032,7 +1138,7 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
         item {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 allowedTabs.forEach { label ->
-                    FilterChip(selected = section == label, onClick = { section = label }, label = { Text(label, fontSize = 11.sp) })
+                    FilterChip(selected = section == label, onClick = { section = label }, label = { Text(translated(label), fontSize = 11.sp) })
                 }
             }
         }
@@ -2630,8 +2736,8 @@ private fun PageHeader(title: String, subtitle: String) {
                 Icon(Icons.Rounded.School, contentDescription = null, tint = Color.White, modifier = Modifier.size(25.dp))
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(title, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                Text(subtitle, color = Muted, fontSize = 12.sp, lineHeight = 19.sp)
+                Text(translated(title), color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                Text(translated(subtitle), color = Muted, fontSize = 12.sp, lineHeight = 19.sp)
             }
         }
     }
@@ -2640,8 +2746,8 @@ private fun PageHeader(title: String, subtitle: String) {
 @Composable
 private fun SectionHeading(title: String, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text(subtitle, color = Muted, fontSize = 12.sp)
+        Text(translated(title), color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(translated(subtitle), color = Muted, fontSize = 12.sp)
     }
 }
 
