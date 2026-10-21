@@ -406,6 +406,7 @@ private fun RuvenApp() {
                 }
             },
             onSignOut = {
+                scope.launch { runCatching { backend.signOut(activeSession) } }
                 authPrefs.edit().remove("refresh_token").apply()
                 session = null
                 profile = null
@@ -610,7 +611,7 @@ private fun RuvenAuthenticatedApp(
                         7 -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
                             else RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ }, onSignOut = onSignOut)
                         8 -> ServerNotificationsScreen(session, backend)
-                        else -> RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ })
+                        else -> RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ }, onSignOut = onSignOut)
                     }
                 }
             }
