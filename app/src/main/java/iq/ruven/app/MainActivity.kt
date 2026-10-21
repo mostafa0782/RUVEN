@@ -47,6 +47,8 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.UploadFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -268,7 +270,7 @@ private fun RuvenTheme(content: @Composable () -> Unit) {
 
 private enum class RuvenTab(val title: String) {
     Home("الرئيسية"), Schedule("الجدول"), Homework("الواجبات"),
-    Preparations("التحاضير"), Notices("الإعلانات"), Admin("الحسابات"), Sections("الشعب")
+    Preparations("التحاضير"), Notices("الإعلانات"), Admin("الحسابات"), Sections("الشعب"), Notifications("الإشعارات"), Settings("الإعدادات")
 }
 
 @Composable
@@ -470,6 +472,8 @@ private fun RuvenAuthenticatedApp(
                         add(RuvenTab.Admin to Icons.Rounded.School)
                         add(RuvenTab.Sections to Icons.Rounded.School)
                     }
+                    add(RuvenTab.Notifications to Icons.Rounded.Notifications)
+                    add(RuvenTab.Settings to Icons.Rounded.Settings)
                 }
                 tabs.forEachIndexed { i, item ->
                     NavigationBarItem(selected = tab == i, onClick = { tab = i },
@@ -513,7 +517,13 @@ private fun RuvenAuthenticatedApp(
                         )
                     }
                 }
-                AnimatedContent(targetState = tab, transitionSpec = { fadeIn() togetherWith fadeOut() },
+                AnimatedContent(targetState = tab,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = androidx.compose.animation.core.tween(220)) +
+                            slideInVertically(animationSpec = androidx.compose.animation.core.tween(220)) { it / 18 }) togetherWith
+                            (fadeOut(animationSpec = androidx.compose.animation.core.tween(140)) +
+                                androidx.compose.animation.slideOutVertically(animationSpec = androidx.compose.animation.core.tween(140)) { -it / 24 })
+                    },
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
                     when (current) {
                         0 -> HomeScreen(role, homework.size, preparations.size, schedules.size, remoteItems, feedError) { tab = it }
@@ -523,8 +533,10 @@ private fun RuvenAuthenticatedApp(
                         4 -> NoticesScreen(role, announcements)
                         5 -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
                             else NoticesScreen(role, announcements)
-                        else -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
+                        6 -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
                             else NoticesScreen(role, announcements)
+                        7 -> NotificationsScreen(remoteItems, feedError, onRefresh)
+                        else -> SettingsScreen(prefs = prefs)
                     }
                 }
             }
