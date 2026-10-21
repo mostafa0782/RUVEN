@@ -134,139 +134,95 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun RuvenSplashGate(content: @Composable () -> Unit) {
     var showSplash by remember { mutableStateOf(true) }
+    var lineExpanded by remember { mutableStateOf(false) }
+    val lineProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (lineExpanded) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = 950,
+            easing = androidx.compose.animation.core.FastOutSlowInEasing
+        ),
+        label = "welcomeGoldLine"
+    )
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(2200)
+        kotlinx.coroutines.delay(180)
+        lineExpanded = true
+        kotlinx.coroutines.delay(1950)
         showSplash = false
     }
     Box(Modifier.fillMaxSize()) {
         content()
         AnimatedVisibility(
             visible = showSplash,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 30 }),
-            exit = fadeOut()
+            enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(280)),
+            exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(520))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        Brush.linearGradient(
+                        Brush.verticalGradient(
                             colors = listOf(
-                                Color(0xFF11151B),
-                                Color(0xFF20252B),
-                                Color(0xFF090B0E)
+                                Color(0xFF070D18),
+                                Color(0xFF101D31),
+                                Color(0xFF050912)
                             )
                         )
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 26.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
+                    Spacer(Modifier.height(4.dp))
+                    AnimatedVisibility(
+                        visible = showSplash,
+                        enter = fadeIn(
+                            animationSpec = androidx.compose.animation.core.tween(
+                                durationMillis = 1000, delayMillis = 220
+                            )
+                        ) + slideInVertically(
+                            animationSpec = androidx.compose.animation.core.tween(
+                                durationMillis = 850,
+                                easing = androidx.compose.animation.core.FastOutSlowInEasing
+                            ),
+                            initialOffsetY = { it / 3 }
+                        )
+                    ) {
+                        Text(
+                            text = "WELCOME",
+                            color = Color(0xFFE8C675),
+                            fontSize = 31.sp,
+                            fontWeight = FontWeight.Light,
+                            letterSpacing = 7.sp,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color(0xFF9B7028),
+                                        Color(0xFFFFE8A3),
+                                        Color(0xFFD5A84F),
+                                        Color(0xFFFFF1C4)
+                                    )
+                                )
+                            )
+                        )
+                    }
                     Box(
                         modifier = Modifier
-                            .size(112.dp)
-                            .clip(RoundedCornerShape(56.dp))
+                            .fillMaxWidth(0.72f * lineProgress)
+                            .height(2.dp)
                             .background(
-                                Brush.linearGradient(
-                                    listOf(Color(0xFFFFE6A3), Color(0xFFF8F1DC), Color(0xFFB88B35))
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(RoundedCornerShape(50.dp))
-                                .background(Color(0xFF102B53)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(3.dp)
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                    modifier = Modifier.padding(bottom = 1.dp)
-                                ) {
-                                    listOf(Color(0xFFCE2B37), Color.White, Color(0xFF171717)).forEach { stripe ->
-                                        Box(Modifier.width(20.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(stripe))
-                                    }
-                                }
-                                Text(
-                                    "الله أكبر",
-                                    color = Color(0xFF48B56A),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Icon(
-                                    Icons.AutoMirrored.Rounded.MenuBook,
-                                    contentDescription = "Open book",
-                                    tint = Color(0xFFFFE7A3),
-                                    modifier = Modifier.size(43.dp)
-                                )
-                                Text(translated("١٤٤٥  •  ٢٠٢٣"), color = Color(0xFFFFE7A3), fontSize = 7.sp)
-                            }
-                        }
-                    }
-                    Text(
-                        "ثانوية المتفوقين الثانية في الناصرية",
-                        color = Color(0xFFF6EAD0),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        "Second Al-Mutafawigeen Secondary School in Nasiriyah",
-                        color = Color(0xFFC8C1B5),
-                        fontSize = 10.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "RUVEN",
-                        color = Color(0xFFF4E7CD),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 43.sp,
-                        letterSpacing = 5.sp
-                    )
-                    Text(
-                        "Your School, Connected",
-                        color = Color(0xFFD4B779),
-                        fontSize = 12.sp,
-                        letterSpacing = 2.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(20.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(9.dp)
-                    ) {
-                        Text(translated("Developed by"), color = Color(0xFFB8B8B8), fontSize = 11.sp)
-                        Text(translated("MOSTAFA PY"), color = Color(0xFFF4E7CD), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
-                            Box(
-                                Modifier.size(width = 16.dp, height = 12.dp)
-                                    .offset(x = 2.dp, y = (-3).dp)
-                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomEnd = 2.dp, bottomStart = 2.dp))
-                                    .background(Color(0xFF3776AB))
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color(0xFF6D4A17),
+                                        Color(0xFFFFE9A0),
+                                        Color(0xFFB8872E)
+                                    )
+                                ),
+                                RoundedCornerShape(2.dp)
                             )
-                            Box(
-                                Modifier.size(width = 16.dp, height = 12.dp)
-                                    .offset(x = (-2).dp, y = 3.dp)
-                                    .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp, bottomEnd = 6.dp, bottomStart = 6.dp))
-                                    .background(Color(0xFFFFD343))
-                            )
-                            Box(Modifier.offset(x = 1.dp, y = (-5).dp).size(2.dp).clip(RoundedCornerShape(1.dp)).background(Color.White))
-                            Box(Modifier.offset(x = (-1).dp, y = 1.dp).size(2.dp).clip(RoundedCornerShape(1.dp)).background(Color.White))
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Box(
-                        Modifier.width(90.dp).height(2.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(Color(0xFFD4B779))
                     )
                 }
             }
