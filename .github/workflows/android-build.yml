@@ -61,23 +61,28 @@ jobs:
             echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
             echo "Stable signing key configured; APK can update installs signed with this key."
           elif [ "$present" -eq 0 ]; then
-            echo "::warning::Release signing secrets are not configured. This APK uses a temporary debug signature and cannot update a release-signed installation."
+            echo "Release signing is not configured. Refusing to publish an APK that cannot update existing installs." >&2
+            echo "Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD in GitHub Actions secrets." >&2
+            exit 1
           else
-            echo "Only some signing secrets are configured. Set all four ANDROID_KEYSTORE_* secrets." >&2
+            echo "Only some signing secrets are configured. Set all four signing secrets." >&2
             exit 1
           fi
 
       - name: Run unit tests
         run: gradle :app:testDebugUnitTest -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.0
 
-      - name: Assemble debug APK
-        run: gradle :app:assembleDebug -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.0
+      - name: Assemble signed release APK
+        run: gradle :app:assembleRelease -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.${{ github.run_number }}
 
-      - name: Upload debug APK
-        if: success()
+      - name: Rename APK for the in-app updater
+        shell: bash
+        run: cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/RUVEN.apk
+
+      - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:
-          name: RUVEN-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: RUVEN-release-apk
+          path: app/build/outputs/apk/release/RUVEN.apk
           if-no-files-found: error
           retention-days: 7
