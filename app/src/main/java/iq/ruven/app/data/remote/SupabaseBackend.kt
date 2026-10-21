@@ -189,11 +189,14 @@ class SupabaseBackend(
             "student", "class_monitor", "parliament_member", "teacher", "class_supervisor",
             "assistant_principal", "principal", "educational_counselor", "ministry_education_member"
         )) { "نوع الحساب غير مسموح." }
+        val cleanClass = className?.trim()?.uppercase()?.takeIf { it.isNotBlank() }
+        require(cleanClass == null || cleanClass in setOf("A", "B", "C", "D", "E", "F")) { "الشعبة يجب أن تكون A أو B أو C أو D أو E أو F." }
+        require(role != "student" || cleanClass != null) { "حدد شعبة الطالب من A إلى F." }
         val payload = JSONObject()
             .put("target_user_id", targetUserId)
-            .put("new_role", role)
-            .put("new_class_name", className?.trim()?.takeIf { it.isNotBlank() } ?: JSONObject.NULL)
-        requestRaw("/rest/v1/rpc/owner_set_profile_role", "POST", payload, session)
+            .put("role", role)
+            .put("class_name", cleanClass ?: JSONObject.NULL)
+        requestRaw("/functions/v1/owner-set-profile-role", "POST", payload, session)
         Unit
     }
 
