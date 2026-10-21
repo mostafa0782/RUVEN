@@ -828,6 +828,7 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
     }
 }
 
+@Composable
 private fun NotificationsScreen(
     items: List<SupabaseBackend.SchoolItem>,
     error: String?,
