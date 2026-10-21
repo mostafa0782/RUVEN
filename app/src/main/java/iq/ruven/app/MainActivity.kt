@@ -1701,9 +1701,9 @@ private fun ServerSchoolItemsScreen(
     var message by remember { mutableStateOf<String?>(null) }
     val needsSubjectAndClass = itemType == "homework" || itemType == "preparation"
     val canCreate = when (itemType) {
-        "timetable" -> SchoolPermissions.canManageTimetable(role)
+        "timetable" -> role in setOf(SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.PRINCIPAL, SchoolRole.OWNER)
         "homework" -> SchoolPermissions.canCreateHomework(role, assignedSubject = subject.isNotBlank())
-        "preparation" -> SchoolPermissions.canCreatePreparation(role, assignedSubject = subject.isNotBlank())
+        "preparation" -> role in setOf(SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.PRINCIPAL, SchoolRole.OWNER) || SchoolPermissions.canCreatePreparation(role, assignedSubject = subject.isNotBlank())
         "announcement" -> SchoolPermissions.canPublishAnnouncements(role)
         else -> false
     }
