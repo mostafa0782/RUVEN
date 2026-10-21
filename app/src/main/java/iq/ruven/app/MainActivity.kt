@@ -544,6 +544,145 @@ private fun RuvenAuthenticatedApp(
     }
 }
 
+@Composable
+private fun NotificationsScreen(
+    items: List<SupabaseBackend.SchoolItem>,
+    error: String?,
+    onRefresh: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            PageHeader("الإشعارات", "آخر تحديثات المدرسة المنشورة. اسحب التحديث من الخادم بزر التحديث.")
+        }
+        item {
+            OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("تحديث الإشعارات")
+            }
+        }
+        if (error != null) item {
+            Text(error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+        }
+        if (items.isEmpty()) item {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Rounded.Notifications, contentDescription = null, tint = Blue, modifier = Modifier.size(32.dp))
+                    Text("ماكو إشعارات منشورة حاليًا", fontWeight = FontWeight.SemiBold, color = Ink)
+                    Text("تظهر هنا تحديثات المدرسة المتاحة لحسابك.", color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center)
+                }
+            }
+        } else items(items, key = { it.id }) { item ->
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(item.title, color = Ink, fontWeight = FontWeight.Bold)
+                    Text(item.body, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
+                    Text(item.createdAt, color = Blue, fontSize = 10.sp)
+                }
+            }
+        }
+        item {
+            Text(
+                "تنبيه: هذه الصفحة تعرض المنشورات المنشورة من الخادم حاليًا؛ إشعارات القرارات والإجازات ستظهر بعد ربط واجهات سير العمل بها.",
+                color = Muted, fontSize = 11.sp, lineHeight = 16.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(prefs: SharedPreferences) {
+    var language by remember { mutableStateOf(prefs.getString("settings_language", "ar") ?: "ar") }
+    var appearance by remember { mutableStateOf(prefs.getString("settings_appearance", "dark") ?: "dark") }
+    var fontScale by remember { mutableFloatStateOf(prefs.getFloat("settings_font_scale", 1.0f)) }
+    var background by remember { mutableStateOf(prefs.getString("settings_background", "navy") ?: "navy") }
+    var saved by remember { mutableStateOf(false) }
+    val backgroundOptions = listOf(
+        "navy" to ("كحلي زجاجي" to Color(0xFF101B32)),
+        "midnight" to ("ليل داكن" to Color(0xFF171923)),
+        "light" to ("فاتح" to Color(0xFFF1F5F9)),
+        "mint" to ("نعناعي" to Color(0xFFE5F6F0))
+    )
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item { PageHeader("الإعدادات", "خصص تجربة RUVEN على هذا الجهاز.") }
+        item {
+            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("اللغة / Language", color = Ink, fontWeight = FontWeight.Bold)
+                    listOf("ar" to "العربية", "en" to "English", "mixed" to "Mixed • عناوين إنجليزية وشرح عربي").forEach { (value, label) ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            RadioButton(selected = language == value, onClick = { language = value; saved = false })
+                            Text(label, color = Ink, fontSize = 13.sp)
+                        }
+                    }
+                    HorizontalDivider()
+                    Text("المظهر", color = Ink, fontWeight = FontWeight.Bold)
+                    listOf("dark" to "داكن", "light" to "فاتح", "glass" to "زجاجي").forEach { (value, label) ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            RadioButton(selected = appearance == value, onClick = { appearance = value; saved = false })
+                            Text(label, color = Ink, fontSize = 13.sp)
+                        }
+                    }
+                    HorizontalDivider()
+                    Text("حجم الخط: ${(fontScale * 100).toInt()}%", color = Ink, fontWeight = FontWeight.Bold)
+                    Slider(value = fontScale, onValueChange = { fontScale = it; saved = false }, valueRange = 0.85f..1.3f)
+                    Text("الخلفية", color = Ink, fontWeight = FontWeight.Bold)
+                    backgroundOptions.forEach { (value, pair) ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            RadioButton(selected = background == value, onClick = { background = value; saved = false })
+                            Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(pair.second))
+                            Spacer(Modifier.width(9.dp))
+                            Text(pair.first, color = Ink, fontSize = 13.sp)
+                        }
+                    }
+                    Button(
+                        onClick = {
+                            prefs.edit()
+                                .putString("settings_language", language)
+                                .putString("settings_appearance", appearance)
+                                .putFloat("settings_font_scale", fontScale)
+                                .putString("settings_background", background)
+                                .apply()
+                            saved = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("حفظ الإعدادات")
+                    }
+                    AnimatedVisibility(visible = saved, enter = fadeIn() + slideInVertically { it / 3 }, exit = fadeOut()) {
+                        Text("انحفظت تفضيلاتك على هذا الجهاز.", color = Color(0xFF16845B), fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+        item {
+            Text(
+                "ملاحظة: خيارات اللغة والخط والخلفية تُحفظ محليًا حاليًا. تغيير لغة جميع الشاشات، تطبيق المظهر على كامل التطبيق، واختيار صورة خلفية من الجهاز تحتاج ربطًا إضافيًا.",
+                color = Muted, fontSize = 11.sp, lineHeight = 16.sp
+            )
+        }
+    }
+}
+
 private fun roleLabel(role: SchoolRole): String = when (role) {
     SchoolRole.STUDENT -> "طالب"
     SchoolRole.CLASS_MONITOR -> "مراقب الشعبة"
