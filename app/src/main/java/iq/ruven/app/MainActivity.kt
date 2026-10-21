@@ -58,6 +58,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.blur
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -455,7 +462,20 @@ private fun RuvenAuthenticatedApp(
         "mint" -> Color(0xFFE5F6F0)
         else -> Color(0xFF101B32)
     }
-    val appSurface = if (settingsSnapshot.first == "light") Color.White else Color(0xFF19263B)
+    val glassEnabled = settingsSnapshot.first == "glass"
+    val glassOpacity = prefs.getFloat("settings_glass_opacity", 0.72f).coerceIn(0.25f, 0.96f)
+    val glassGlow = prefs.getFloat("settings_glass_glow", 0.45f).coerceIn(0f, 1f)
+    val glassBlur = prefs.getFloat("settings_glass_blur", 12f).coerceIn(0f, 28f)
+    val appSurface = if (glassEnabled) Color(0xFFB9DDFB).copy(alpha = glassOpacity)
+        else if (settingsSnapshot.first == "light") Color.White else Color(0xFF19263B)
+    val wallpaperUri = remember(settingsVersion) { prefs.getString("settings_wallpaper_uri", null) }
+    val wallpaperBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, wallpaperUri) {
+        value = if (wallpaperUri.isNullOrBlank()) null else withContext(Dispatchers.IO) {
+            runCatching {
+                context.contentResolver.openInputStream(Uri.parse(wallpaperUri))?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+            }.getOrNull()
+        }
+    }
     val homework = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "homework")) } }
     val preparations = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "preparations")) } }
     val schedules = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "schedules")) } }
@@ -479,7 +499,17 @@ private fun RuvenAuthenticatedApp(
         )
     }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Scaffold(containerColor = appBackground, bottomBar = {
+        Box(Modifier.fillMaxSize()) {
+            if (wallpaperBitmap != null) {
+                Image(
+                    bitmap = wallpaperBitmap!!,
+                    contentDescription = "خلفية RUVEN",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().then(if (glassEnabled && glassBlur > 0f) Modifier.blur(glassBlur.dp) else Modifier)
+                )
+                if (glassEnabled) Box(Modifier.fillMaxSize().background(Color(0xFF0B1930).copy(alpha = (1f - glassOpacity).coerceIn(0.05f, 0.65f))))
+            }
+            Scaffold(containerColor = if (wallpaperBitmap != null) appBackground.copy(alpha = if (glassEnabled) 0.12f else 0.82f) else appBackground, bottomBar = {
             NavigationBar(containerColor = appSurface, tonalElevation = 8.dp) {
                 val tabs = buildList {
                     add(RuvenTab.Home to Icons.Rounded.Home)
@@ -578,7 +608,7 @@ private fun RuvenAuthenticatedApp(
                         6 -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
                             else ServerNotificationsScreen(session, backend)
                         7 -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
-                            else SettingsScreen(prefs = prefs, onSaved = { settingsVersion++ })
+                            else RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ })
                         8 -> ServerNotificationsScreen(session, backend)
                         else -> SettingsScreen(prefs = prefs, onSaved = { settingsVersion++ })
                     }
@@ -586,6 +616,8 @@ private fun RuvenAuthenticatedApp(
             }
         }
     }
+        }
+}
 }
 
 @Composable
