@@ -77,12 +77,21 @@ jobs:
       - name: Build signed update APK
         run: gradle :app:assembleRelease -PVERSION_CODE=${{ steps.version.outputs.version_code }} -PVERSION_NAME=${{ steps.version.outputs.version_name }}
 
+      - name: Verify signed APK
+        run: $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+
+      - name: Prepare APK and verify checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/release/app-release.apk RUVEN.apk
+          sha256sum RUVEN.apk > RUVEN.apk.sha256
+          sha256sum --check RUVEN.apk.sha256
+
       - name: Publish GitHub Release with APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/release/app-release.apk RUVEN.apk
-          sha256sum RUVEN.apk > RUVEN.apk.sha256
           gh release create "${GITHUB_REF_NAME}" RUVEN.apk RUVEN.apk.sha256 \
             --title "RUVEN ${{ steps.version.outputs.version_name }}" \
             --generate-notes
