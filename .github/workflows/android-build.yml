@@ -40,11 +40,38 @@ jobs:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
           accept-android-sdk-licenses: true
 
+      - name: Configure stable APK signing (if secrets are set)
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          present=0
+          for value in "$KEYSTORE_BASE64" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD"; do
+            if [ -n "$value" ]; then present=$((present + 1)); fi
+          done
+          if [ "$present" -eq 4 ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/ruven-release.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/ruven-release.jks" >> "$GITHUB_ENV"
+            echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+            echo "Stable signing key configured; APK can update installs signed with this key."
+          elif [ "$present" -eq 0 ]; then
+            echo "::warning::Release signing secrets are not configured. This APK uses a temporary debug signature and cannot update a release-signed installation."
+          else
+            echo "Only some signing secrets are configured. Set all four ANDROID_KEYSTORE_* secrets." >&2
+            exit 1
+          fi
+
       - name: Run unit tests
-        run: gradle :app:testDebugUnitTest
+        run: gradle :app:testDebugUnitTest -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.0
 
       - name: Assemble debug APK
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleDebug -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.0
 
       - name: Upload debug APK
         if: success()
