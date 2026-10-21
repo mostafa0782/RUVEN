@@ -466,7 +466,7 @@ private fun RuvenAuthenticatedApp(
     val glassOpacity = prefs.getFloat("settings_glass_opacity", 0.72f).coerceIn(0.25f, 0.96f)
     val glassGlow = prefs.getFloat("settings_glass_glow", 0.45f).coerceIn(0f, 1f)
     val glassBlur = prefs.getFloat("settings_glass_blur", 12f).coerceIn(0f, 28f)
-    val appSurface = if (glassEnabled) Color(0xFFB9DDFB).copy(alpha = glassOpacity)
+    val appSurface = if (glassEnabled) Color(0xFFB9DDFB).copy(alpha = (glassOpacity * (0.7f + glassGlow * 0.3f)).coerceIn(0.25f, 0.98f))
         else if (settingsSnapshot.first == "light") Color.White else Color(0xFF19263B)
     val wallpaperUri = remember(settingsVersion) { prefs.getString("settings_wallpaper_uri", null) }
     val wallpaperBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, wallpaperUri) {
