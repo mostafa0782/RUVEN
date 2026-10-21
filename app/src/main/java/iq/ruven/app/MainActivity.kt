@@ -304,6 +304,7 @@ private fun RuvenApp() {
                     val loaded = backend.loadPublishedItems(restored, restoredProfile.className)
                     remoteItems = loaded
                     RuvenNotifications.processSync(context, restoredProfile.id, loaded)
+                    runCatching { RuvenNotifications.processWorkflowSync(context, restoredProfile.id, backend.loadUserNotifications(restored)) }
                 } catch (e: Exception) {
                     feedError = e.message ?: "تعذر تحميل محتوى المدرسة."
                 }
@@ -338,6 +339,7 @@ private fun RuvenApp() {
                     remoteItems = loaded
                     // First sync is intentionally silent; only later new items alert the user.
                     RuvenNotifications.processSync(context, newProfile.id, loaded)
+                    runCatching { RuvenNotifications.processWorkflowSync(context, newProfile.id, backend.loadUserNotifications(newSession)) }
                 } catch (e: Exception) {
                     feedError = e.message ?: "تعذر تحميل محتوى المدرسة."
                 }
@@ -389,6 +391,7 @@ private fun RuvenApp() {
                         val loaded = backend.loadPublishedItems(activeSession, activeProfile.className)
                         remoteItems = loaded
                         RuvenNotifications.processSync(context, activeProfile.id, loaded)
+                        runCatching { RuvenNotifications.processWorkflowSync(context, activeProfile.id, backend.loadUserNotifications(activeSession)) }
                         feedError = null
                     } catch (e: Exception) {
                         feedError = e.message ?: "تعذر تحديث محتوى المدرسة."

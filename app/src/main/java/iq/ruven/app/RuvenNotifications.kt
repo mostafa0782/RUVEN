@@ -73,6 +73,60 @@ object RuvenNotifications {
         return fresh.size
     }
 
+    fun processWorkflowSync(
+        context: Context,
+        profileId: String,
+        items: List<SupabaseBackend.UserNotification>
+    ): Int {
+        createChannel(context)
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val key = "workflow_seen_ids_" + profileId
+        val baselineKey = "workflow_baseline_" + profileId
+        val currentIds = items.map { it.id }.toSet()
+        val previouslySeen = prefs.getStringSet(key, emptySet()).orEmpty()
+        if (!prefs.getBoolean(baselineKey, false)) {
+            prefs.edit().putStringSet(key, currentIds).putBoolean(baselineKey, true).apply()
+            return 0
+        }
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return 0
+        val fresh = items.filter { it.id !in previouslySeen }
+        fresh.asReversed().forEach { item -> postWorkflow(context, item) }
+        prefs.edit().putStringSet(key, currentIds).apply()
+        return fresh.size
+    }
+
+    private fun postWorkflow(context: Context, item: SupabaseBackend.UserNotification) {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("ruven_notification_workflow_id", item.id)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, item.id.hashCode(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setColor(BLUE)
+            .setContentTitle(item.title)
+            .setContentText(item.body.ifBlank { "افتح RUVEN للاطلاع على التفاصيل." })
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(item.title)
+                    .bigText(item.body.ifBlank { "افتح RUVEN للاطلاع على التفاصيل." })
+                    .setSummaryText("RUVEN • تنبيه مدرسي")
+            )
+            .setContentIntent(pendingIntent)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setGroup("ruven_school_updates")
+            .build()
+        NotificationManagerCompat.from(context).notify(item.id.hashCode(), notification)
+    }
+
     private fun post(context: Context, item: SupabaseBackend.SchoolItem) {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
 
