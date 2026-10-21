@@ -41,7 +41,12 @@ jobs:
           MAJOR="${MAJOR:-0}"
           MINOR="${MINOR:-0}"
           PATCH="${PATCH:-0}"
-          VERSION_CODE=$((MAJOR * 1000000 + MINOR * 1000 + PATCH))
+          if [ "$MAJOR" -eq 0 ] && [ "$MINOR" -eq 1 ]; then
+            # Keep 0.1.x releases compatible with CI builds whose versionCode is the run number.
+            VERSION_CODE="$PATCH"
+          else
+            VERSION_CODE=$((MAJOR * 1000000 + MINOR * 1000 + PATCH))
+          fi
           if [ "$VERSION_CODE" -lt 1 ]; then
             echo "Tag must be a numeric version such as v0.1.1"
             exit 1
@@ -66,11 +71,33 @@ jobs:
           echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
 
+      - name: Verify Supabase app configuration
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$SUPABASE_URL" =~ ^https:// ]]; then
+            echo "Missing or invalid SUPABASE_URL. Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in repository Actions secrets." >&2
+            exit 1
+          fi
+          if [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "Missing SUPABASE_PUBLISHABLE_KEY. Add it in repository Actions secrets." >&2
+            exit 1
+          fi
+
       - name: Run unit tests
-        run: gradle :app:testDebugUnitTest -PVERSION_CODE=${{ steps.version.outputs.version_code }} -PVERSION_NAME=${{ steps.version.outputs.version_name }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: gradle :app:testDebugUnitTest -PSUPABASE_URL="$SUPABASE_URL" -PSUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" -PVERSION_CODE=${{ steps.version.outputs.version_code }} -PVERSION_NAME=${{ steps.version.outputs.version_name }}
 
       - name: Build signed update APK
-        run: gradle :app:assembleRelease -PVERSION_CODE=${{ steps.version.outputs.version_code }} -PVERSION_NAME=${{ steps.version.outputs.version_name }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: gradle :app:assembleRelease -PSUPABASE_URL="$SUPABASE_URL" -PSUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" -PVERSION_CODE=${{ steps.version.outputs.version_code }} -PVERSION_NAME=${{ steps.version.outputs.version_name }}
 
       - name: Publish GitHub Release with APK
         env:
