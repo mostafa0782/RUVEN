@@ -155,7 +155,7 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
         } }
         item { SettingsGroup("اللغة وإمكانية الوصول", Icons.Rounded.Language, language) {
             Text(st("لغة التطبيق", language), color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            listOf("ar" to if (language == "en") "Arabic" else "العربية", "en" to "English", "mixed" to if (language == "en") "Mixed" else "مختلط").forEach { (v, label) ->
+            listOf("ar" to if (language == "en") "Arabic" else "العربية", "en" to "English").forEach { (v, label) ->
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     RadioButton(selected = language == v, onClick = { language = v; saved = false })
                     Text(label, color = SettingsNavy, fontSize = 13.sp)
