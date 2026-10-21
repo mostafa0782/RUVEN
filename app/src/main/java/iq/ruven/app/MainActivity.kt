@@ -271,7 +271,7 @@ private fun RuvenTheme(content: @Composable () -> Unit) {
 
 private enum class RuvenTab(val title: String) {
     Home("الرئيسية"), Schedule("الجدول"), Homework("الواجبات"),
-    Preparations("التحاضير"), Notices("الإعلانات"), Admin("الحسابات"), Sections("الشعب"), Notifications("الإشعارات"), Settings("الإعدادات")
+    Preparations("التحاضير"), Notices("الإعلانات"), Workflows("العمليات المدرسية"), Admin("الحسابات"), Sections("الشعب"), Notifications("الإشعارات"), Settings("الإعدادات")
 }
 
 @Composable
@@ -484,6 +484,7 @@ private fun RuvenAuthenticatedApp(
                     add(RuvenTab.Homework to Icons.AutoMirrored.Rounded.MenuBook)
                     add(RuvenTab.Preparations to Icons.Rounded.Description)
                     add(RuvenTab.Notices to Icons.AutoMirrored.Rounded.Announcement)
+                    add(RuvenTab.Workflows to Icons.Rounded.Description)
                     if (role == SchoolRole.OWNER) {
                         add(RuvenTab.Admin to Icons.Rounded.School)
                         add(RuvenTab.Sections to Icons.Rounded.School)
@@ -547,11 +548,12 @@ private fun RuvenAuthenticatedApp(
                         2 -> HomeworkScreen(role, homework, reports)
                         3 -> PreparationsScreen(role, preparations)
                         4 -> NoticesScreen(role, announcements)
-                        5 -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
-                            else NoticesScreen(role, announcements)
-                        6 -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
-                            else NoticesScreen(role, announcements)
-                        7 -> NotificationsScreen(remoteItems, feedError, onRefresh)
+                        5 -> SchoolWorkflowsScreen(profile, session, backend, role)
+                        6 -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
+                            else ServerNotificationsScreen(session, backend)
+                        7 -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
+                            else SettingsScreen(prefs = prefs, onSaved = { settingsVersion++ })
+                        8 -> ServerNotificationsScreen(session, backend)
                         else -> SettingsScreen(prefs = prefs, onSaved = { settingsVersion++ })
                     }
                 }
@@ -561,6 +563,266 @@ private fun RuvenAuthenticatedApp(
 }
 
 @Composable
+
+private fun isSchoolAdminRole(role: SchoolRole): Boolean = role in setOf(
+    SchoolRole.OWNER, SchoolRole.PRINCIPAL, SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.EDUCATIONAL_COUNSELOR
+)
+
+private fun localIsoDate(): String = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+
+@Composable
+private fun ServerNotificationsScreen(session: SupabaseBackend.Session, backend: SupabaseBackend) {
+    var notifications by remember { mutableStateOf<List<SupabaseBackend.UserNotification>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    fun reload() {
+        scope.launch {
+            loading = true
+            try { notifications = backend.loadUserNotifications(session); error = null }
+            catch (e: Exception) { error = e.message ?: "تعذر تحميل الإشعارات." }
+            finally { loading = false }
+        }
+    }
+    LaunchedEffect(session.userId) { reload() }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item { PageHeader("الإشعارات", "إشعارات فعلية من قاعدة البيانات: قرارات الإدارة وحالة الإجازات.") }
+        item { OutlinedButton(onClick = { reload() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.Refresh, null); Spacer(Modifier.width(8.dp)); Text("تحديث") } }
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        if (error != null) item { Text(error!!, color = MaterialTheme.colorScheme.error) }
+        if (!loading && notifications.isEmpty() && error == null) item { Text("ما عندك إشعارات حاليًا.", color = Muted) }
+        items(notifications, key = { it.id }) { n ->
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (n.readAt == null) Color(0xFFEAF2FF) else Color.White)) {
+                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(n.title, color = Ink, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        if (n.readAt == null) Text("جديد", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text(n.body, color = Muted, fontSize = 13.sp, lineHeight = 19.sp)
+                    Text(n.createdAt, color = Muted, fontSize = 10.sp)
+                    if (n.readAt == null) TextButton(onClick = {
+                        scope.launch { try { backend.markNotificationRead(session, n.id); notifications = notifications.map { if (it.id == n.id) it.copy(readAt = localIsoDate()) else it } } catch (e: Exception) { error = e.message ?: "تعذر تحديث الإشعار." } }
+                    }) { Text("تحديد كمقروء") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: SupabaseBackend.Session, backend: SupabaseBackend, role: SchoolRole) {
+    val admin = isSchoolAdminRole(role)
+    val monitor = role == SchoolRole.CLASS_MONITOR
+    val student = role == SchoolRole.STUDENT
+    var section by remember { mutableStateOf(if (student) "الإجازات" else "الدليل") }
+    var profiles by remember { mutableStateOf<List<SupabaseBackend.ManagedProfile>>(emptyList()) }
+    var seals by remember { mutableStateOf<List<SupabaseBackend.SchoolSeal>>(emptyList()) }
+    var decisions by remember { mutableStateOf<List<SupabaseBackend.SchoolDecision>>(emptyList()) }
+    var leaves by remember { mutableStateOf<List<SupabaseBackend.LeaveRequest>>(emptyList()) }
+    var dailyReports by remember { mutableStateOf<List<SupabaseBackend.DailyReport>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    var selectedStudent by remember { mutableStateOf("") }
+    var selectedMonitor by remember { mutableStateOf("") }
+    var selectedSeal by remember { mutableStateOf("") }
+    var targetClass by remember { mutableStateOf("") }
+    var sourceClass by remember { mutableStateOf(profile.className.orEmpty()) }
+    var decisionType by remember { mutableStateOf("transfer_student") }
+    var decisionReason by remember { mutableStateOf("") }
+    var sealName by remember { mutableStateOf("") }
+    var sealTitle by remember { mutableStateOf(if (role == SchoolRole.OWNER) "المالك" else "الإدارة المدرسية") }
+    var leaveStart by remember { mutableStateOf(localIsoDate()) }
+    var leaveEnd by remember { mutableStateOf(localIsoDate()) }
+    var leaveReason by remember { mutableStateOf("") }
+    var reportDate by remember { mutableStateOf(localIsoDate()) }
+    var reportEvents by remember { mutableStateOf("") }
+    var reportPromises by remember { mutableStateOf("") }
+    var reportUnresolved by remember { mutableStateOf("") }
+    var filterTeachers by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val allowedTabs = buildList {
+        add("الدليل")
+        add("القرارات")
+        add("الإجازات")
+        add("التقرير اليومي")
+        if (admin) add("الأختام")
+    }
+    fun reload() {
+        scope.launch {
+            loading = true
+            error = null
+            try {
+                seals = backend.loadSchoolSeals(session)
+                if (admin || monitor) profiles = backend.loadManagedProfiles(session)
+                decisions = backend.loadSchoolDecisions(session)
+                leaves = backend.loadLeaveRequests(session)
+                dailyReports = backend.loadDailyReports(session, if (admin) null else profile.className)
+                if (selectedSeal.isBlank()) selectedSeal = seals.firstOrNull()?.id.orEmpty()
+            } catch (e: Exception) { error = e.message ?: "تعذر تحميل بيانات العمليات المدرسية." }
+            finally { loading = false }
+        }
+    }
+    LaunchedEffect(session.userId) { reload() }
+    fun perform(action: suspend () -> Unit, success: String) {
+        scope.launch {
+            busy = true
+            try { action(); notice = success; error = null; reload() }
+            catch (e: Exception) { error = e.message ?: "تعذر تنفيذ العملية." }
+            finally { busy = false }
+        }
+    }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { PageHeader("العمليات المدرسية", "الدليل، القرارات المختومة، طلبات الإجازة، والتقرير اليومي المتصل بالخادم.") }
+        item {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                allowedTabs.forEach { label ->
+                    FilterChip(selected = section == label, onClick = { section = label }, label = { Text(label, fontSize = 11.sp) })
+                }
+            }
+        }
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        if (error != null) item { Text(error!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+        if (notice != null) item { Text(notice!!, color = Color(0xFF16845B), fontSize = 12.sp) }
+        when (section) {
+            "الدليل" -> {
+                if (!admin && !monitor) item { Text("قائمة الأسماء متاحة للمراقبين والإدارة. الطلاب يقدمون الإجازات ويتابعون التقارير من الأقسام الأخرى.", color = Muted, fontSize = 12.sp) }
+                if (admin || monitor) {
+                    item { Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = filterTeachers, onCheckedChange = { filterTeachers = it }); Text("عرض المدرسين والهيئة التربوية فقط", color = Ink, fontSize = 12.sp) } }
+                    val visibleProfiles = profiles.filter { p -> if (filterTeachers) p.role in setOf("teacher","class_supervisor","assistant_principal","principal","educational_counselor") else true }
+                    items(visibleProfiles, key = { it.id }) { p ->
+                        Card(shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(p.fullName, color = Ink, fontWeight = FontWeight.SemiBold)
+                                    Text("${p.role} • ${p.className ?: "بدون شعبة"}", color = Muted, fontSize = 11.sp)
+                                }
+                                if (admin) TextButton(onClick = { selectedStudent = p.id; section = "القرارات" }, enabled = p.role == "student") { Text("قرار") }
+                            }
+                        }
+                    }
+                }
+            }
+            "الأختام" -> {
+                if (!admin) item { Text("إدارة الأختام متاحة للمالك وأعضاء الإدارة المخوّلين فقط.", color = Muted) }
+                if (admin) {
+                    item { OutlinedTextField(sealName, { sealName = it }, label = { Text("اسم الختم") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(sealTitle, { sealTitle = it }, label = { Text("صفة صاحب الختم") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { Button(onClick = { perform({ backend.createSchoolSeal(session,sealName,sealTitle); sealName = "" }, "تم إنشاء الختم.") }, enabled = !busy && sealName.trim().length >= 2 && sealTitle.trim().length >= 2, modifier = Modifier.fillMaxWidth()) { Text(if (busy) "جارٍ الحفظ…" else "إنشاء ختم") } }
+                    items(seals, key = { it.id }) { seal -> Card(colors = CardDefaults.cardColors(containerColor = Color.White)) { Column(Modifier.fillMaxWidth().padding(12.dp)) { Text("ختم: ${seal.name}", color = Ink, fontWeight = FontWeight.Bold); Text(seal.title, color = Muted, fontSize = 12.sp); Text("معرّف: ${seal.id.take(8)}…", color = Muted, fontSize = 10.sp) } } }
+                }
+            }
+            "القرارات" -> {
+                if (admin) {
+                    item { Text("إنشاء قرار إداري", color = Ink, fontWeight = FontWeight.Bold) }
+                    item { Text("الطالب المستهدف", color = Muted, fontSize = 12.sp) }
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            profiles.filter { it.role == "student" }.take(100).forEach { p ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(selected = selectedStudent == p.id, onClick = { selectedStudent = p.id })
+                                    Column { Text(p.fullName, color = Ink, fontSize = 12.sp); Text(p.className ?: "بدون شعبة", color = Muted, fontSize = 10.sp) }
+                                }
+                            }
+                        }
+                    }
+                    item { Text("نوع القرار", color = Ink, fontWeight = FontWeight.SemiBold) }
+                    item { Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf("transfer_student" to "نقل", "remove_student" to "حذف", "accept_request" to "قبول", "other" to "آخر").forEach { (v,l) -> FilterChip(selected = decisionType == v, onClick = { decisionType = v }, label = { Text(l) }) }
+                    } }
+                    item { OutlinedTextField(sourceClass, { sourceClass = it }, label = { Text("الشعبة الحالية") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(targetClass, { targetClass = it }, label = { Text("الشعبة الجديدة (إن وجدت)") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(decisionReason, { decisionReason = it }, label = { Text("السبب والتعليمات") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { Text("ختم القرار", color = Ink, fontWeight = FontWeight.SemiBold) }
+                    item { Column { seals.forEach { seal -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedSeal == seal.id, onClick = { selectedSeal = seal.id }); Text("${seal.name} • ${seal.title}", color = Ink, fontSize = 12.sp) } } } }
+                    item { Text("تعيين مراقب للتنفيذ", color = Ink, fontWeight = FontWeight.SemiBold) }
+                    item { Column { profiles.filter { it.role == "class_monitor" }.forEach { p -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedMonitor == p.id, onClick = { selectedMonitor = p.id }); Text("${p.fullName} • ${p.className ?: "بدون شعبة"}", color = Ink, fontSize = 12.sp) } } } }
+                    item { Button(onClick = { val p = profiles.firstOrNull { it.id == selectedStudent }; perform({ backend.createSchoolDecision(session,decisionType,selectedStudent,sourceClass.ifBlank { p?.className },targetClass,decisionReason,selectedMonitor,selectedSeal); decisionReason = "" }, "تم إرسال القرار المختوم للمراقب.") }, enabled = !busy && selectedStudent.isNotBlank() && selectedSeal.isNotBlank() && decisionReason.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text("إصدار القرار وإشعار المراقب") } }
+                }
+                if (decisions.isEmpty()) item { Text("ماكو قرارات ظاهرة لهذا الحساب.", color = Muted, fontSize = 12.sp) }
+                items(decisions, key = { it.id }) { d ->
+                    val studentName = profiles.firstOrNull { it.id == d.studentId }?.fullName ?: d.studentId.take(8)
+                    val seal = seals.firstOrNull { it.id == d.sealId }
+                    Card(shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("${when(d.type) { "transfer_student" -> "قرار نقل"; "remove_student" -> "قرار حذف"; "accept_request" -> "قرار قبول"; else -> "قرار إداري" }} • $studentName", color = Ink, fontWeight = FontWeight.Bold)
+                            Text(d.reason, color = Muted, fontSize = 12.sp)
+                            Text("الحالة: ${d.status} • الختم: ${seal?.name ?: "قرار مختوم"}", color = Blue, fontSize = 11.sp)
+                            if (d.targetClass != null) Text("من ${d.sourceClass ?: "غير محدد"} إلى ${d.targetClass}", color = Muted, fontSize = 11.sp)
+                            if (monitor && d.assignedMonitor == session.userId && d.status in setOf("pending","acknowledged")) {
+                                OutlinedTextField(d.executionNote ?: "", { }, label = { Text("ملاحظة التنفيذ (اختيارية)") }, modifier = Modifier.fillMaxWidth(), readOnly = true)
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"acknowledged","") }, "تم تأكيد استلام القرار.") }, modifier = Modifier.weight(1f)) { Text("استلام") }
+                                    Button(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"completed","تم التنفيذ") }, "تم تسجيل تنفيذ القرار.") }, modifier = Modifier.weight(1f)) { Text("تم التنفيذ") }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            "الإجازات" -> {
+                if (student) {
+                    item { Text("طلب إجازة", color = Ink, fontWeight = FontWeight.Bold) }
+                    item { OutlinedTextField(leaveStart, { leaveStart = it }, label = { Text("من تاريخ YYYY-MM-DD") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(leaveEnd, { leaveEnd = it }, label = { Text("إلى تاريخ YYYY-MM-DD") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(leaveReason, { leaveReason = it }, label = { Text("سبب الإجازة") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { Button(onClick = { perform({ backend.createLeaveRequest(session,profile.className ?: "",leaveStart,leaveEnd,leaveReason); leaveReason = "" }, "تم إرسال طلب الإجازة للإدارة.") }, enabled = !busy && !profile.className.isNullOrBlank() && leaveReason.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text("إرسال طلب الإجازة") } }
+                }
+                if (admin && leaves.any { it.status == "pending" }) item { Text("طلبات بانتظار قرار الإدارة", color = Ink, fontWeight = FontWeight.Bold) }
+                if (leaves.isEmpty()) item { Text("ماكو طلبات إجازة ظاهرة حاليًا.", color = Muted, fontSize = 12.sp) }
+                items(leaves, key = { it.id }) { l ->
+                    val studentName = profiles.firstOrNull { it.id == l.studentId }?.fullName ?: if (l.studentId == session.userId) profile.fullName else l.studentId.take(8)
+                    val seal = seals.firstOrNull { it.id == l.sealId }
+                    Card(shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text(studentName, color = Ink, fontWeight = FontWeight.Bold)
+                            Text("${l.startsOn} → ${l.endsOn} • ${l.className}", color = Blue, fontSize = 11.sp)
+                            Text("السبب: ${l.reason}", color = Muted, fontSize = 12.sp)
+                            Text("الحالة: ${l.status} • الحضور: ${l.attendanceStatus}", color = Ink, fontSize = 11.sp)
+                            if (l.status == "approved") Text("تمت الموافقة بختم: ${seal?.name ?: "ختم الإدارة"}", color = Color(0xFF16845B), fontSize = 11.sp)
+                            if (admin && l.status == "pending") {
+                                if (seals.isEmpty()) Text("أنشئ ختمًا إداريًا أولًا حتى توافق على الطلب.", color = Muted, fontSize = 11.sp)
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Button(onClick = { perform({ backend.reviewLeaveRequest(session,l.id,true,seals.firstOrNull()?.id) }, "تمت الموافقة على الإجازة وأُرسل إشعار للطالب.") }, enabled = !busy && seals.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("موافقة") }
+                                    OutlinedButton(onClick = { perform({ backend.reviewLeaveRequest(session,l.id,false,null) }, "تم رفض الإجازة وإشعار الطالب.") }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("رفض") }
+                                }
+                            }
+                            if (monitor && l.status == "approved" && l.className == profile.className && l.attendanceStatus == "not_recorded") {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = { perform({ backend.markLeaveAttendance(session,l.id,"present") }, "تم تسجيل الحضور.") }, modifier = Modifier.weight(1f)) { Text("حاضر") }
+                                    Button(onClick = { perform({ backend.markLeaveAttendance(session,l.id,"absent") }, "تم تسجيل الغياب.") }, modifier = Modifier.weight(1f)) { Text("غائب") }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            "التقرير اليومي" -> {
+                if (monitor) {
+                    item { OutlinedTextField(reportDate, { reportDate = it }, label = { Text("تاريخ التقرير YYYY-MM-DD") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                    item { OutlinedTextField(reportEvents, { reportEvents = it }, label = { Text("أهم أحداث اليوم") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { OutlinedTextField(reportPromises, { reportPromises = it }, label = { Text("وعود الإدارة أو الأمور المقررة") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { OutlinedTextField(reportUnresolved, { reportUnresolved = it }, label = { Text("أمور لم تُنفّذ بعد") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    item { Button(onClick = { perform({ backend.createDailyReport(session,profile.className ?: "",reportDate,reportEvents,reportPromises,reportUnresolved,true); reportEvents = ""; reportPromises = ""; reportUnresolved = "" }, "نُشر التقرير اليومي لطلاب الشعبة.") }, enabled = !busy && !profile.className.isNullOrBlank() && (reportEvents.isNotBlank() || reportPromises.isNotBlank() || reportUnresolved.isNotBlank()), modifier = Modifier.fillMaxWidth()) { Text("نشر التقرير للطلاب") } }
+                }
+                if (dailyReports.isEmpty()) item { Text("ماكو تقارير يومية منشورة حاليًا.", color = Muted, fontSize = 12.sp) }
+                items(dailyReports, key = { it.id }) { report ->
+                    Card(shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Text("${report.className} • ${report.reportDate}", color = Ink, fontWeight = FontWeight.Bold)
+                            if (report.events.isNotBlank()) { Text("أحداث اليوم", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp); Text(report.events, color = Ink, fontSize = 12.sp) }
+                            if (report.promises.isNotBlank()) { Text("وعود الإدارة", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp); Text(report.promises, color = Ink, fontSize = 12.sp) }
+                            if (report.unresolved.isNotBlank()) { Text("لم يُنفّذ بعد", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp); Text(report.unresolved, color = Ink, fontSize = 12.sp) }
+                        }
+                    }
+                }
+            }
+        }
+        item { OutlinedButton(onClick = { reload() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.Refresh, null); Spacer(Modifier.width(8.dp)); Text("تحديث بيانات الخادم") } }
+    }
+}
+
 private fun NotificationsScreen(
     items: List<SupabaseBackend.SchoolItem>,
     error: String?,
