@@ -1,6 +1,8 @@
 package iq.ruven.app.data.monitor
 
 import android.content.Context
+import iq.ruven.app.RuvenNotifications
+import iq.ruven.app.data.remote.SupabaseBackend
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -23,6 +25,11 @@ class BackendHealthWorker(
         val baseUrl = BuildConfig.SUPABASE_URL.trim().trimEnd('/')
         val publishableKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY.trim()
         if (baseUrl.isBlank() || publishableKey.isBlank()) return@withContext Result.success()
+
+        // Refresh the signed-in session and sync workflow alerts in the background.
+        // A workflow sync failure must not prevent the independent health check.
+        runCatching { syncWorkflowNotifications() }
+            .onFailure { Log.d(TAG, "Workflow notification sync skipped: ${it.message}") }
 
         var connection: HttpURLConnection? = null
         try {
@@ -56,6 +63,17 @@ class BackendHealthWorker(
         } finally {
             connection?.disconnect()
         }
+    }
+
+    private suspend fun syncWorkflowNotifications() {
+        val prefs = applicationContext.getSharedPreferences("ruven_auth", Context.MODE_PRIVATE)
+        val refreshToken = prefs.getString("refresh_token", null)?.takeIf { it.isNotBlank() } ?: return
+        val backend = SupabaseBackend()
+        val session = backend.refreshSession(refreshToken)
+        prefs.edit().putString("refresh_token", session.refreshToken).apply()
+        val profile = backend.loadMyProfile(session)
+        val items = backend.loadUserNotifications(session)
+        RuvenNotifications.processWorkflowSync(applicationContext, profile.id, items)
     }
 
     companion object {
