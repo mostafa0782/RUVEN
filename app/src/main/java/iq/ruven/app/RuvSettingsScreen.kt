@@ -114,7 +114,7 @@ private val SettingsMuted = Color(0xFF718096)
 fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session, backend: SupabaseBackend, onSaved: () -> Unit, onSignOut: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var language by remember { mutableStateOf(prefs.getString("settings_language", "ar") ?: "ar") }
+    var language by remember { mutableStateOf((prefs.getString("settings_language", "ar") ?: "ar").let { if (it == "mixed") "ar" else it }) }
     var appearance by remember { mutableStateOf(prefs.getString("settings_appearance", "dark") ?: "dark") }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("settings_font_scale", 1f)) }
     var background by remember { mutableStateOf(prefs.getString("settings_background", "navy") ?: "navy") }
