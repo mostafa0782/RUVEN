@@ -438,6 +438,21 @@ private fun RuvenAuthenticatedApp(
     val role = remember(profile.role) { schoolRoleFromDatabase(profile.role) }
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("ruven_local_data", Context.MODE_PRIVATE) }
+    var settingsVersion by remember { mutableIntStateOf(0) }
+    val settingsSnapshot = remember(settingsVersion) {
+        Triple(
+            prefs.getString("settings_appearance", "dark") ?: "dark",
+            prefs.getFloat("settings_font_scale", 1.0f),
+            prefs.getString("settings_background", "navy") ?: "navy"
+        )
+    }
+    val appBackground = when (settingsSnapshot.third) {
+        "midnight" -> Color(0xFF171923)
+        "light" -> Color(0xFFF1F5F9)
+        "mint" -> Color(0xFFE5F6F0)
+        else -> Color(0xFF101B32)
+    }
+    val appSurface = if (settingsSnapshot.first == "light") Color.White else Color(0xFF19263B)
     val homework = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "homework")) } }
     val preparations = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "preparations")) } }
     val schedules = remember(prefs) { mutableStateListOf<String>().apply { addAll(readLocalItems(prefs, "schedules")) } }
@@ -461,8 +476,8 @@ private fun RuvenAuthenticatedApp(
         )
     }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Scaffold(containerColor = Canvas, bottomBar = {
-            NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
+        Scaffold(containerColor = appBackground, bottomBar = {
+            NavigationBar(containerColor = appSurface, tonalElevation = 8.dp) {
                 val tabs = buildList {
                     add(RuvenTab.Home to Icons.Rounded.Home)
                     add(RuvenTab.Schedule to Icons.Rounded.CalendarMonth)
@@ -484,7 +499,7 @@ private fun RuvenAuthenticatedApp(
             }
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
-                Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 18.dp, vertical = 9.dp),
+                Row(Modifier.fillMaxWidth().background(appSurface).padding(horizontal = 18.dp, vertical = 9.dp),
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
                         Text("RUVEN", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
@@ -537,7 +552,7 @@ private fun RuvenAuthenticatedApp(
                         6 -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
                             else NoticesScreen(role, announcements)
                         7 -> NotificationsScreen(remoteItems, feedError, onRefresh)
-                        else -> SettingsScreen(prefs = prefs)
+                        else -> SettingsScreen(prefs = prefs, onSaved = { settingsVersion++ })
                     }
                 }
             }
@@ -607,7 +622,7 @@ private fun NotificationsScreen(
 }
 
 @Composable
-private fun SettingsScreen(prefs: SharedPreferences) {
+private fun SettingsScreen(prefs: SharedPreferences, onSaved: () -> Unit) {
     var language by remember { mutableStateOf(prefs.getString("settings_language", "ar") ?: "ar") }
     var appearance by remember { mutableStateOf(prefs.getString("settings_appearance", "dark") ?: "dark") }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("settings_font_scale", 1.0f)) }
@@ -664,6 +679,7 @@ private fun SettingsScreen(prefs: SharedPreferences) {
                                 .putString("settings_background", background)
                                 .apply()
                             saved = true
+                            onSaved()
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -677,7 +693,7 @@ private fun SettingsScreen(prefs: SharedPreferences) {
         }
         item {
             Text(
-                "ملاحظة: خيارات اللغة والخط والخلفية تُحفظ محليًا حاليًا. تغيير لغة جميع الشاشات، تطبيق المظهر على كامل التطبيق، واختيار صورة خلفية من الجهاز تحتاج ربطًا إضافيًا.",
+                "اللغة والخط المخصص وصورة الخلفية تحتاج ربطًا إضافيًا؛ ألوان الخلفية وشريط التنقل تُطبّق بعد الحفظ.",
                 color = Muted, fontSize = 11.sp, lineHeight = 16.sp
             )
         }
