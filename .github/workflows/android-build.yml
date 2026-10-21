@@ -37,8 +37,18 @@ jobs:
       - name: Set up Android SDK and install packages
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
           accept-android-sdk-licenses: true
+
+      - name: Confirm apksigner is installed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" version
 
       - name: Configure stable APK signing (if secrets are set)
         shell: bash
