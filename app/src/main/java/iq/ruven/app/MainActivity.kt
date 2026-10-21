@@ -600,10 +600,10 @@ private fun RuvenAuthenticatedApp(
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
                     when (current) {
                         0 -> HomeScreen(role, homework.size, preparations.size, schedules.size, remoteItems, feedError) { tab = it }
-                        1 -> ScheduleScreen(role, schedules, scheduleFiles)
-                        2 -> HomeworkScreen(role, homework, reports)
-                        3 -> PreparationsScreen(role, preparations)
-                        4 -> NoticesScreen(role, announcements)
+                        1 -> ServerSchoolItemsScreen(session, backend, remoteItems, "timetable", "الجدول الدراسي", "الجداول المنشورة من إدارة المدرسة.", role, profile.className, onRefresh)
+                        2 -> ServerSchoolItemsScreen(session, backend, remoteItems, "homework", "الواجبات", "الواجبات المنشورة حسب المادة والشعبة.", role, profile.className, onRefresh)
+                        3 -> ServerSchoolItemsScreen(session, backend, remoteItems, "preparation", "التحاضير", "تحاضير الدروس المنشورة من المدرسين والإدارة.", role, profile.className, onRefresh)
+                        4 -> ServerSchoolItemsScreen(session, backend, remoteItems, "announcement", "الإعلانات المدرسية", "الإعلانات المنشورة من إدارة المدرسة.", role, profile.className, onRefresh)
                         5 -> SchoolWorkflowsScreen(profile, session, backend, role)
                         6 -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
                             else ServerNotificationsScreen(session, backend)
@@ -1656,6 +1656,142 @@ private fun QuickActionCard(
             }
             Text(title, color = Ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(subtitle, color = Muted, fontSize = 10.sp, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun ServerSchoolItemsScreen(
+    session: SupabaseBackend.Session,
+    backend: SupabaseBackend,
+    remoteItems: List<SupabaseBackend.SchoolItem>,
+    itemType: String,
+    title: String,
+    description: String,
+    role: SchoolRole,
+    profileClass: String?,
+    onRefresh: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var search by remember { mutableStateOf("") }
+    var subject by remember { mutableStateOf("") }
+    var targetClass by remember { mutableStateOf(profileClass.orEmpty()) }
+    var entryTitle by remember { mutableStateOf("") }
+    var body by remember { mutableStateOf("") }
+    var composerOpen by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val needsSubjectAndClass = itemType == "homework" || itemType == "preparation"
+    val canCreate = when (itemType) {
+        "timetable" -> SchoolPermissions.canManageTimetable(role)
+        "homework" -> SchoolPermissions.canCreateHomework(role, assignedSubject = subject.isNotBlank())
+        "preparation" -> SchoolPermissions.canCreatePreparation(role, assignedSubject = subject.isNotBlank())
+        "announcement" -> SchoolPermissions.canPublishAnnouncements(role)
+        else -> false
+    }
+    val visibleItems = remoteItems.filter { it.itemType == itemType }.filter {
+        search.isBlank() || it.title.contains(search, true) || it.body.contains(search, true) ||
+            (it.subjectName?.contains(search, true) == true) || (it.className?.contains(search, true) == true)
+    }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item { PageHeader(title, description) }
+        item {
+            OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth(), enabled = !busy) {
+                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("تحديث من خادم المدرسة")
+            }
+        }
+        if (canCreate) item {
+            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Text("إضافة محتوى رسمي", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text("سيُرسل إلى خادم المدرسة، وتطبّق صلاحيات قاعدة البيانات.", color = Muted, fontSize = 11.sp)
+                        }
+                        TextButton(onClick = { composerOpen = !composerOpen }) { Text(if (composerOpen) "إغلاق" else "إنشاء") }
+                    }
+                    androidx.compose.animation.AnimatedVisibility(visible = composerOpen) {
+                        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                            if (needsSubjectAndClass) {
+                                OutlinedTextField(subject, { subject = it }, label = { Text("المادة") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                                OutlinedTextField(targetClass, { targetClass = it.trim().uppercase() }, label = { Text("الشعبة / الصف") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            }
+                            OutlinedTextField(entryTitle, { entryTitle = it }, label = { Text("العنوان") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(body, { body = it }, label = { Text("التفاصيل") }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8)
+                            Button(
+                                enabled = !busy && canCreate && entryTitle.isNotBlank() && body.isNotBlank() &&
+                                    (!needsSubjectAndClass || (subject.isNotBlank() && targetClass.isNotBlank())),
+                                onClick = {
+                                    scope.launch {
+                                        busy = true
+                                        message = null
+                                        try {
+                                            backend.createSchoolItem(
+                                                session = session,
+                                                itemType = itemType,
+                                                title = entryTitle.trim(),
+                                                body = body.trim(),
+                                                subjectName = subject.takeIf { needsSubjectAndClass },
+                                                className = if (needsSubjectAndClass) targetClass.trim().uppercase() else null,
+                                                published = true
+                                            )
+                                            entryTitle = ""; body = ""; subject = ""
+                                            message = "تم إرسال المحتوى إلى الخادم."
+                                            composerOpen = false
+                                            onRefresh()
+                                        } catch (e: Exception) {
+                                            message = e.message ?: "تعذر نشر المحتوى. تحقّق من الصلاحيات والاتصال."
+                                        } finally { busy = false }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp)
+                                else Icon(Icons.Rounded.CloudUpload, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (busy) "جارٍ الإرسال…" else "نشر على خادم المدرسة")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (message != null) item { Text(message!!, color = if (message!!.startsWith("تم")) Color(0xFF16845B) else MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+        item {
+            OutlinedTextField(
+                value = search, onValueChange = { search = it },
+                modifier = Modifier.fillMaxWidth(), singleLine = true,
+                label = { Text("بحث") },
+                placeholder = { Text("ابحث بالعنوان أو المادة أو الشعبة") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) }
+            )
+        }
+        if (visibleItems.isEmpty()) item {
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Rounded.CloudOff, contentDescription = null, tint = Muted, modifier = Modifier.size(28.dp))
+                    Text(if (search.isBlank()) "ماكو محتوى منشور بهذا القسم حالياً." else "ماكو نتائج مطابقة للبحث.", color = Ink, fontWeight = FontWeight.SemiBold)
+                    Text("اسحب تحديث المحتوى من الخادم للتأكد من آخر البيانات.", color = Muted, fontSize = 11.sp)
+                }
+            }
+        }
+        items(visibleItems, key = { it.id }) { item ->
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(1.dp)) {
+                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(item.title, color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    if (!item.subjectName.isNullOrBlank() || !item.className.isNullOrBlank()) {
+                        Text(listOfNotNull(item.subjectName, item.className?.let { "الشعبة $it" }).joinToString(" • "), color = SettingsBlue, fontSize = 11.sp)
+                    }
+                    Text(item.body, color = Ink, fontSize = 13.sp, lineHeight = 19.sp)
+                    Text(item.createdAt.replace("T", " ").take(16), color = Muted, fontSize = 10.sp)
+                }
+            }
         }
     }
 }
