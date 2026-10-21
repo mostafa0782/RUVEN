@@ -82,6 +82,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/release/app-release.apk RUVEN.apk
-          gh release create "${GITHUB_REF_NAME}" RUVEN.apk \
+          sha256sum RUVEN.apk > RUVEN.apk.sha256
+          gh release create "${GITHUB_REF_NAME}" RUVEN.apk RUVEN.apk.sha256 \
             --title "RUVEN ${{ steps.version.outputs.version_name }}" \
             --generate-notes
