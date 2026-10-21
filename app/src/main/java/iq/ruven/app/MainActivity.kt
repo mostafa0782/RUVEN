@@ -649,7 +649,18 @@ private val ruvenEnglishLabels = mapOf(
     "ليل داكن" to "Midnight",
     "فاتح" to "Light",
     "نعناعي" to "Mint",
-    "إلغاء" to "Cancel"
+    "إلغاء" to "Cancel",
+    "أعداد العناصر المنشورة على الخادم" to "Published server content counts",
+    "الواجبات المنشورة: " to "Published homework: ",
+    "التحاضير المنشورة: " to "Published preparations: ",
+    "الجداول المنشورة: " to "Published timetables: ",
+    "مراقب الشعبة" to "Class monitor",
+    "أستاذ مشرف شعبة" to "Class supervisor",
+    "معاون المدير" to "Assistant principal",
+    "مرشد تربوي" to "Educational counselor",
+    "عضو تربوي من وزارة التربية" to "Ministry of Education member",
+    "عضو برلمان الطلبة" to "Student parliament member",
+    "المالك" to "Owner"
 )
 
 @Composable
@@ -1844,7 +1855,7 @@ private fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Box(Modifier.size(7.dp).clip(RoundedCornerShape(50)).background(Color(0xFF20A879)))
-                            Text(roleLabel(role), color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(translated(roleLabel(role)), color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1923,7 +1934,7 @@ private fun HomeScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(ruvenText(translated("ملخصك الدراسي"), "Your study summary", isEnglish), color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                        Text(ruvenText(translated("عدادات العناصر المحفوظة محلياً"), "Locally saved item counts", isEnglish), color = Muted, fontSize = 11.sp)
+                        Text(ruvenText(translated("أعداد العناصر المنشورة على الخادم"), "Locally saved item counts", isEnglish), color = Muted, fontSize = 11.sp)
                     }
                     TextButton(onClick = { showAllStats = !showAllStats }) {
                         Text(if (showAllStats) ruvenText(translated("عرض أقل"), "Show less", isEnglish) else ruvenText(translated("تفاصيل"), "Details", isEnglish), fontSize = 12.sp)
@@ -1939,9 +1950,9 @@ private fun HomeScreen(
                         Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(ruvenText(translated("تفاصيل المساحة"), "Workspace details", isEnglish), color = Ink, fontWeight = FontWeight.Bold)
                             Text(translated("منشورات الخادم: ${remoteItems.size}"), color = Muted, fontSize = 12.sp)
-                            Text(translated("الواجبات المحلية: $homeworkCount"), color = Muted, fontSize = 12.sp)
-                            Text(translated("التحاضير المحلية: $prepCount"), color = Muted, fontSize = 12.sp)
-                            Text(translated("الجداول المحلية: $scheduleCount"), color = Muted, fontSize = 12.sp)
+                            Text(translated("الواجبات المنشورة: $homeworkCount"), color = Muted, fontSize = 12.sp)
+                            Text(translated("التحاضير المنشورة: $prepCount"), color = Muted, fontSize = 12.sp)
+                            Text(translated("الجداول المنشورة: $scheduleCount"), color = Muted, fontSize = 12.sp)
                         }
                     }
                 }
