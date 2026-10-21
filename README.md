@@ -1,43 +1,57 @@
 # RUVEN
 
-RUVEN is an Android-first school services app for Iraqi schools, beginning with Al-Mutafawiqeen Secondary School in Nasiriyah, Dhi Qar, Iraq.
+RUVEN is an Android-first school services app for Al-Mutafawiqeen Secondary School in Nasiriyah, Dhi Qar, Iraq.
 
-## Current status
+## Current implementation
 
-The Android client foundation includes:
-- Native Android application using Kotlin and Jetpack Compose.
-- Arabic-first interface, RTL layout, and a blue/cyan visual system.
-- Home dashboard and navigation for timetable, homework, preparations, and announcements.
-- Timetable form with a system file picker for PDF/image selection plus a text entry option.
-- Local preview flows for homework, teacher preparations, administrative reports, and school announcements, persisted on-device using SharedPreferences.
-- Principal/assistant-principal announcement creation and deletion in the local preview.
-- Administrative homework edit/delete controls in the local preview.
-- Persisted URI access for a selected timetable document, with a local open-file action.
-- Typed school-content models, data validation, and role-policy unit tests.
+- Native Android app built with Kotlin, Jetpack Compose, and Material 3.
+- Arabic-first interface with RTL support.
+- Animated launch screen with RUVEN branding and a temporary, illustrative school emblem.
+- Supabase email/password authentication, refresh-token session restoration, and profile loading.
+- Server-backed loading of published school items, with class-aware filtering expected to be enforced by database policies.
+- Owner-only management flows call server-side functions/RPCs for account creation and profile-role changes.
+- Local device persistence for selected school content and UI workflows; not every screen is server-synchronized.
+- Local notification processing for newly synchronized published items.
+- In-app update checker reads the latest GitHub Release and expects an asset named `RUVEN.apk`.
 
-**Important limitation:** this is still a UI prototype. Preview content is persisted on this device with SharedPreferences; it is not synced between users or backed up to a school server. Announcements are also local to this device and are not broadcast to other users. A selected PDF/image can be reopened locally when Android preserves access, but it is not uploaded. There is no authentication, backend/API, server database, live school data, messaging, push notifications, or production role enforcement yet.
+## Important limitations before public deployment
 
-## Intended role policy
+- No official GitHub Release is published yet. Workflow artifacts are temporary test/build outputs, not public app releases.
+- The launch emblem is an approximation, not the school's original logo; the Python mark is a simple illustration, not the official Python logo.
+- Test the app on a real Android device, including login, session restoration, role permissions, network errors, notifications, and update installation.
+- Confirm Supabase tables, Row Level Security (RLS) policies, database RPCs, and the `owner-create-account` Edge Function are deployed and correctly restricted. Client-side UI checks are not an authorization boundary.
+- Do not publish until stable APK signing is confirmed to match the installed app. Replacing the signing key can prevent in-place updates.
+- Local-only content is not automatically synchronized between users.
 
-- Teachers can publish homework and preparations only for subjects assigned to their authenticated account.
-- The class monitor can publish homework and manage timetable submissions, and can report problematic homework to the principal; the monitor does not own the delete permission.
-- The principal and assistant principals can manage the timetable and moderate homework.
-- Timetable entry supports text or selection of a PDF/image file.
-- The role selector currently exists only to preview UI states. It is not authentication and must not be used as a security boundary.
+## GitHub Actions secrets
 
-All permissions must be enforced by a backend using the verified session, teacher-subject assignments, school, and class membership.
+The Android build and tagged-release workflows require these repository Actions secrets:
 
-## Build prerequisites
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+
+Use only the Supabase publishable/anon client key in the Android app. Never place a Supabase service-role key in the app or repository workflow inputs.
+
+## Build
 
 - JDK 17
-- Android SDK with API 35 installed
-- Android Studio compatible with Android Gradle Plugin 8.9.1
+- Android SDK platform 35 and build-tools 35.0.0
+- Gradle 8.11.1 (the repository does not currently include a Gradle wrapper)
 
-A Gradle wrapper has not yet been added. Open the repository in Android Studio, sync Gradle, and run the app configuration. With a compatible installed Gradle, run `gradle :app:assembleDebug`.
+The CI workflow runs unit tests, builds a signed release APK, and uploads it as the `RUVEN-release-apk` artifact.
 
-## Development principles
+## Versioning and publishing
 
-- Keep feature work on dedicated `feature/*` branches until reviewed; do not merge into `main` without a deliberate review.
-- Do not commit secrets or real student data.
-- Do not describe local preview functionality as connected functionality.
-- Enforce authorization in the backend when it is implemented.
+The build workflow uses `0.1.<GitHub Actions run number>` as the version name and the run number as Android `versionCode`. For the current `0.1.x` series, publish a matching numeric tag such as `v0.1.132` only after reviewing and testing that source. The tag workflow creates a GitHub Release with an APK named exactly `RUVEN.apk`, which the in-app updater expects.
+
+## Security and release checklist
+
+1. Confirm all required Actions secrets are configured.
+2. Verify Supabase RLS and privileged server-side functions independently of the Android UI.
+3. Run CI tests and inspect the generated artifact.
+4. Test installation/update signature compatibility and app behavior on a real device.
+5. Publish a tagged release only after the previous checks pass.
