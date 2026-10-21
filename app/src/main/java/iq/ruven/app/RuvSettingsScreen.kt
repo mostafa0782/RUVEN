@@ -1,7 +1,5 @@
 package iq.ruven.app
 
-import android.app.WallpaperManager
-import android.content.ComponentName
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -57,8 +55,9 @@ private fun st(ar: String, language: String): String = if (language != "en") ar 
     "استخدم صورة ثابتة خلف محتوى التطبيق" -> "Use a still image behind app content"
     "إزالة الخلفية المخصصة" -> "Remove custom wallpaper"
     "الرجوع إلى لون الخلفية" -> "Return to the background color"
-    "تعيين خلفية متحركة" -> "Set live wallpaper"
-    "افتح معاينة خلفية RUVEN المتحركة للنظام" -> "Open the system preview for RUVEN live wallpaper"
+    "اختيار فيديو لخلفية التطبيق" -> "Choose a video for the app background"
+    "اختر فيديو من جهازك ليظهر خلف محتوى RUVEN" -> "Choose a video to display behind RUVEN content"
+    "إزالة خلفية الفيديو" -> "Remove background video"
     "تم اختيار خلفية مخصصة." -> "A custom wallpaper is selected."
     "الخصوصية والمعلومات" -> "Privacy & information"
     "سياسة الخصوصية" -> "Privacy policy"
@@ -122,12 +121,24 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
     var glassBlur by remember { mutableFloatStateOf(prefs.getFloat("settings_glass_blur", 12f)) }
     var glassGlow by remember { mutableFloatStateOf(prefs.getFloat("settings_glass_glow", .45f)) }
     var wallpaperUri by remember { mutableStateOf(prefs.getString("settings_wallpaper_uri", null)) }
+    var videoUri by remember { mutableStateOf(prefs.getString("settings_wallpaper_video_uri", null)) }
+    var fontFamily by remember { mutableStateOf(prefs.getString("settings_font_family", "default") ?: "default") }
+    var fontColor by remember { mutableIntStateOf(prefs.getInt("settings_font_color", android.graphics.Color.WHITE)) }
     var saved by remember { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<String?>(null) }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordBusy by remember { mutableStateOf(false) }
     var passwordMessage by remember { mutableStateOf<String?>(null) }
+    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            videoUri = uri.toString()
+            prefs.edit().putString("settings_wallpaper_video_uri", videoUri).apply()
+            saved = true
+            onSaved()
+        }
+    }
     val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -184,6 +195,16 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
             Slider(value = glassOpacity, onValueChange = { glassOpacity = it; saved = false }, valueRange = .25f.. .96f)
             Text(if (language == "en") "Background blur: ${glassBlur.toInt()} dp" else "تمويه الخلفية: ${glassBlur.toInt()} dp", color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Slider(value = glassBlur, onValueChange = { glassBlur = it; saved = false }, valueRange = 0f..28f)
+            Text(if (language == "en") "Font family" else "نوع الخط", color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            listOf("default" to (if (language == "en") "System default" else "الافتراضي"), "serif" to "Serif", "sans" to "Sans", "monospace" to "Monospace").forEach { (value, label) ->
+                Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = fontFamily == value, onClick = { fontFamily = value; saved = false }); Text(label, color = SettingsNavy, fontSize = 13.sp) }
+            }
+            Text(if (language == "en") "Font color" else "لون الخط", color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(0xFFFFFFFF.toInt(), 0xFF111827.toInt(), 0xFF2867D8.toInt(), 0xFFFFC857.toInt(), 0xFF16A085.toInt(), 0xFFE05263.toInt()).forEach { c ->
+                    Surface(onClick = { fontColor = c; saved = false }, shape = RoundedCornerShape(50), color = Color(c), modifier = Modifier.size(30.dp), border = if (fontColor == c) androidx.compose.foundation.BorderStroke(3.dp, SettingsBlue) else null) {}
+                }
+            }
             Text(if (language == "en") "Glass glow: ${(glassGlow * 100).toInt()}%" else "لمعان الزجاج: ${(glassGlow * 100).toInt()}%", color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Slider(value = glassGlow, onValueChange = { glassGlow = it; saved = false }, valueRange = 0f..1f)
         } }
@@ -195,10 +216,17 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
                 saved = false
                 onSaved()
             }
-            SettingsAction("تعيين خلفية متحركة", "افتح معاينة خلفية RUVEN المتحركة للنظام", Icons.Rounded.MotionPhotosOn, language) {
-                openIntent(Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).putExtra(
-                    WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, ComponentName(context, RuvenLiveWallpaperService::class.java)
-                ))
+            SettingsAction("اختيار فيديو لخلفية التطبيق", "اختر فيديو من جهازك ليظهر خلف محتوى RUVEN", Icons.Rounded.Movie, language) {
+                videoPicker.launch(arrayOf("video/*"))
+            }
+            if (!videoUri.isNullOrBlank()) {
+                Text(if (language == "en") "An app-background video is selected." else "تم اختيار فيديو لخلفية التطبيق.", color = Color(0xFF16845B), fontSize = 12.sp)
+                SettingsAction("إزالة خلفية الفيديو", "إزالة الفيديو المحدد", Icons.Rounded.DeleteOutline, language) {
+                    videoUri = null
+                    prefs.edit().remove("settings_wallpaper_video_uri").apply()
+                    saved = false
+                    onSaved()
+                }
             }
             if (!wallpaperUri.isNullOrBlank()) Text(st("تم اختيار خلفية مخصصة.", language), color = Color(0xFF16845B), fontSize = 11.sp)
         } }
@@ -227,7 +255,8 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
                 prefs.edit().putString("settings_language", language).putString("settings_appearance", appearance)
                     .putFloat("settings_font_scale", fontScale).putString("settings_background", background)
                     .putFloat("settings_glass_opacity", glassOpacity).putFloat("settings_glass_blur", glassBlur)
-                    .putFloat("settings_glass_glow", glassGlow).apply()
+                    .putFloat("settings_glass_glow", glassGlow)
+                    .putString("settings_font_family", fontFamily).putInt("settings_font_color", fontColor).apply()
                 saved = true
                 onSaved()
             }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
