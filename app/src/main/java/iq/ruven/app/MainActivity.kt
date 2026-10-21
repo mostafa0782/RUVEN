@@ -480,6 +480,7 @@ private val ruvenEnglishLabels = mapOf(
     "هلا بيك 👋" to "Welcome 👋",
     "خلّ يومك الدراسي أوضح وأسهل." to "Make your school day clearer and easier.",
     "RUVEN • مدرستك بذكاء" to "RUVEN • Your school, smarter",
+    "كل شي يخص دراستك،\\nبمكان واحد." to "Everything about your studies,\\nin one place.",
     "تابع الواجبات، افتح الجدول، وابقَ على اطلاع بآخر إعلانات المدرسة." to "Track homework, check the timetable, and stay up to date with school announcements.",
     "شوف واجباتك" to "View homework",
     "اختصارات سريعة" to "Quick shortcuts",
@@ -546,7 +547,12 @@ private val ruvenEnglishLabels = mapOf(
 )
 
 @Composable
-private fun translated(ar: String): String = if (LocalEnglish.current) ruvenEnglishLabels[ar] ?: ar else ar
+private fun translated(ar: String): String {
+    if (!LocalEnglish.current) return ar
+    ruvenEnglishLabels[ar]?.let { return it }
+    val prefix = ruvenEnglishLabels.entries.firstOrNull { (key, _) -> key.endsWith(" ") && ar.startsWith(key) }
+    return if (prefix != null) prefix.value + ar.removePrefix(prefix.key) else ar
+}
 
 private val LocalEnglish = androidx.compose.runtime.staticCompositionLocalOf { false }
 
@@ -601,6 +607,8 @@ private fun RuvenApp() {
             }
         }
     } else if (session == null || profile == null) {
+        val loginEnglish = context.getSharedPreferences("ruven_local_data", Context.MODE_PRIVATE).getString("settings_language", "ar") == "en"
+        CompositionLocalProvider(LocalEnglish provides loginEnglish, LocalLayoutDirection provides (if (loginEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl)) {
         SupabaseLoginScreen { newSession, newProfile ->
             authPrefs.edit().putString("refresh_token", newSession.refreshToken).apply()
             session = newSession
@@ -622,6 +630,7 @@ private fun RuvenApp() {
                     feedError = e.message ?: "تعذر تحميل محتوى المدرسة."
                 }
             }
+        }
         }
     } else {
         val activeSession = session!!
