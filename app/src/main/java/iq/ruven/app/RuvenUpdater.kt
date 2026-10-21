@@ -105,7 +105,7 @@ internal object RuvenUpdater {
                     if (count < 0) break
                     digest.update(buffer, 0, count)
                 }
-                digest.digest().joinToString("") { "%02x".format(it) }
+                digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
             }
             if (!MessageDigest.isEqual(
                     actualSha256.toByteArray(Charsets.US_ASCII),
