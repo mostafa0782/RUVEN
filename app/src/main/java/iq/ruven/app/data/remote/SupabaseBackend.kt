@@ -282,6 +282,115 @@ class SupabaseBackend(
         Unit
     }
 
+
+    data class SchoolSeal(val id: String, val name: String, val title: String, val ownerId: String)
+    data class SchoolDecision(
+        val id: String, val type: String, val studentId: String, val sourceClass: String?,
+        val targetClass: String?, val reason: String, val assignedMonitor: String?,
+        val status: String, val createdBy: String, val sealId: String, val executionNote: String?,
+        val createdAt: String
+    )
+    data class LeaveRequest(
+        val id: String, val studentId: String, val className: String, val startsOn: String,
+        val endsOn: String, val reason: String, val status: String, val reviewedBy: String?,
+        val sealId: String?, val attendanceStatus: String, val createdAt: String
+    )
+    data class DailyReport(
+        val id: String, val className: String, val reportDate: String, val events: String,
+        val promises: String, val unresolved: String, val createdBy: String, val published: Boolean
+    )
+    data class UserNotification(
+        val id: String, val type: String, val title: String, val body: String,
+        val relatedId: String?, val readAt: String?, val createdAt: String
+    )
+
+    suspend fun loadSchoolSeals(session: Session): List<SchoolSeal> = withContext(Dispatchers.IO) {
+        val rows = requestArray("/rest/v1/school_seals?select=id,seal_name,seal_title,owner_id,is_active&is_active=eq.true&order=created_at.desc&limit=100", session)
+        (0 until rows.length()).map { i -> rows.getJSONObject(i).let { SchoolSeal(it.getString("id"), it.getString("seal_name"), it.getString("seal_title"), it.getString("owner_id")) } }
+    }
+
+    suspend fun createSchoolSeal(session: Session, name: String, title: String) = withContext(Dispatchers.IO) {
+        require(name.trim().length in 2..100 && title.trim().length in 2..100) { "اسم الختم وصفته مطلوبان." }
+        requestRaw("/rest/v1/school_seals", "POST", JSONObject().put("owner_id", session.userId).put("seal_name", name.trim()).put("seal_title", title.trim()), session)
+        Unit
+    }
+
+    suspend fun loadSchoolDecisions(session: Session): List<SchoolDecision> = withContext(Dispatchers.IO) {
+        val rows = requestArray("/rest/v1/school_decisions?select=id,decision_type,student_id,source_class,target_class,reason,assigned_monitor,status,created_by,decision_seal_id,execution_note,created_at&order=created_at.desc&limit=200", session)
+        (0 until rows.length()).map { i -> rows.getJSONObject(i).let { r ->
+            SchoolDecision(r.getString("id"),r.getString("decision_type"),r.getString("student_id"),r.optString("source_class").takeIf { it.isNotBlank() && it!="null" },r.optString("target_class").takeIf { it.isNotBlank() && it!="null" },r.getString("reason"),r.optString("assigned_monitor").takeIf { it.isNotBlank() && it!="null" },r.getString("status"),r.getString("created_by"),r.getString("decision_seal_id"),r.optString("execution_note").takeIf { it.isNotBlank() && it!="null" },r.getString("created_at"))
+        } }
+    }
+
+    suspend fun createSchoolDecision(session: Session, type: String, studentId: String, sourceClass: String?, targetClass: String?, reason: String, monitorId: String?, sealId: String) = withContext(Dispatchers.IO) {
+        require(type in setOf("transfer_student","remove_student","accept_request","other")) { "نوع القرار غير صالح." }
+        require(reason.trim().length in 3..3000) { "اكتب سبب القرار." }
+        val body = JSONObject().put("decision_type",type).put("student_id",studentId).put("reason",reason.trim()).put("created_by",session.userId).put("decision_seal_id",sealId)
+        sourceClass?.takeIf { it.isNotBlank() }?.let { body.put("source_class",it.trim()) }
+        targetClass?.takeIf { it.isNotBlank() }?.let { body.put("target_class",it.trim()) }
+        monitorId?.takeIf { it.isNotBlank() }?.let { body.put("assigned_monitor",it) }
+        requestRaw("/rest/v1/school_decisions", "POST", body, session)
+        Unit
+    }
+
+    suspend fun updateSchoolDecision(session: Session, id: String, status: String, note: String = "") = withContext(Dispatchers.IO) {
+        require(status in setOf("acknowledged","completed")) { "حالة التنفيذ غير صالحة." }
+        val body = JSONObject().put("status",status).put("execution_note",note.trim())
+        if (status=="completed") body.put("executed_by",session.userId).put("executed_at",java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).format(java.util.Date()))
+        requestRaw("/rest/v1/school_decisions?id=eq.${encode(id)}", "PATCH", body, session)
+        Unit
+    }
+
+    suspend fun loadLeaveRequests(session: Session): List<LeaveRequest> = withContext(Dispatchers.IO) {
+        val rows = requestArray("/rest/v1/leave_requests?select=id,student_id,class_name,starts_on,ends_on,reason,status,reviewed_by,decision_seal_id,attendance_status,created_at&order=created_at.desc&limit=200", session)
+        (0 until rows.length()).map { i -> rows.getJSONObject(i).let { r ->
+            LeaveRequest(r.getString("id"),r.getString("student_id"),r.getString("class_name"),r.getString("starts_on"),r.getString("ends_on"),r.getString("reason"),r.getString("status"),r.optString("reviewed_by").takeIf { it.isNotBlank() && it!="null" },r.optString("decision_seal_id").takeIf { it.isNotBlank() && it!="null" },r.getString("attendance_status"),r.getString("created_at"))
+        } }
+    }
+
+    suspend fun createLeaveRequest(session: Session, className: String, startsOn: String, endsOn: String, reason: String) = withContext(Dispatchers.IO) {
+        require(className.isNotBlank() && startsOn.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && endsOn.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && endsOn >= startsOn && reason.trim().length in 3..2000) { "تحقق من الشعبة والتواريخ وسبب الإجازة." }
+        requestRaw("/rest/v1/leave_requests", "POST", JSONObject().put("student_id",session.userId).put("class_name",className.trim()).put("starts_on",startsOn).put("ends_on",endsOn).put("reason",reason.trim()), session)
+        Unit
+    }
+
+    suspend fun reviewLeaveRequest(session: Session, id: String, approve: Boolean, sealId: String?) = withContext(Dispatchers.IO) {
+        val body = JSONObject().put("status",if (approve) "approved" else "rejected").put("reviewed_by",session.userId).put("reviewed_at",java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).format(java.util.Date()))
+        if (approve && !sealId.isNullOrBlank()) body.put("decision_seal_id",sealId)
+        requestRaw("/rest/v1/leave_requests?id=eq.${encode(id)}", "PATCH", body, session)
+        Unit
+    }
+
+    suspend fun markLeaveAttendance(session: Session, id: String, attendance: String) = withContext(Dispatchers.IO) {
+        require(attendance in setOf("present","absent","excused")) { "حالة الحضور غير صالحة." }
+        requestRaw("/rest/v1/leave_requests?id=eq.${encode(id)}", "PATCH", JSONObject().put("attendance_status",attendance).put("attendance_marked_by",session.userId).put("attendance_marked_at",java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).format(java.util.Date())), session)
+        Unit
+    }
+
+    suspend fun loadDailyReports(session: Session, className: String?): List<DailyReport> = withContext(Dispatchers.IO) {
+        val filter = className?.takeIf { it.isNotBlank() }?.let { "&class_name=eq.${encode(it)}" }.orEmpty()
+        val rows = requestArray("/rest/v1/daily_class_reports?select=id,class_name,report_date,important_events,promises,unresolved_items,created_by,is_published&order=report_date.desc&limit=100$filter", session)
+        (0 until rows.length()).map { i -> rows.getJSONObject(i).let { r -> DailyReport(r.getString("id"),r.getString("class_name"),r.getString("report_date"),r.optString("important_events"),r.optString("promises"),r.optString("unresolved_items"),r.getString("created_by"),r.optBoolean("is_published")) } }
+    }
+
+    suspend fun createDailyReport(session: Session, className: String, reportDate: String, events: String, promises: String, unresolved: String, publish: Boolean) = withContext(Dispatchers.IO) {
+        require(className.isNotBlank() && reportDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { "تاريخ التقرير أو الشعبة غير صحيح." }
+        val now = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).format(java.util.Date())
+        val body = JSONObject().put("class_name",className.trim()).put("report_date",reportDate).put("important_events",events.trim()).put("promises",promises.trim()).put("unresolved_items",unresolved.trim()).put("created_by",session.userId).put("is_published",publish).put("published_at",if (publish) now else JSONObject.NULL)
+        requestRaw("/rest/v1/daily_class_reports", "POST", body, session)
+        Unit
+    }
+
+    suspend fun loadUserNotifications(session: Session): List<UserNotification> = withContext(Dispatchers.IO) {
+        val rows = requestArray("/rest/v1/user_notifications?select=id,notification_type,title,body,related_id,read_at,created_at&order=created_at.desc&limit=100", session)
+        (0 until rows.length()).map { i -> rows.getJSONObject(i).let { r -> UserNotification(r.getString("id"),r.getString("notification_type"),r.getString("title"),r.optString("body"),r.optString("related_id").takeIf { it.isNotBlank() && it!="null" },r.optString("read_at").takeIf { it.isNotBlank() && it!="null" },r.getString("created_at")) } }
+    }
+
+    suspend fun markNotificationRead(session: Session, id: String) = withContext(Dispatchers.IO) {
+        requestRaw("/rest/v1/user_notifications?id=eq.${encode(id)}", "PATCH", JSONObject().put("read_at",java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).format(java.util.Date())), session)
+        Unit
+    }
+
     suspend fun signOut(session: Session) = withContext(Dispatchers.IO) {
         if (baseUrl.isBlank() || publishableKey.isBlank()) return@withContext
         runCatching {
