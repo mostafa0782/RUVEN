@@ -40,8 +40,12 @@ android {
         compose = true
         buildConfig = true
     }
-    val supabaseUrl = providers.gradleProperty("SUPABASE_URL").orElse("").get().replace("\\", "\\\\").replace("\"", "\\\"")
-    val supabaseKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY").orElse("").get().replace("\\", "\\\\").replace("\"", "\\\"")
+    // Supabase project URL and publishable key are client-side configuration, not secrets.
+    // RLS and server-side authorization must protect all data and privileged operations.
+    val supabaseUrl = providers.gradleProperty("SUPABASE_URL")
+        .orElse("https://ijvfjvfmpvydbclgzyac.supabase.co").get().replace("\\", "\\\\").replace("\"", "\\\"")
+    val supabaseKey = providers.gradleProperty("SUPABASE_PUBLISHABLE_KEY")
+        .orElse("sb_publishable_H7BJR5JeVrDfEC_BLJaXCg_gns9YZRu").get().replace("\\", "\\\\").replace("\"", "\\\"")
     defaultConfig {
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabaseKey\"")
