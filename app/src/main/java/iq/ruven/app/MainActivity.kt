@@ -610,14 +610,13 @@ private fun RuvenAuthenticatedApp(
                         7 -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
                             else RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ })
                         8 -> ServerNotificationsScreen(session, backend)
-                        else -> SettingsScreen(prefs = prefs, onSaved = { settingsVersion++ })
+                        else -> RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ })
                     }
                 }
             }
         }
-    }
         }
-}
+    }
 }
 
 @Composable
