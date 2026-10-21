@@ -37,7 +37,7 @@ do $$
 declare p record; q text; wc text; stmt text;
 begin
   for p in select schemaname, tablename, policyname, cmd, qual, with_check from pg_policies
-    where schemaname='public' and (
+    where schemaname in ('public','storage') and (
       coalesce(qual,'') ~ '(current_school_class|current_school_role|is_school_admin|is_school_owner|teacher_has_assignment)\s*\('
       or coalesce(with_check,'') ~ '(current_school_class|current_school_role|is_school_admin|is_school_owner|teacher_has_assignment)\s*\(')
   loop
