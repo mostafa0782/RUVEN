@@ -31,10 +31,7 @@ The Android build and tagged-release workflows require these repository Actions 
 - `ANDROID_KEYSTORE_PASSWORD`
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
-- `SUPABASE_URL`
-- `SUPABASE_PUBLISHABLE_KEY`
-
-Use only the Supabase publishable/anon client key in the Android app. Never place a Supabase service-role key in the app or repository workflow inputs.
+The Supabase project URL and publishable client key are configured as public client settings in `app/build.gradle.kts`; they can be overridden with Gradle properties when building for a different project. A publishable key is intended for client apps, but it does not replace Row Level Security (RLS). Never place a Supabase service-role key in the Android app or repository.
 
 ## Build
 
