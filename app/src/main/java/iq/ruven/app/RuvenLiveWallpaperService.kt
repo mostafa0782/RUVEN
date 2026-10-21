@@ -49,14 +49,14 @@ class RuvenLiveWallpaperService : WallpaperService() {
                 canvas = holder.lockCanvas()
                 if (canvas != null) {
                     val w = canvas.width.toFloat(); val h = canvas.height.toFloat()
-                    val phase = (System.currentTimeMillis() % 12000L) / 12000f
+                    val phase = (System.currentTimeMillis() % 12000L).toDouble() / 12000.0
                     paint.shader = LinearGradient(0f, 0f, w, h,
                         intArrayOf(Color.rgb(7,18,42), Color.rgb(22,65,120), Color.rgb(8,24,52)), null, Shader.TileMode.CLAMP)
                     canvas.drawRect(0f, 0f, w, h, paint); paint.shader = null
                     paint.color = Color.argb(55, 80, 190, 255)
-                    canvas.drawCircle(w * (.25f + .12f * sin(phase * 6.28318).toFloat()), h * (.34f + .08f * sin((phase + .25f) * 6.28318).toFloat()), w * .36f, paint)
+                    canvas.drawCircle(w * (.25f + .12f * sin(phase * 6.28318).toFloat()), h * (.34f + .08f * sin((phase + .25) * 6.28318).toFloat()), w * .36f, paint)
                     paint.color = Color.argb(36, 170, 220, 255)
-                    canvas.drawCircle(w * (.75f + .1f * sin((phase + .5f) * 6.28318).toFloat()), h * (.68f + .07f * sin((phase + .7f) * 6.28318).toFloat()), w * .29f, paint)
+                    canvas.drawCircle(w * (.75f + .1f * sin((phase + .5) * 6.28318).toFloat()), h * (.68f + .07f * sin((phase + .7) * 6.28318).toFloat()), w * .29f, paint)
                 }
             } catch (_: Exception) {
             } finally {
