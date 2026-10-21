@@ -130,6 +130,13 @@ class SupabaseBackend(
         Unit
     }
 
+    /** Change the authenticated user's password through Supabase Auth. */
+    suspend fun updatePassword(session: Session, newPassword: String) = withContext(Dispatchers.IO) {
+        require(newPassword.length in 8..72) { "كلمة المرور يجب أن تكون بين 8 و72 محرفًا." }
+        requestRaw("/auth/v1/user", "PUT", JSONObject().put("password", newPassword), session)
+        Unit
+    }
+
     /** Create a login account through the server-side owner-only Edge Function. No service-role key is shipped in Android. */
     suspend fun createManagedAccount(
         session: Session,
