@@ -166,12 +166,32 @@ private fun RuvenSplashGate(content: @Composable () -> Unit) {
                                 .background(Color(0xFF102B53)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.Rounded.School,
-                                contentDescription = "School",
-                                tint = Color(0xFFFFE7A3),
-                                modifier = Modifier.size(58.dp)
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                    modifier = Modifier.padding(bottom = 1.dp)
+                                ) {
+                                    listOf(Color(0xFFCE2B37), Color.White, Color(0xFF171717)).forEach { stripe ->
+                                        Box(Modifier.width(20.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(stripe))
+                                    }
+                                }
+                                Text(
+                                    "الله أكبر",
+                                    color = Color(0xFF48B56A),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    Icons.AutoMirrored.Rounded.MenuBook,
+                                    contentDescription = "Open book",
+                                    tint = Color(0xFFFFE7A3),
+                                    modifier = Modifier.size(43.dp)
+                                )
+                                Text("١٤٤٥  •  ٢٠٢٣", color = Color(0xFFFFE7A3), fontSize = 7.sp)
+                            }
                         }
                     }
                     Text(
@@ -209,7 +229,22 @@ private fun RuvenSplashGate(content: @Composable () -> Unit) {
                     ) {
                         Text("Developed by", color = Color(0xFFB8B8B8), fontSize = 11.sp)
                         Text("MOSTAFA PY", color = Color(0xFFF4E7CD), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("🐍", fontSize = 17.sp)
+                        Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                Modifier.size(width = 16.dp, height = 12.dp)
+                                    .offset(x = 2.dp, y = (-3).dp)
+                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomEnd = 2.dp, bottomStart = 2.dp))
+                                    .background(Color(0xFF3776AB))
+                            )
+                            Box(
+                                Modifier.size(width = 16.dp, height = 12.dp)
+                                    .offset(x = (-2).dp, y = 3.dp)
+                                    .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp, bottomEnd = 6.dp, bottomStart = 6.dp))
+                                    .background(Color(0xFFFFD343))
+                            )
+                            Box(Modifier.offset(x = 1.dp, y = (-5).dp).size(2.dp).clip(RoundedCornerShape(1.dp)).background(Color.White))
+                            Box(Modifier.offset(x = (-1).dp, y = 1.dp).size(2.dp).clip(RoundedCornerShape(1.dp)).background(Color.White))
+                        }
                     }
                     Spacer(Modifier.height(12.dp))
                     Box(
