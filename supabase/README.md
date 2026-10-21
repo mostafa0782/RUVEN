@@ -20,8 +20,8 @@ This folder defines the first shared PostgreSQL database for RUVEN. It uses Supa
 4. Run `supabase db push` from the repository root.
 5. In Supabase Authentication, configure allowed sign-in methods and create/approve school accounts.
 6. Assign roles and teacher subjects through a trusted administrator workflow. Do not expose role editing to students.
-7. Add the project's URL and public anon key to Android local configuration (never commit real secrets).
+7. Configure the project's URL and publishable client key in `app/build.gradle.kts` or override them with Gradle properties. A publishable/anon key is designed for client apps; never put a service-role or secret key in Android or commit it.
 
 ## Current limitation
 
-Committing these migrations creates the database definition in the repository; it does **not** create a hosted Supabase project or deploy it automatically. The app UI still uses local SharedPreferences until the Android data layer is wired to Supabase and project credentials are configured. See `docs/DATABASE.md` for the rollout plan.
+Committing these migrations creates the database definition in the repository; it does **not** create a hosted Supabase project or deploy it automatically. The Android app currently uses Supabase Auth and reads published school items, but some tab forms still use local SharedPreferences and are not synchronized. The URL and publishable key are configured in the Android build. See `docs/SUPABASE_SETUP.md` for current limitations and rollout checks.
