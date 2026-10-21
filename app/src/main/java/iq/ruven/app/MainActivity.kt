@@ -280,10 +280,14 @@ private fun RuvenTheme(content: @Composable () -> Unit) {
     ), content = content)
 }
 
-private enum class RuvenTab(val title: String) {
-    Home("الرئيسية"), Schedule("الجدول"), Homework("الواجبات"),
-    Preparations("التحاضير"), Notices("الإعلانات"), Workflows("العمليات المدرسية"), Admin("الحسابات"), Sections("الشعب"), Notifications("الإشعارات"), Settings("الإعدادات")
+private enum class RuvenTab(val title: String, val englishTitle: String) {
+    Home("الرئيسية", "Home"), Schedule("الجدول", "Timetable"), Homework("الواجبات", "Homework"),
+    Preparations("التحاضير", "Preparations"), Notices("الإعلانات", "Announcements"), Workflows("العمليات المدرسية", "School workflows"),
+    Admin("الحسابات", "Accounts"), Sections("الشعب", "Sections"), Notifications("الإشعارات", "Notifications"), Settings("الإعدادات", "Settings")
 }
+
+@Composable
+private fun ruvenText(ar: String, en: String, english: Boolean): String = if (english) en else ar
 
 @Composable
 private fun RuvenApp() {
@@ -461,6 +465,8 @@ private fun RuvenAuthenticatedApp(
             prefs.getString("settings_background", "navy") ?: "navy"
         )
     }
+    val appLanguage = remember(settingsVersion) { prefs.getString("settings_language", "ar") ?: "ar" }
+    val isEnglish = appLanguage == "en"
     val appBackground = when (settingsSnapshot.third) {
         "midnight" -> Color(0xFF171923)
         "light" -> Color(0xFFF1F5F9)
@@ -503,7 +509,7 @@ private fun RuvenAuthenticatedApp(
             }
         )
     }
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl, LocalDensity provides androidx.compose.ui.unit.Density(LocalDensity.current.density, settingsSnapshot.second)) {
+    CompositionLocalProvider(LocalLayoutDirection provides (if (isEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl), LocalDensity provides androidx.compose.ui.unit.Density(LocalDensity.current.density, settingsSnapshot.second)) {
         Box(Modifier.fillMaxSize()) {
             if (wallpaperBitmap != null) {
                 Image(
@@ -545,8 +551,8 @@ private fun RuvenAuthenticatedApp(
                 }
                 tabs.forEachIndexed { i, item ->
                     NavigationBarItem(selected = tab == i, onClick = { tab = i },
-                        icon = { Icon(item.second, contentDescription = item.first.title) },
-                        label = { Text(item.first.title, fontSize = 10.sp, maxLines = 1) }, alwaysShowLabel = true)
+                        icon = { Icon(item.second, contentDescription = if (isEnglish) item.first.englishTitle else item.first.title) },
+                        label = { Text(if (isEnglish) item.first.englishTitle else item.first.title, fontSize = 10.sp, maxLines = 1) }, alwaysShowLabel = true)
                 }
             }
         }) { padding ->
@@ -555,14 +561,14 @@ private fun RuvenAuthenticatedApp(
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
                         Text("RUVEN", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                        Text("منظومتك المدرسية", color = Muted, fontSize = 11.sp)
+                        Text(ruvenText("منظومتك المدرسية", "Your school system", isEnglish), color = Muted, fontSize = 11.sp)
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(profile.fullName, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(roleLabel(role), color = Blue, fontSize = 11.sp)
                             IconButton(onClick = onRefresh) {
-                                Icon(Icons.Rounded.Refresh, contentDescription = "تحديث المحتوى والإشعارات", tint = Blue)
+                                Icon(Icons.Rounded.Refresh, contentDescription = ruvenText("تحديث المحتوى والإشعارات", "Refresh content and notifications", isEnglish), tint = Blue)
                             }
                             TextButton(
                                 onClick = onCheckUpdates,
@@ -585,7 +591,7 @@ private fun RuvenAuthenticatedApp(
                                 }
                                 Spacer(Modifier.width(5.dp))
                                 Text(
-                                    if (checkingUpdate) "جارٍ الفحص…" else "تحقق من التحديثات",
+                                    if (checkingUpdate) ruvenText("جارٍ الفحص…", "Checking…", isEnglish) else ruvenText("تحقق من التحديثات", "Check for updates", isEnglish),
                                     color = Blue,
                                     fontSize = 11.sp,
                                     maxLines = 1
@@ -617,11 +623,11 @@ private fun RuvenAuthenticatedApp(
                     },
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
                     when (current) {
-                        0 -> HomeScreen(role, remoteItems.count { it.itemType == "homework" }, remoteItems.count { it.itemType == "preparation" }, remoteItems.count { it.itemType == "timetable" }, remoteItems, feedError) { tab = it }
-                        1 -> ServerSchoolItemsScreen(session, backend, remoteItems, "timetable", "الجدول الدراسي", "الجداول المنشورة من إدارة المدرسة.", role, profile.className, onRefresh)
-                        2 -> ServerSchoolItemsScreen(session, backend, remoteItems, "homework", "الواجبات", "الواجبات المنشورة حسب المادة والشعبة.", role, profile.className, onRefresh)
-                        3 -> ServerSchoolItemsScreen(session, backend, remoteItems, "preparation", "التحاضير", "تحاضير الدروس المنشورة من المدرسين والإدارة.", role, profile.className, onRefresh)
-                        4 -> ServerSchoolItemsScreen(session, backend, remoteItems, "announcement", "الإعلانات المدرسية", "الإعلانات المنشورة من إدارة المدرسة.", role, profile.className, onRefresh)
+                        0 -> HomeScreen(role, remoteItems.count { it.itemType == "homework" }, remoteItems.count { it.itemType == "preparation" }, remoteItems.count { it.itemType == "timetable" }, remoteItems, feedError, isEnglish) { tab = it }
+                        1 -> ServerSchoolItemsScreen(session, backend, remoteItems, "timetable", ruvenText("الجدول الدراسي", "Timetable", isEnglish), ruvenText("الجداول المنشورة من إدارة المدرسة.", "Timetables published by school administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
+                        2 -> ServerSchoolItemsScreen(session, backend, remoteItems, "homework", ruvenText("الواجبات", "Homework", isEnglish), ruvenText("الواجبات المنشورة حسب المادة والشعبة.", "Homework published by subject and class.", isEnglish), role, profile.className, onRefresh, isEnglish)
+                        3 -> ServerSchoolItemsScreen(session, backend, remoteItems, "preparation", ruvenText("التحاضير", "Preparations", isEnglish), ruvenText("تحاضير الدروس المنشورة من المدرسين والإدارة.", "Lesson preparations published by teachers and administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
+                        4 -> ServerSchoolItemsScreen(session, backend, remoteItems, "announcement", ruvenText("الإعلانات المدرسية", "School announcements", isEnglish), ruvenText("الإعلانات المنشورة من إدارة المدرسة.", "Announcements published by school administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
                         5 -> SchoolWorkflowsScreen(profile, session, backend, role)
                         6 -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
                             else ServerNotificationsScreen(session, backend)
@@ -1419,7 +1425,7 @@ private fun OwnerAccountManagementScreen(
 @Composable
 private fun HomeScreen(
     role: SchoolRole, homeworkCount: Int, prepCount: Int, scheduleCount: Int,
-    remoteItems: List<SupabaseBackend.SchoolItem>, feedError: String?,
+    remoteItems: List<SupabaseBackend.SchoolItem>, feedError: String?, isEnglish: Boolean = false,
     onNavigate: (Int) -> Unit
 ) {
     var search by remember { mutableStateOf("") }
@@ -1450,8 +1456,8 @@ private fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("هلا بيك 👋", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("خلّ يومك الدراسي أوضح وأسهل.", color = Muted, fontSize = 13.sp)
+                    Text(ruvenText("هلا بيك 👋", "Welcome 👋", isEnglish), color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(ruvenText("خلّ يومك الدراسي أوضح وأسهل.", "Make your school day clearer and easier.", isEnglish), color = Muted, fontSize = 13.sp)
                     Spacer(Modifier.height(3.dp))
                     Surface(color = Color(0xFFE5F1FF), shape = RoundedCornerShape(50)) {
                         Row(
@@ -1487,14 +1493,14 @@ private fun HomeScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Surface(color = Color.White.copy(alpha = .16f), shape = RoundedCornerShape(50)) {
-                                Text("RUVEN • مدرستك بذكاء", color = Color.White, fontSize = 10.sp,
+                                Text(ruvenText("RUVEN • مدرستك بذكاء", "RUVEN • Your school, smarter", isEnglish), color = Color.White, fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp))
                             }
                             Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = Color(0xFFFFE8A3), modifier = Modifier.size(25.dp))
                         }
                         Text("كل شي يخص دراستك،\nبمكان واحد.", color = Color.White, fontSize = 27.sp,
                             lineHeight = 35.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("تابع الواجبات، افتح الجدول، وابقَ على اطلاع بآخر إعلانات المدرسة.", color = Color.White.copy(alpha = .88f),
+                        Text(ruvenText("تابع الواجبات، افتح الجدول، وابقَ على اطلاع بآخر إعلانات المدرسة.", "Track homework, check the timetable, and stay up to date with school announcements.", isEnglish), color = Color.White.copy(alpha = .88f),
                             fontSize = 13.sp, lineHeight = 21.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             Button(
@@ -1504,7 +1510,7 @@ private fun HomeScreen(
                             ) {
                                 Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, modifier = Modifier.size(17.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("شوف واجباتك", fontWeight = FontWeight.Bold)
+                                Text(ruvenText("شوف واجباتك", "View homework", isEnglish), fontWeight = FontWeight.Bold)
                             }
                             OutlinedButton(
                                 onClick = { onNavigate(1) },
@@ -1523,14 +1529,14 @@ private fun HomeScreen(
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionHeading("اختصارات سريعة", "اختَر شنو تحتاج هسه")
+                SectionHeading(ruvenText("اختصارات سريعة", "Quick shortcuts", isEnglish), ruvenText("اختَر شنو تحتاج هسه", "Choose what you need", isEnglish))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickActionCard("الجدول", "حصصك ومواعيدك", Icons.Rounded.CalendarMonth, Color(0xFFE7F0FF), Blue, Modifier.weight(1f)) { onNavigate(1) }
-                    QuickActionCard("الواجبات", "لا يفوتك شي", Icons.AutoMirrored.Rounded.MenuBook, Color(0xFFFFF0DD), Color(0xFFB66A12), Modifier.weight(1f)) { onNavigate(2) }
+                    QuickActionCard(ruvenText("الجدول", "Timetable", isEnglish), ruvenText("حصصك ومواعيدك", "Classes and times", isEnglish), Icons.Rounded.CalendarMonth, Color(0xFFE7F0FF), Blue, Modifier.weight(1f)) { onNavigate(1) }
+                    QuickActionCard(ruvenText("الواجبات", "Homework", isEnglish), ruvenText("لا يفوتك شي", "Stay on top of tasks", isEnglish), Icons.AutoMirrored.Rounded.MenuBook, Color(0xFFFFF0DD), Color(0xFFB66A12), Modifier.weight(1f)) { onNavigate(2) }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickActionCard("التحاضير", "محتوى الدروس", Icons.Rounded.Description, Color(0xFFE5F8F1), Color(0xFF168A70), Modifier.weight(1f)) { onNavigate(3) }
-                    QuickActionCard("الإعلانات", "آخر المستجدات", Icons.AutoMirrored.Rounded.Announcement, Color(0xFFF0E9FF), Color(0xFF7651C9), Modifier.weight(1f)) { onNavigate(4) }
+                    QuickActionCard(ruvenText("التحاضير", "Preparations", isEnglish), ruvenText("محتوى الدروس", "Lesson content", isEnglish), Icons.Rounded.Description, Color(0xFFE5F8F1), Color(0xFF168A70), Modifier.weight(1f)) { onNavigate(3) }
+                    QuickActionCard(ruvenText("الإعلانات", "Announcements", isEnglish), ruvenText("آخر المستجدات", "Latest updates", isEnglish), Icons.AutoMirrored.Rounded.Announcement, Color(0xFFF0E9FF), Color(0xFF7651C9), Modifier.weight(1f)) { onNavigate(4) }
                 }
             }
         }
@@ -1538,22 +1544,22 @@ private fun HomeScreen(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("ملخصك الدراسي", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                        Text("عدادات العناصر المحفوظة محلياً", color = Muted, fontSize = 11.sp)
+                        Text(ruvenText("ملخصك الدراسي", "Your study summary", isEnglish), color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text(ruvenText("عدادات العناصر المحفوظة محلياً", "Locally saved item counts", isEnglish), color = Muted, fontSize = 11.sp)
                     }
                     TextButton(onClick = { showAllStats = !showAllStats }) {
-                        Text(if (showAllStats) "عرض أقل" else "تفاصيل", fontSize = 12.sp)
+                        Text(if (showAllStats) ruvenText("عرض أقل", "Show less", isEnglish) else ruvenText("تفاصيل", "Details", isEnglish), fontSize = 12.sp)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
-                    SummaryCard("الجدول", scheduleCount.toString(), "جداول", Icons.Rounded.CalendarMonth, Modifier.weight(1f))
-                    SummaryCard("الواجبات", homeworkCount.toString(), "واجبات", Icons.AutoMirrored.Rounded.MenuBook, Modifier.weight(1f))
-                    SummaryCard("التحاضير", prepCount.toString(), "تحاضير", Icons.Rounded.Description, Modifier.weight(1f))
+                    SummaryCard(ruvenText("الجدول", "Timetable", isEnglish), scheduleCount.toString(), ruvenText("جداول", "timetables", isEnglish), Icons.Rounded.CalendarMonth, Modifier.weight(1f))
+                    SummaryCard(ruvenText("الواجبات", "Homework", isEnglish), homeworkCount.toString(), ruvenText("واجبات", "tasks", isEnglish), Icons.AutoMirrored.Rounded.MenuBook, Modifier.weight(1f))
+                    SummaryCard(ruvenText("التحاضير", "Preparations", isEnglish), prepCount.toString(), ruvenText("تحاضير", "preparations", isEnglish), Icons.Rounded.Description, Modifier.weight(1f))
                 }
                 androidx.compose.animation.AnimatedVisibility(visible = showAllStats) {
                     Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("تفاصيل المساحة", color = Ink, fontWeight = FontWeight.Bold)
+                            Text(ruvenText("تفاصيل المساحة", "Workspace details", isEnglish), color = Ink, fontWeight = FontWeight.Bold)
                             Text("منشورات الخادم: ${remoteItems.size}", color = Muted, fontSize = 12.sp)
                             Text("الواجبات المحلية: $homeworkCount", color = Muted, fontSize = 12.sp)
                             Text("التحاضير المحلية: $prepCount", color = Muted, fontSize = 12.sp)
@@ -1565,7 +1571,7 @@ private fun HomeScreen(
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionHeading("آخر منشورات المدرسة", "واجبات وتحاضير وإعلانات منشورة من الخادم")
+                SectionHeading(ruvenText("آخر منشورات المدرسة", "Latest school posts", isEnglish), ruvenText("واجبات وتحاضير وإعلانات منشورة من الخادم", "Homework, preparations and announcements from the server", isEnglish))
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1591,11 +1597,11 @@ private fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
-                    placeholder = { Text("ابحث باسم الواجب أو المادة…") },
+                    placeholder = { Text(ruvenText("ابحث باسم الواجب أو المادة…", "Search homework or subject…", isEnglish)) },
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Muted) },
                     trailingIcon = {
                         if (search.isNotBlank()) IconButton(onClick = { search = "" }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "مسح البحث")
+                            Icon(Icons.Rounded.Close, contentDescription = ruvenText("مسح البحث", "Clear search", isEnglish))
                         }
                     }
                 )
@@ -1631,7 +1637,7 @@ private fun HomeScreen(
                         Icon(Icons.Rounded.Person, contentDescription = null, tint = Blue)
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("مساحتك وصلاحياتك", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(ruvenText("مساحتك وصلاحياتك", "Your space and permissions", isEnglish), color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Text(roleLabel(role), color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Text(when (role) {
                             SchoolRole.STUDENT -> "تقدر تتابع الجدول والواجبات المنشورة لشعبتك."
@@ -1650,7 +1656,7 @@ private fun HomeScreen(
             }
         }
         item {
-            Text("RUVEN • نسخة قيد التطوير", color = Muted, fontSize = 10.sp,
+            Text(ruvenText("RUVEN • نسخة قيد التطوير", "RUVEN • Development build", isEnglish), color = Muted, fontSize = 10.sp,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp))
         }
     }
@@ -1678,6 +1684,14 @@ private fun QuickActionCard(
     }
 }
 
+private fun localizeSchoolTitle(title: String, english: Boolean): String = if (!english) title else when (title) {
+    "الجدول الدراسي" -> "Timetable"
+    "الواجبات" -> "Homework"
+    "التحاضير" -> "Preparations"
+    "الإعلانات المدرسية" -> "School announcements"
+    else -> title
+}
+
 @Composable
 private fun ServerSchoolItemsScreen(
     session: SupabaseBackend.Session,
@@ -1688,7 +1702,8 @@ private fun ServerSchoolItemsScreen(
     description: String,
     role: SchoolRole,
     profileClass: String?,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    isEnglish: Boolean = false
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -1723,7 +1738,7 @@ private fun ServerSchoolItemsScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { PageHeader(title, description) }
+        item { PageHeader(localizeSchoolTitle(title, isEnglish), description) }
         item {
             OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth(), enabled = !busy) {
                 Icon(Icons.Rounded.Refresh, contentDescription = null)
