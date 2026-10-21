@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -142,7 +144,7 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
         } }
         item { SettingsGroup("اللغة وإمكانية الوصول", Icons.Rounded.Language, language) {
             Text(st("لغة التطبيق", language), color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            listOf("ar" to "العربية", "en" to "English", "mixed" to "مختلط").forEach { (v, label) ->
+            listOf("ar" to if (language == "en") "Arabic" else "العربية", "en" to "English", "mixed" to if (language == "en") "Mixed" else "مختلط").forEach { (v, label) ->
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     RadioButton(selected = language == v, onClick = { language = v; saved = false })
                     Text(label, color = SettingsNavy, fontSize = 13.sp)
@@ -154,14 +156,14 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
             Slider(value = fontScale, onValueChange = { fontScale = it; saved = false }, valueRange = .85f..1.3f)
         } }
         item { SettingsGroup("المظهر والتخصيص", Icons.Rounded.Palette, language) {
-            listOf("dark" to "داكن", "light" to "فاتح", "glass" to "زجاجي").forEach { (v, label) ->
+            listOf("dark" to if (language == "en") "Dark" else "داكن", "light" to if (language == "en") "Light" else "فاتح", "glass" to if (language == "en") "Glass" else "زجاجي").forEach { (v, label) ->
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     RadioButton(selected = appearance == v, onClick = { appearance = v; saved = false })
                     Text(label, color = SettingsNavy, fontSize = 13.sp)
                 }
             }
             Text(st("لون الخلفية", language), color = SettingsNavy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            listOf("navy" to "كحلي", "midnight" to "ليل داكن", "light" to "فاتح", "mint" to "نعناعي").forEach { (v, label) ->
+            listOf("navy" to if (language == "en") "Navy" else "كحلي", "midnight" to if (language == "en") "Midnight" else "ليل داكن", "light" to if (language == "en") "Light" else "فاتح", "mint" to if (language == "en") "Mint" else "نعناعي").forEach { (v, label) ->
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     RadioButton(selected = background == v, onClick = { background = v; saved = false })
                     Text(label, color = SettingsNavy, fontSize = 13.sp)
@@ -259,16 +261,72 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
         dismissButton = { TextButton(onClick = { if (!passwordBusy) dialog = null }) { Text("إغلاق") } }
     )
     val info = when (dialog) {
-        "privacy" -> "يستخدم RUVEN بيانات الحساب المدرسي ومحتوى المدرسة اللازم لتقديم الوظائف عبر خادم المدرسة وSupabase. لا تشارك كلمة مرورك. يجب على إدارة المدرسة اعتماد سياسة نهائية توضّح الاحتفاظ بالبيانات وطلبات الحذف قبل الإطلاق العام."
-        "terms" -> "يُستخدم RUVEN للأغراض المدرسية المصرح بها. حافظ على سرية بيانات الدخول ولا تنشر معلومات الطلبة دون إذن. قد تتوقف بعض الوظائف أثناء الصيانة. هذه مسودة تحتاج اعتماد إدارة المدرسة."
-        "about" -> "RUVEN منظومة رقمية مدرسية تهدف إلى جمع الإعلانات والجدول والواجبات والتحاضير والإشعارات وإدارة الحسابات المصرح بها في تطبيق واحد."
+        "privacy" -> if (language == "en") """
+            DRAFT — pending formal approval by school administration.
+
+            1. Data handled: school account identifiers, name, role, class/section, school posts and attachments, notification status, and settings needed to operate the app.
+            2. Purposes: authenticate approved users, show school-approved schedules, homework, preparations and announcements, deliver school workflow notifications, and protect account security.
+            3. Storage and processors: account and school content are handled by the school's configured Supabase project. A private storage bucket is used for school attachments. Network requests use HTTPS.
+            4. Access and sharing: access is limited by account role and database/storage policies. Data is not intended for advertising or sale. Information may be disclosed only when required by law or authorized school procedures.
+            5. Retention and deletion: the school administration must define retention periods, backup handling, and the process for correction/deletion requests before public deployment.
+            6. Security: use a unique password, sign out on shared devices, and report suspected unauthorized access. No online system can guarantee absolute security.
+            7. Minors: because students may be under 18, the school must confirm appropriate guardian notices, approvals and handling procedures.
+            8. Your choices: request account/profile corrections or data-related help through school administration. Technical issues can be reported at github.com/mostafa0782/RUVEN/issues.
+            9. Changes: the school should publish a dated revision when this policy changes.
+
+            This is an implementation draft, not a school-approved legal notice. The school must fill in its official contact details and approve the retention, deletion and guardian procedures.
+        """.trimIndent() else """
+            مسودة — بانتظار الاعتماد الرسمي من إدارة المدرسة.
+
+            ١. البيانات: معرّف الحساب المدرسي والاسم والدور والشعبة، والمنشورات والمرفقات المدرسية، وحالة الإشعارات والإعدادات اللازمة لتشغيل التطبيق.
+            ٢. الأغراض: توثيق دخول الحسابات المعتمدة، وعرض الجداول والواجبات والتحاضير والإعلانات المعتمدة، وإرسال إشعارات سير العمل المدرسي، وحماية الحسابات.
+            ٣. التخزين والمعالجة: تُعالج بيانات الحساب والمحتوى عبر مشروع Supabase الذي تضبطه المدرسة. تُحفظ المرفقات في مساحة تخزين خاصة، وتستخدم الاتصالات HTTPS.
+            ٤. الوصول والمشاركة: تُقيّد الصلاحيات بحسب الدور وسياسات قاعدة البيانات والتخزين. لا يُقصد استخدام البيانات للإعلانات أو بيعها. ولا تُكشف إلا عند إلزام قانوني أو إجراء مدرسي مخوّل.
+            ٥. الاحتفاظ والحذف: على الإدارة تحديد مدد الاحتفاظ والنسخ الاحتياطية وآلية طلب تصحيح البيانات أو حذفها قبل الإطلاق العام.
+            ٦. الأمان: استخدم كلمة مرور فريدة، وسجّل الخروج من الأجهزة المشتركة، وأبلغ عن أي دخول مشبوه. لا يمكن لأي نظام متصل ضمان أمان مطلق.
+            ٧. القاصرون: لأن بعض الطلبة دون ١٨ عاماً، يجب على المدرسة اعتماد إشعارات أولياء الأمور والموافقات والإجراءات المناسبة.
+            ٨. حقوق المستخدم: يمكن طلب تصحيح بيانات الحساب أو المساعدة بشأنها من إدارة المدرسة. ويمكن الإبلاغ عن المشكلات التقنية عبر github.com/mostafa0782/RUVEN/issues.
+            ٩. التغييرات: ينبغي نشر نسخة مؤرخة عند تعديل هذه السياسة.
+
+            هذه مسودة تنفيذية وليست سياسة قانونية معتمدة من المدرسة. يجب إضافة بيانات الاتصال الرسمية واعتماد مدد الاحتفاظ والحذف وإجراءات أولياء الأمور.
+        """.trimIndent()
+        "terms" -> if (language == "en") """
+            DRAFT — pending formal approval by school administration.
+
+            1. Eligibility: access is for school accounts created or approved by authorized school staff. Do not create or share unauthorized accounts.
+            2. Account security: keep passwords private, use the sign-out option on shared devices, and promptly report suspected compromise. You are responsible for activity performed through your account, subject to applicable law and school policy.
+            3. Acceptable use: use RUVEN for legitimate school purposes. Do not impersonate others, bypass role restrictions, probe the service without authorization, upload malware, or publish unlawful, abusive, confidential or unrelated material.
+            4. Student information: do not upload or share personal information, grades, images or documents about students unless you have explicit school authorization.
+            5. Official content: schedules, announcements, homework, preparations, decisions and leave information are authoritative only when published or approved through the school's designated process. Confirm urgent matters with the school.
+            6. Availability and updates: features may be changed, interrupted or unavailable during maintenance. Keep the app updated through verified RUVEN releases.
+            7. Enforcement: the school may restrict or suspend accounts according to its policies and applicable procedures.
+            8. Reporting: report technical problems at github.com/mostafa0782/RUVEN/issues and school/disciplinary matters to school administration.
+            9. Changes: revised terms should be dated and communicated by the school.
+
+            This is a draft for review, not approved school policy or legal advice. The school must approve it, add its official contact details, and define appeals and account suspension procedures before deployment.
+        """.trimIndent() else """
+            مسودة — بانتظار الاعتماد الرسمي من إدارة المدرسة.
+
+            ١. الأهلية: الدخول مخصص للحسابات التي تنشئها أو تعتمدها كوادر المدرسة المخوّلة. يُمنع إنشاء حسابات غير مصرح بها أو مشاركة الحسابات.
+            ٢. أمان الحساب: حافظ على سرية كلمة المرور، واستخدم تسجيل الخروج على الأجهزة المشتركة، وأبلغ سريعاً عن أي اشتباه باختراق. تُراعى القوانين وسياسات المدرسة في تحديد مسؤولية نشاط الحساب.
+            ٣. الاستخدام المقبول: استخدم RUVEN للأغراض المدرسية المشروعة. يُمنع انتحال الشخصيات أو تجاوز الصلاحيات أو اختبار الخدمة دون إذن أو رفع برمجيات ضارة أو نشر محتوى مخالف أو مسيء أو سري أو غير متعلق بالمدرسة.
+            ٤. بيانات الطلبة: لا ترفع أو تشارك معلومات شخصية أو درجات أو صوراً أو وثائق تخص الطلبة دون تصريح واضح من المدرسة.
+            ٥. المحتوى الرسمي: لا تُعد الجداول والإعلانات والواجبات والتحاضير والقرارات والإجازات معتمدة إلا إذا نُشرت أو اعتُمدت عبر الإجراء المدرسي المحدد. أكّد الأمور العاجلة مع المدرسة.
+            ٦. التوفر والتحديثات: قد تتغير بعض الوظائف أو تتوقف أثناء الصيانة. ثبّت التحديثات من إصدارات RUVEN الموثوقة.
+            ٧. تطبيق القواعد: يجوز للمدرسة تقييد الحساب أو تعليقه وفق سياساتها وإجراءاتها المعتمدة.
+            ٨. الإبلاغ: أبلغ عن المشكلات التقنية عبر github.com/mostafa0782/RUVEN/issues، ووجّه الشؤون المدرسية أو الانضباطية إلى الإدارة.
+            ٩. التعديلات: ينبغي تأريخ الشروط المعدلة وإبلاغ المستخدمين بها من قبل المدرسة.
+
+            هذه مسودة للمراجعة وليست شروطاً مدرسية معتمدة أو استشارة قانونية. يجب اعتمادها وإضافة بيانات الاتصال الرسمية وتحديد إجراءات الاعتراض وتعليق الحساب قبل النشر.
+        """.trimIndent()
+        "about" -> if (language == "en") "RUVEN is a school digital system designed to bring approved announcements, schedules, homework, lesson preparations, notifications and authorized account workflows into one application. It is maintained as a school-focused project and its policies must be approved by the school administration." else "RUVEN منظومة رقمية مدرسية تهدف إلى جمع الإعلانات والجداول والواجبات والتحاضير والإشعارات وإدارة الحسابات المصرح بها في تطبيق واحد. تُدار الوظائف المدرسية بحسب الصلاحيات، وتحتاج السياسات الرسمية إلى اعتماد إدارة المدرسة."
         else -> null
     }
     if (info != null) AlertDialog(
         onDismissRequest = { dialog = null },
-        title = { Text(when (dialog) { "privacy" -> "سياسة الخصوصية"; "terms" -> "الشروط والأحكام"; else -> "من نحن" }) },
-        text = { Text(info) },
-        confirmButton = { TextButton(onClick = { dialog = null }) { Text("إغلاق") } }
+        title = { Text(st(when (dialog) { "privacy" -> "سياسة الخصوصية"; "terms" -> "الشروط والأحكام"; else -> "من نحن" }, language)) },
+        text = { Text(info, modifier = Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState())) },
+        confirmButton = { TextButton(onClick = { dialog = null }) { Text(st("إغلاق", language)) } }
     )
 }
 
