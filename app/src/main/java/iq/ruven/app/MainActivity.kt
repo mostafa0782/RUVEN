@@ -503,7 +503,7 @@ private fun RuvenAuthenticatedApp(
             }
         )
     }
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl, LocalDensity provides LocalDensity.current.copy(fontScale = settingsSnapshot.second)) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl, LocalDensity provides androidx.compose.ui.unit.Density(LocalDensity.current.density, settingsSnapshot.second)) {
         Box(Modifier.fillMaxSize()) {
             if (wallpaperBitmap != null) {
                 Image(
