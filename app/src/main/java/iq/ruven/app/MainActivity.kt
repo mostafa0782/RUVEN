@@ -1984,7 +1984,8 @@ private fun ServerSchoolItemsScreen(
     var composerOpen by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    val needsSubjectAndClass = itemType == "homework" || itemType == "preparation"
+    val needsSubject = itemType == "homework" || itemType == "preparation"
+    val needsClass = needsSubject || itemType == "timetable"
     val canCreate = when (itemType) {
         "timetable" -> role in setOf(SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.PRINCIPAL, SchoolRole.OWNER)
         "homework" -> SchoolPermissions.canCreateHomework(role, assignedSubject = subject.isNotBlank())
@@ -2017,24 +2018,22 @@ private fun ServerSchoolItemsScreen(
                             Text(translated("إضافة محتوى رسمي"), color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Text(translated("سيُرسل إلى خادم المدرسة، وتطبّق صلاحيات قاعدة البيانات."), color = Muted, fontSize = 11.sp)
                         }
-                        TextButton(onClick = { composerOpen = !composerOpen }) { Text(if (composerOpen) "إغلاق" else "إنشاء") }
+                        TextButton(onClick = { composerOpen = !composerOpen }) { Text(translated(if (composerOpen) "إغلاق" else "إنشاء")) }
                     }
                     androidx.compose.animation.AnimatedVisibility(visible = composerOpen) {
                         Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                            if (needsSubjectAndClass) {
-                                OutlinedTextField(subject, { subject = it }, label = { Text(translated("المادة")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                                OutlinedTextField(targetClass, { targetClass = it.trim().uppercase() }, label = { Text(translated("الشعبة / الصف")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                            }
+                            if (needsSubject) OutlinedTextField(subject, { subject = it }, label = { Text(translated("المادة")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            if (needsClass) OutlinedTextField(targetClass, { targetClass = it.trim().uppercase() }, label = { Text(translated("الشعبة / الصف")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             OutlinedTextField(entryTitle, { entryTitle = it }, label = { Text(translated("العنوان")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             OutlinedTextField(body, { body = it }, label = { Text(translated("التفاصيل")) }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8)
                             OutlinedButton(onClick = { attachmentPicker.launch(arrayOf("application/pdf", "image/*", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Rounded.UploadFile, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text(attachmentName ?: "إرفاق ملف من الجهاز (اختياري)")
+                                Text(attachmentName ?: translated("إرفاق ملف من الجهاز (اختياري)"))
                             }
                             Button(
                                 enabled = !busy && canCreate && entryTitle.isNotBlank() && body.isNotBlank() &&
-                                    (!needsSubjectAndClass || (subject.isNotBlank() && targetClass.isNotBlank())),
+                                    (!needsSubject || subject.isNotBlank()) && (!needsClass || targetClass.isNotBlank()),
                                 onClick = {
                                     scope.launch {
                                         busy = true
@@ -2050,8 +2049,8 @@ private fun ServerSchoolItemsScreen(
                                                 itemType = itemType,
                                                 title = entryTitle.trim(),
                                                 body = body.trim(),
-                                                subjectName = subject.takeIf { needsSubjectAndClass },
-                                                className = if (needsSubjectAndClass) targetClass.trim().uppercase() else null,
+                                                subjectName = subject.takeIf { needsSubject },
+                                                className = if (needsClass) targetClass.trim().uppercase() else null,
                                                 published = true,
                                                 attachmentPath = uploadedPath
                                             )
