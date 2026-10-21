@@ -69,11 +69,33 @@ jobs:
             exit 1
           fi
 
+      - name: Verify Supabase app configuration
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$SUPABASE_URL" =~ ^https://[^/]+\.supabase\.co/?$ ]] && [[ ! "$SUPABASE_URL" =~ ^https:// ]]; then
+            echo "Missing or invalid SUPABASE_URL. Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in repository Actions secrets." >&2
+            exit 1
+          fi
+          if [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "Missing SUPABASE_PUBLISHABLE_KEY. Add it in repository Actions secrets." >&2
+            exit 1
+          fi
+
       - name: Run unit tests
-        run: gradle :app:testDebugUnitTest -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.0
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: gradle :app:testDebugUnitTest -PSUPABASE_URL="$SUPABASE_URL" -PSUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.0
 
       - name: Assemble signed release APK
-        run: gradle :app:assembleRelease -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.${{ github.run_number }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: gradle :app:assembleRelease -PSUPABASE_URL="$SUPABASE_URL" -PSUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.${{ github.run_number }}
 
       - name: Rename APK for the in-app updater
         shell: bash
