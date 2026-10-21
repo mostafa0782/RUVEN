@@ -599,7 +599,7 @@ private fun RuvenAuthenticatedApp(
                     },
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
                     when (current) {
-                        0 -> HomeScreen(role, homework.size, preparations.size, schedules.size, remoteItems, feedError) { tab = it }
+                        0 -> HomeScreen(role, remoteItems.count { it.itemType == "homework" }, remoteItems.count { it.itemType == "preparation" }, remoteItems.count { it.itemType == "timetable" }, remoteItems, feedError) { tab = it }
                         1 -> ServerSchoolItemsScreen(session, backend, remoteItems, "timetable", "الجدول الدراسي", "الجداول المنشورة من إدارة المدرسة.", role, profile.className, onRefresh)
                         2 -> ServerSchoolItemsScreen(session, backend, remoteItems, "homework", "الواجبات", "الواجبات المنشورة حسب المادة والشعبة.", role, profile.className, onRefresh)
                         3 -> ServerSchoolItemsScreen(session, backend, remoteItems, "preparation", "التحاضير", "تحاضير الدروس المنشورة من المدرسين والإدارة.", role, profile.className, onRefresh)
@@ -608,7 +608,7 @@ private fun RuvenAuthenticatedApp(
                         6 -> if (role == SchoolRole.OWNER) OwnerAccountManagementScreen(session, backend)
                             else ServerNotificationsScreen(session, backend)
                         7 -> if (role == SchoolRole.OWNER) OwnerSectionsScreen(session, backend)
-                            else RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ })
+                            else RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ }, onSignOut = onSignOut)
                         8 -> ServerNotificationsScreen(session, backend)
                         else -> RuvSettingsScreen(prefs = prefs, session = session, backend = backend, onSaved = { settingsVersion++ })
                     }
@@ -1786,7 +1786,7 @@ private fun ServerSchoolItemsScreen(
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(item.title, color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     if (!item.subjectName.isNullOrBlank() || !item.className.isNullOrBlank()) {
-                        Text(listOfNotNull(item.subjectName, item.className?.let { "الشعبة $it" }).joinToString(" • "), color = SettingsBlue, fontSize = 11.sp)
+                        Text(listOfNotNull(item.subjectName, item.className?.let { "الشعبة $it" }).joinToString(" • "), color = Blue, fontSize = 11.sp)
                     }
                     Text(item.body, color = Ink, fontSize = 13.sp, lineHeight = 19.sp)
                     Text(item.createdAt.replace("T", " ").take(16), color = Muted, fontSize = 10.sp)
