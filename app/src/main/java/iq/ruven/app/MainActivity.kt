@@ -370,7 +370,7 @@ private fun RuvenApp() {
                         } else {
                             updateMessage = "يتوفر تحديث v${release.versionName}. جارٍ تنزيله…"
                             val activity = context as? Activity ?: throw IllegalStateException("افتح التحديث من التطبيق مباشرة.")
-                            RuvenUpdater.downloadAndInstall(activity, release.apkUrl)
+                            RuvenUpdater.downloadAndInstall(activity, release.apkUrl, release.sha256)
                             updateMessage = "تم تنزيل التحديث. أكمل التثبيت من نافذة أندرويد."
                         }
                     } catch (e: Exception) {
