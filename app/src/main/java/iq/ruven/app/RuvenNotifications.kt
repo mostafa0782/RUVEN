@@ -85,8 +85,12 @@ object RuvenNotifications {
         val currentIds = items.map { it.id }.toSet()
         val previouslySeen = prefs.getStringSet(key, emptySet()).orEmpty()
         if (!prefs.getBoolean(baselineKey, false)) {
+            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return 0
+            // On first sync, notify only unread workflow items, capped to avoid a burst.
+            val unread = items.filter { it.readAt == null }.take(10)
+            unread.asReversed().forEach { item -> postWorkflow(context, item) }
             prefs.edit().putStringSet(key, currentIds).putBoolean(baselineKey, true).apply()
-            return 0
+            return unread.size
         }
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return 0
         val fresh = items.filter { it.id !in previouslySeen }
