@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.os.Build
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -2140,7 +2141,7 @@ private fun ServerSchoolItemsScreen(
                             if (needsClass) OutlinedTextField(targetClass, { targetClass = it.trim().uppercase() }, label = { Text(translated("الشعبة / الصف")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             OutlinedTextField(entryTitle, { entryTitle = it }, label = { Text(translated("العنوان")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             OutlinedTextField(body, { body = it }, label = { Text(translated("التفاصيل")) }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8)
-                            OutlinedButton(onClick = { attachmentPicker.launch(arrayOf("application/pdf", "image/*", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) }, modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(onClick = { attachmentPicker.launch(arrayOf("application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Rounded.UploadFile, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
                                 Text(attachmentName ?: translated("إرفاق ملف من الجهاز (اختياري)"))
@@ -2153,21 +2154,56 @@ private fun ServerSchoolItemsScreen(
                                         busy = true
                                         message = null
                                         try {
-                                            val uploadedPath = selectedAttachment?.let { uri ->
-                                                val bytes = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw java.io.IOException("تعذر قراءة الملف المحدد.") }
-                                                val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
-                                                backend.uploadSchoolFile(session, attachmentName ?: "school-file", mime, bytes)
+                                            var uploadedPath: String? = null
+                                            try {
+                                                uploadedPath = selectedAttachment?.let { uri ->
+                                                    val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                                                    val allowedTypes = setOf("application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                                                    require(mime in allowedTypes) { "نوع الملف غير مدعوم. استخدم PDF أو JPG أو PNG أو WEBP أو DOCX أو XLSX." }
+                                                    val metadata = withContext(Dispatchers.IO) {
+                                                        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                                                            if (cursor.moveToFirst()) {
+                                                                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                                                                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                                                                (if (nameIndex >= 0) cursor.getString(nameIndex) else null) to (if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else -1L)
+                                                            } else null
+                                                        }
+                                                    }
+                                                    val actualName = metadata?.first?.takeIf { it.isNotBlank() } ?: attachmentName ?: "school-file"
+                                                    val declaredSize = metadata?.second ?: -1L
+                                                    require(declaredSize <= 20L * 1024 * 1024) { "حجم الملف يجب ألا يتجاوز 20 ميغابايت." }
+                                                    val bytes = withContext(Dispatchers.IO) {
+                                                        context.contentResolver.openInputStream(uri)?.use { input ->
+                                                            val output = java.io.ByteArrayOutputStream()
+                                                            val buffer = ByteArray(8192)
+                                                            var total = 0
+                                                            while (true) {
+                                                                val count = input.read(buffer)
+                                                                if (count < 0) break
+                                                                total += count
+                                                                require(total <= 20 * 1024 * 1024) { "حجم الملف يجب ألا يتجاوز 20 ميغابايت." }
+                                                                output.write(buffer, 0, count)
+                                                            }
+                                                            output.toByteArray()
+                                                        } ?: throw java.io.IOException("تعذر قراءة الملف المحدد.")
+                                                    }
+                                                    backend.uploadSchoolFile(session, actualName, mime, bytes)
+                                                }
+                                                backend.createSchoolItem(
+                                                    session = session,
+                                                    itemType = itemType,
+                                                    title = entryTitle.trim(),
+                                                    body = body.trim(),
+                                                    subjectName = subject.takeIf { needsSubject },
+                                                    className = if (needsClass) targetClass.trim().uppercase() else null,
+                                                    published = true,
+                                                    attachmentPath = uploadedPath
+                                                )
+                                                uploadedPath = null
+                                            } catch (failure: Exception) {
+                                                uploadedPath?.let { path -> runCatching { backend.deleteSchoolFile(session, path) } }
+                                                throw failure
                                             }
-                                            backend.createSchoolItem(
-                                                session = session,
-                                                itemType = itemType,
-                                                title = entryTitle.trim(),
-                                                body = body.trim(),
-                                                subjectName = subject.takeIf { needsSubject },
-                                                className = if (needsClass) targetClass.trim().uppercase() else null,
-                                                published = true,
-                                                attachmentPath = uploadedPath
-                                            )
                                             entryTitle = ""; body = ""; subject = ""; selectedAttachment = null; attachmentName = null
                                             message = "تم إرسال المحتوى إلى الخادم."
                                             composerOpen = false
@@ -2182,7 +2218,7 @@ private fun ServerSchoolItemsScreen(
                                 if (busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp)
                                 else Icon(Icons.Rounded.CloudUpload, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text(if (busy) "جارٍ الإرسال…" else "نشر على خادم المدرسة")
+                                Text(translated(if (busy) "جارٍ الإرسال…" else "نشر على خادم المدرسة"))
                             }
                         }
                     }
@@ -2203,7 +2239,7 @@ private fun ServerSchoolItemsScreen(
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Rounded.CloudOff, contentDescription = null, tint = Muted, modifier = Modifier.size(28.dp))
-                    Text(if (search.isBlank()) "ماكو محتوى منشور بهذا القسم حالياً." else "ماكو نتائج مطابقة للبحث.", color = Ink, fontWeight = FontWeight.SemiBold)
+                    Text(translated(if (search.isBlank()) "ماكو محتوى منشور بهذا القسم حالياً." else "ماكو نتائج مطابقة للبحث."), color = Ink, fontWeight = FontWeight.SemiBold)
                     Text(translated("اسحب تحديث المحتوى من الخادم للتأكد من آخر البيانات."), color = Muted, fontSize = 11.sp)
                 }
             }
@@ -2213,7 +2249,7 @@ private fun ServerSchoolItemsScreen(
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(item.title, color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     if (!item.subjectName.isNullOrBlank() || !item.className.isNullOrBlank()) {
-                        Text(listOfNotNull(item.subjectName, item.className?.let { "الشعبة $it" }).joinToString(" • "), color = Blue, fontSize = 11.sp)
+                        Text(listOfNotNull(item.subjectName, item.className?.let { "${translated("الشعبة: ")}$it" }).joinToString(" • "), color = Blue, fontSize = 11.sp)
                     }
                     Text(item.body, color = Ink, fontSize = 13.sp, lineHeight = 19.sp)
                     if (!item.attachmentPath.isNullOrBlank()) {
