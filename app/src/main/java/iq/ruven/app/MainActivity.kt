@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -629,7 +630,7 @@ private fun OwnerAccountManagementScreen(
                     Text("ينشئ حساب دخول حقيقياً. لا يمكن إنشاء مالك آخر، وكلمة المرور لا تُعرض ضمن قائمة الحسابات.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
                     OutlinedTextField(newFullName, { newFullName = it }, label = { Text("اسم الطالب أو الموظف") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(newEmail, { newEmail = it }, label = { Text("البريد الإلكتروني") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(newPassword, { newPassword = it }, label = { Text("كلمة مرور مؤقتة (8 أحرف على الأقل)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(newPassword, { newPassword = it }, label = { Text("كلمة مرور مؤقتة (8 أحرف على الأقل)") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
                     Box {
                         OutlinedButton(onClick = { newRoleMenu = true }, modifier = Modifier.fillMaxWidth()) {
                             Text("نوع الحساب: " + (managedRoleOptions.firstOrNull { it.value == newRole }?.label ?: newRole))
