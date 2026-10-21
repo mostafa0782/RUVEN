@@ -10,6 +10,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.util.UUID
 
 /**
  * Small Supabase REST/Auth adapter. Never put a service-role key in this Android app.
@@ -55,7 +56,8 @@ class SupabaseBackend(
         val body: String,
         val subjectName: String?,
         val className: String?,
-        val createdAt: String
+        val createdAt: String,
+        val attachmentPath: String? = null
     )
 
     suspend fun signIn(email: String, password: String): Session = withContext(Dispatchers.IO) {
@@ -197,7 +199,7 @@ class SupabaseBackend(
 
     suspend fun loadPublishedItems(session: Session, className: String?): List<SchoolItem> = withContext(Dispatchers.IO) {
         val query = buildString {
-            append("select=id,item_type,title,body,subject_name,class_name,created_at")
+            append("select=id,item_type,title,body,subject_name,class_name,created_at,attachment_path")
             append("&published=eq.true&order=created_at.desc&limit=100")
             if (!className.isNullOrBlank()) append("&or=(class_name.is.null,class_name.eq.${encode(className)})")
         }
@@ -211,7 +213,8 @@ class SupabaseBackend(
                 body = row.optString("body"),
                 subjectName = row.optString("subject_name").takeIf { it.isNotBlank() && it != "null" },
                 className = row.optString("class_name").takeIf { it.isNotBlank() && it != "null" },
-                createdAt = row.optString("created_at")
+                createdAt = row.optString("created_at"),
+                attachmentPath = row.optString("attachment_path").takeIf { it.isNotBlank() && it != "null" }
             )
         }
     }
@@ -224,7 +227,8 @@ class SupabaseBackend(
         body: String,
         subjectName: String? = null,
         className: String? = null,
-        published: Boolean = true
+        published: Boolean = true,
+        attachmentPath: String? = null
     ): SchoolItem = withContext(Dispatchers.IO) {
         require(itemType in setOf("homework", "preparation", "timetable", "announcement", "report")) {
             "نوع المنشور غير صالح."
@@ -239,8 +243,9 @@ class SupabaseBackend(
             .put("published", published)
         subjectName?.takeIf { it.isNotBlank() }?.let { payload.put("subject_name", it.trim()) }
         className?.takeIf { it.isNotBlank() }?.let { payload.put("class_name", it.trim()) }
+        attachmentPath?.takeIf { it.isNotBlank() }?.let { payload.put("attachment_path", it) }
         val response = requestRaw(
-            "/rest/v1/school_items?select=id,item_type,title,body,subject_name,class_name,created_at",
+            "/rest/v1/school_items?select=id,item_type,title,body,subject_name,class_name,created_at,attachment_path",
             "POST",
             payload,
             session,
@@ -256,9 +261,47 @@ class SupabaseBackend(
             body = row.optString("body"),
             subjectName = row.optString("subject_name").takeIf { it.isNotBlank() && it != "null" },
             className = row.optString("class_name").takeIf { it.isNotBlank() && it != "null" },
-            createdAt = row.optString("created_at")
+            createdAt = row.optString("created_at"),
+            attachmentPath = row.optString("attachment_path").takeIf { it.isNotBlank() && it != "null" }
         )
     }
+
+    suspend fun uploadSchoolFile(session: Session, fileName: String, mimeType: String, bytes: ByteArray): String = withContext(Dispatchers.IO) {
+        requireConfigured()
+        require(bytes.isNotEmpty()) { "الملف فارغ." }
+        require(bytes.size <= 20 * 1024 * 1024) { "حجم الملف يجب ألا يتجاوز 20 ميغابايت." }
+        val safeName = fileName.substringAfterLast('/').replace(Regex("[^A-Za-z0-9._-]"), "_").take(100).ifBlank { "attachment" }
+        val path = "${session.userId}/${UUID.randomUUID()}-$safeName"
+        var connection: HttpURLConnection? = null
+        try {
+            connection = (URL("$baseUrl/storage/v1/object/ruven-school-files/${encodeStoragePath(path)}").openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 15000
+                readTimeout = 30000
+                doOutput = true
+                setRequestProperty("apikey", publishableKey)
+                setRequestProperty("Authorization", "Bearer ${session.accessToken}")
+                setRequestProperty("Content-Type", mimeType.ifBlank { "application/octet-stream" })
+                setRequestProperty("x-upsert", "false")
+                outputStream.use { it.write(bytes) }
+            }
+            val status = connection.responseCode
+            val response = (if (status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (status !in 200..299) {
+                val message = runCatching { JSONObject(response).optString("message").ifBlank { JSONObject(response).optString("error") } }.getOrDefault("")
+                throw IOException(message.ifBlank { "تعذر رفع الملف إلى خادم المدرسة (HTTP $status)." })
+            }
+            path
+        } finally { connection?.disconnect() }
+    }
+
+    suspend fun createSchoolFileSignedUrl(session: Session, path: String): String = withContext(Dispatchers.IO) {
+        val result = request("/storage/v1/object/sign/ruven-school-files/${encodeStoragePath(path)}", "POST", JSONObject().put("expiresIn", 3600), session = session)
+        val signed = result.optString("signedURL").ifBlank { throw IOException("تعذر إنشاء رابط الملف.") }
+        if (signed.startsWith("http://") || signed.startsWith("https://")) signed else "$baseUrl/${signed.trimStart('/')}"
+    }
+
+    private fun encodeStoragePath(path: String): String = path.split("/").joinToString("/") { encode(it) }
 
     /** These mutations are restricted again by database RLS; only authorized administrators can change items. */
     suspend fun updateSchoolItem(
