@@ -241,7 +241,7 @@ fun RuvSettingsScreen(prefs: SharedPreferences, session: SupabaseBackend.Session
         title = { Text(st("تسجيل الخروج؟", language)) },
         text = { Text(st("سيتم إنهاء الجلسة على هذا الجهاز. يمكنك تسجيل الدخول مرة أخرى لاحقاً.", language)) },
         confirmButton = { TextButton(onClick = { dialog = null; onSignOut() }) { Text(st("تسجيل الخروج", language)) } },
-        dismissButton = { TextButton(onClick = { dialog = null }) { Text("إلغاء") } }
+        dismissButton = { TextButton(onClick = { dialog = null }) { Text(st("إلغاء", language)) } }
     )
     if (dialog == "password") AlertDialog(
         onDismissRequest = { if (!passwordBusy) dialog = null },
