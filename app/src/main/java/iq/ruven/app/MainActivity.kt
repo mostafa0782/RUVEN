@@ -627,6 +627,7 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
     var selectedStudent by remember { mutableStateOf("") }
     var selectedMonitor by remember { mutableStateOf("") }
     var selectedSeal by remember { mutableStateOf("") }
+    var executionNote by remember { mutableStateOf("") }
     var targetClass by remember { mutableStateOf("") }
     var sourceClass by remember { mutableStateOf(profile.className.orEmpty()) }
     var decisionType by remember { mutableStateOf("transfer_student") }
@@ -642,6 +643,7 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
     var reportUnresolved by remember { mutableStateOf("") }
     var filterTeachers by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val mySeals = seals.filter { it.ownerId == session.userId }
     val allowedTabs = buildList {
         add("الدليل")
         add("القرارات")
@@ -659,7 +661,7 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
                 decisions = backend.loadSchoolDecisions(session)
                 leaves = backend.loadLeaveRequests(session)
                 dailyReports = backend.loadDailyReports(session, if (admin) null else profile.className)
-                if (selectedSeal.isBlank()) selectedSeal = seals.firstOrNull()?.id.orEmpty()
+                if (selectedSeal.isBlank() || seals.none { it.id == selectedSeal && it.ownerId == session.userId }) selectedSeal = seals.firstOrNull { it.ownerId == session.userId }?.id.orEmpty()
             } catch (e: Exception) { error = e.message ?: "تعذر تحميل بيانات العمليات المدرسية." }
             finally { loading = false }
         }
@@ -735,7 +737,7 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
                     item { OutlinedTextField(targetClass, { targetClass = it }, label = { Text("الشعبة الجديدة (إن وجدت)") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                     item { OutlinedTextField(decisionReason, { decisionReason = it }, label = { Text("السبب والتعليمات") }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
                     item { Text("ختم القرار", color = Ink, fontWeight = FontWeight.SemiBold) }
-                    item { Column { seals.forEach { seal -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedSeal == seal.id, onClick = { selectedSeal = seal.id }); Text("${seal.name} • ${seal.title}", color = Ink, fontSize = 12.sp) } } } }
+                    item { Column { mySeals.forEach { seal -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedSeal == seal.id, onClick = { selectedSeal = seal.id }); Text("${seal.name} • ${seal.title}", color = Ink, fontSize = 12.sp) } }; if (mySeals.isEmpty()) Text("لا يوجد ختم باسم حسابك. أنشئ ختمًا من تبويب الأختام أولًا.", color = Muted, fontSize = 11.sp) } }
                     item { Text("تعيين مراقب للتنفيذ", color = Ink, fontWeight = FontWeight.SemiBold) }
                     item { Column { profiles.filter { it.role == "class_monitor" }.forEach { p -> Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = selectedMonitor == p.id, onClick = { selectedMonitor = p.id }); Text("${p.fullName} • ${p.className ?: "بدون شعبة"}", color = Ink, fontSize = 12.sp) } } } }
                     item { Button(onClick = { val p = profiles.firstOrNull { it.id == selectedStudent }; perform({ backend.createSchoolDecision(session,decisionType,selectedStudent,sourceClass.ifBlank { p?.className },targetClass,decisionReason,selectedMonitor,selectedSeal); decisionReason = "" }, "تم إرسال القرار المختوم للمراقب.") }, enabled = !busy && selectedStudent.isNotBlank() && selectedSeal.isNotBlank() && decisionReason.trim().length >= 3, modifier = Modifier.fillMaxWidth()) { Text("إصدار القرار وإشعار المراقب") } }
@@ -751,10 +753,10 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
                             Text("الحالة: ${d.status} • الختم: ${seal?.name ?: "قرار مختوم"}", color = Blue, fontSize = 11.sp)
                             if (d.targetClass != null) Text("من ${d.sourceClass ?: "غير محدد"} إلى ${d.targetClass}", color = Muted, fontSize = 11.sp)
                             if (monitor && d.assignedMonitor == session.userId && d.status in setOf("pending","acknowledged")) {
-                                OutlinedTextField(d.executionNote ?: "", { }, label = { Text("ملاحظة التنفيذ (اختيارية)") }, modifier = Modifier.fillMaxWidth(), readOnly = true)
+                                OutlinedTextField(executionNote, { executionNote = it }, label = { Text("ملاحظة التنفيذ (اختيارية)") }, modifier = Modifier.fillMaxWidth(), minLines = 1)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedButton(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"acknowledged","") }, "تم تأكيد استلام القرار.") }, modifier = Modifier.weight(1f)) { Text("استلام") }
-                                    Button(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"completed","تم التنفيذ") }, "تم تسجيل تنفيذ القرار.") }, modifier = Modifier.weight(1f)) { Text("تم التنفيذ") }
+                                    OutlinedButton(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"acknowledged",executionNote) }, "تم تأكيد استلام القرار.") }, modifier = Modifier.weight(1f)) { Text("استلام") }
+                                    Button(onClick = { perform({ backend.updateSchoolDecision(session,d.id,"completed",executionNote.ifBlank { "تم التنفيذ" }) }, "تم تسجيل تنفيذ القرار.") }, modifier = Modifier.weight(1f)) { Text("تم التنفيذ") }
                                 }
                             }
                         }
@@ -782,9 +784,9 @@ private fun SchoolWorkflowsScreen(profile: SupabaseBackend.Profile, session: Sup
                             Text("الحالة: ${l.status} • الحضور: ${l.attendanceStatus}", color = Ink, fontSize = 11.sp)
                             if (l.status == "approved") Text("تمت الموافقة بختم: ${seal?.name ?: "ختم الإدارة"}", color = Color(0xFF16845B), fontSize = 11.sp)
                             if (admin && l.status == "pending") {
-                                if (seals.isEmpty()) Text("أنشئ ختمًا إداريًا أولًا حتى توافق على الطلب.", color = Muted, fontSize = 11.sp)
+                                if (mySeals.isEmpty()) Text("أنشئ ختمًا باسم حسابك أولًا حتى توافق على الطلب.", color = Muted, fontSize = 11.sp)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(onClick = { perform({ backend.reviewLeaveRequest(session,l.id,true,seals.firstOrNull()?.id) }, "تمت الموافقة على الإجازة وأُرسل إشعار للطالب.") }, enabled = !busy && seals.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("موافقة") }
+                                    Button(onClick = { perform({ backend.reviewLeaveRequest(session,l.id,true,mySeals.firstOrNull()?.id) }, "تمت الموافقة على الإجازة وأُرسل إشعار للطالب.") }, enabled = !busy && mySeals.isNotEmpty(), modifier = Modifier.weight(1f)) { Text("موافقة") }
                                     OutlinedButton(onClick = { perform({ backend.reviewLeaveRequest(session,l.id,false,null) }, "تم رفض الإجازة وإشعار الطالب.") }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("رفض") }
                                 }
                             }

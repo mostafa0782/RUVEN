@@ -377,7 +377,7 @@ class SupabaseBackend(
         require(className.isNotBlank() && reportDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) { "تاريخ التقرير أو الشعبة غير صحيح." }
         val now = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", java.util.Locale.US).format(java.util.Date())
         val body = JSONObject().put("class_name",className.trim()).put("report_date",reportDate).put("important_events",events.trim()).put("promises",promises.trim()).put("unresolved_items",unresolved.trim()).put("created_by",session.userId).put("is_published",publish).put("published_at",if (publish) now else JSONObject.NULL)
-        requestRaw("/rest/v1/daily_class_reports", "POST", body, session)
+        requestRaw("/rest/v1/daily_class_reports?on_conflict=class_name,report_date,created_by", "POST", body, session, preferRepresentation = true, upsert = true)
         Unit
     }
 
@@ -420,7 +420,8 @@ class SupabaseBackend(
         method: String,
         body: JSONObject?,
         session: Session?,
-        preferRepresentation: Boolean = false
+        preferRepresentation: Boolean = false,
+        upsert: Boolean = false
     ): String {
         requireConfigured()
         var connection: HttpURLConnection? = null
@@ -432,7 +433,8 @@ class SupabaseBackend(
                 setRequestProperty("apikey", publishableKey)
                 setRequestProperty("Accept", "application/json")
                 setRequestProperty("Content-Type", "application/json")
-                if (preferRepresentation) setRequestProperty("Prefer", "return=representation")
+                if (upsert) setRequestProperty("Prefer", "resolution=merge-duplicates,return=representation")
+                else if (preferRepresentation) setRequestProperty("Prefer", "return=representation")
                 if (session != null) setRequestProperty("Authorization", "Bearer ${session.accessToken}")
                 if (body != null) {
                     doOutput = true
