@@ -132,6 +132,39 @@ class SupabaseBackend(
         Unit
     }
 
+    data class RosterEntry(val id: String, val fullName: String, val gradeName: String, val sectionCode: String, val status: String)
+
+    /** Owner-only bulk import from plain text: one student name per line. */
+    suspend fun importStudentRosterText(session: Session, gradeName: String, sectionCode: String, text: String): Pair<Int, Int> = withContext(Dispatchers.IO) {
+        require(gradeName.trim().length in 1..80) { "اسم الصف مطلوب." }
+        val section = sectionCode.trim().uppercase()
+        require(section in setOf("A","B","C","D","E","F")) { "اختر شعبة صحيحة." }
+        val rawNames = text.lines().map { it.trim().replace(Regex("\\s+"), " ") }.filter { it.length >= 2 }.distinctBy { it.lowercase() }
+        require(rawNames.isNotEmpty()) { "الصق اسمًا واحدًا على الأقل، كل اسم بسطر." }
+        require(rawNames.size <= 1000) { "الحد الأقصى 1000 اسم في الدفعة الواحدة." }
+        var inserted = 0
+        var duplicates = 0
+        for (name in rawNames) {
+            val normalized = name.lowercase().replace(Regex("[^\\p{L}\\p{N}]"), "")
+            val payload = JSONObject().put("full_name", name).put("normalized_name", normalized)
+                .put("grade_name", gradeName.trim()).put("section_code", section)
+                .put("status", "unmatched").put("created_by", session.userId)
+            try {
+                requestRaw("/rest/v1/student_roster", "POST", payload, session)
+                inserted++
+            } catch (e: Exception) { duplicates++ }
+        }
+        Pair(inserted, duplicates)
+    }
+
+    suspend fun loadStudentRoster(session: Session): List<RosterEntry> = withContext(Dispatchers.IO) {
+        val rows = requestArray("/rest/v1/student_roster?select=id,full_name,grade_name,section_code,status&order=grade_name.asc,section_code.asc,full_name.asc&limit=2000", session = session)
+        (0 until rows.length()).map { i ->
+            val row = rows.getJSONObject(i)
+            RosterEntry(row.getString("id"), row.getString("full_name"), row.getString("grade_name"), row.getString("section_code"), row.getString("status"))
+        }
+    }
+
     /** Change the authenticated user's password through Supabase Auth. */
     suspend fun updatePassword(session: Session, newPassword: String) = withContext(Dispatchers.IO) {
         require(newPassword.length in 8..72) { "كلمة المرور يجب أن تكون بين 8 و72 محرفًا." }
