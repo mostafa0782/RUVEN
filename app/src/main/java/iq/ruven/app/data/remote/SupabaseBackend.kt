@@ -295,6 +295,12 @@ class SupabaseBackend(
         } finally { connection?.disconnect() }
     }
 
+    suspend fun deleteSchoolFile(session: Session, path: String) = withContext(Dispatchers.IO) {
+        requireConfigured()
+        requestRaw("/storage/v1/object/ruven-school-files/${encodeStoragePath(path)}", "DELETE", null, session)
+        Unit
+    }
+
     suspend fun createSchoolFileSignedUrl(session: Session, path: String): String = withContext(Dispatchers.IO) {
         val result = request("/storage/v1/object/sign/ruven-school-files/${encodeStoragePath(path)}", "POST", JSONObject().put("expiresIn", 3600), session = session)
         val signed = result.optString("signedURL").ifBlank { throw IOException("تعذر إنشاء رابط الملف.") }
