@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Announcement
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
@@ -509,6 +510,19 @@ private fun RuvenAuthenticatedApp(
                     modifier = Modifier.fillMaxSize().then(if (glassEnabled && glassBlur > 0f) Modifier.blur(glassBlur.dp) else Modifier)
                 )
                 if (glassEnabled) Box(Modifier.fillMaxSize().background(Color(0xFF0B1930).copy(alpha = (1f - glassOpacity).coerceIn(0.05f, 0.65f))))
+            } else if (glassEnabled) {
+                Box(Modifier.fillMaxSize().background(appBackground)) {
+                    Box(
+                        Modifier.size(340.dp).offset(x = (-110).dp, y = 120.dp)
+                            .background(Brush.radialGradient(listOf(Color(0xFF56C7E8).copy(alpha = 0.65f * glassGlow), Color.Transparent)), CircleShape)
+                            .then(if (glassBlur > 0f) Modifier.blur(glassBlur.dp) else Modifier)
+                    )
+                    Box(
+                        Modifier.size(300.dp).align(Alignment.BottomEnd).offset(x = 80.dp, y = (-90).dp)
+                            .background(Brush.radialGradient(listOf(Color(0xFF5E8BFF).copy(alpha = 0.55f * glassGlow), Color.Transparent)), CircleShape)
+                            .then(if (glassBlur > 0f) Modifier.blur(glassBlur.dp) else Modifier)
+                    )
+                }
             }
             Scaffold(containerColor = if (wallpaperBitmap != null) appBackground.copy(alpha = if (glassEnabled) 0.12f else 0.82f) else appBackground, bottomBar = {
             NavigationBar(containerColor = appSurface, tonalElevation = 8.dp) {
