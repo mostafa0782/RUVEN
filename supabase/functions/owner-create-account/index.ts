@@ -54,8 +54,6 @@ Deno.serve(async (req: Request) => {
     if (!allowedRoles.has(role)) return json(400, { error: "نوع الحساب غير مسموح." });
     if (className && !allowedClasses.has(className)) return json(400, { error: "الشعبة يجب أن تكون A أو B أو C أو D أو E أو F." });
     if (role === "student" && !className) return json(400, { error: "حدد شعبة الطالب من A إلى F." });
-    if (email === "mostafaminecraft472@gmail.com") return json(400, { error: "لا يمكن إنشاء نسخة ثانية من حساب المالك." });
-
     const createResponse = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
       method: "POST",
       headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
@@ -75,11 +73,12 @@ Deno.serve(async (req: Request) => {
       `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(created.id)}`,
       {
         method: "PATCH",
-        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=representation" },
         body: JSON.stringify({ full_name: fullName, role, class_name: className || null, is_owner: false, email }),
       },
     );
-    if (!profileResponse.ok) {
+    const configuredProfiles = profileResponse.ok ? await profileResponse.json() : [];
+    if (!profileResponse.ok || !Array.isArray(configuredProfiles) || configuredProfiles.length !== 1) {
       // Do not leave a login account that was only partially configured.
       await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(created.id)}`, {
         method: "DELETE",
