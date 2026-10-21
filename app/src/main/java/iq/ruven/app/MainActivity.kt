@@ -1691,6 +1691,13 @@ private fun ServerSchoolItemsScreen(
     onRefresh: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var selectedAttachment by remember { mutableStateOf<Uri?>(null) }
+    var attachmentName by remember { mutableStateOf<String?>(null) }
+    val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        selectedAttachment = uri
+        attachmentName = uri?.lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/')
+    }
     var search by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var targetClass by remember { mutableStateOf(profileClass.orEmpty()) }
@@ -1742,6 +1749,11 @@ private fun ServerSchoolItemsScreen(
                             }
                             OutlinedTextField(entryTitle, { entryTitle = it }, label = { Text("العنوان") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             OutlinedTextField(body, { body = it }, label = { Text("التفاصيل") }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8)
+                            OutlinedButton(onClick = { attachmentPicker.launch(arrayOf("application/pdf", "image/*", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Rounded.UploadFile, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(attachmentName ?: "إرفاق ملف من الجهاز (اختياري)")
+                            }
                             Button(
                                 enabled = !busy && canCreate && entryTitle.isNotBlank() && body.isNotBlank() &&
                                     (!needsSubjectAndClass || (subject.isNotBlank() && targetClass.isNotBlank())),
@@ -1750,6 +1762,11 @@ private fun ServerSchoolItemsScreen(
                                         busy = true
                                         message = null
                                         try {
+                                            val uploadedPath = selectedAttachment?.let { uri ->
+                                                val bytes = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw java.io.IOException("تعذر قراءة الملف المحدد.") }
+                                                val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                                                backend.uploadSchoolFile(session, attachmentName ?: "school-file", mime, bytes)
+                                            }
                                             backend.createSchoolItem(
                                                 session = session,
                                                 itemType = itemType,
@@ -1757,9 +1774,10 @@ private fun ServerSchoolItemsScreen(
                                                 body = body.trim(),
                                                 subjectName = subject.takeIf { needsSubjectAndClass },
                                                 className = if (needsSubjectAndClass) targetClass.trim().uppercase() else null,
-                                                published = true
+                                                published = true,
+                                                attachmentPath = uploadedPath
                                             )
-                                            entryTitle = ""; body = ""; subject = ""
+                                            entryTitle = ""; body = ""; subject = ""; selectedAttachment = null; attachmentName = null
                                             message = "تم إرسال المحتوى إلى الخادم."
                                             composerOpen = false
                                             onRefresh()
@@ -1807,6 +1825,16 @@ private fun ServerSchoolItemsScreen(
                         Text(listOfNotNull(item.subjectName, item.className?.let { "الشعبة $it" }).joinToString(" • "), color = Blue, fontSize = 11.sp)
                     }
                     Text(item.body, color = Ink, fontSize = 13.sp, lineHeight = 19.sp)
+                    if (!item.attachmentPath.isNullOrBlank()) {
+                        TextButton(onClick = {
+                            scope.launch {
+                                try {
+                                    val url = backend.createSchoolFileSignedUrl(session, item.attachmentPath)
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                } catch (e: Exception) { message = e.message ?: "تعذر فتح الملف المرفق." }
+                            }
+                        }) { Icon(Icons.Rounded.Download, contentDescription = null); Spacer(Modifier.width(6.dp)); Text("فتح / تنزيل الملف المرفق") }
+                    }
                     Text(item.createdAt.replace("T", " ").take(16), color = Muted, fontSize = 10.sp)
                 }
             }
