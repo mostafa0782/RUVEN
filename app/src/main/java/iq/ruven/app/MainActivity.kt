@@ -1430,6 +1430,68 @@ private val managedRoleOptions = listOf(
 )
 
 @Composable
+private fun OwnerStudentRosterScreen(session: SupabaseBackend.Session, backend: SupabaseBackend) {
+    var grade by remember { mutableStateOf("الثالث المتوسط") }
+    var section by remember { mutableStateOf("C") }
+    var pastedNames by remember { mutableStateOf("") }
+    var entries by remember { mutableStateOf<List<SupabaseBackend.RosterEntry>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    fun reload() {
+        scope.launch {
+            loading = true
+            try { entries = backend.loadStudentRoster(session); error = null }
+            catch (e: Exception) { error = e.message ?: "تعذر تحميل سجل الطلاب." }
+            finally { loading = false }
+        }
+    }
+    LaunchedEffect(session.userId) { reload() }
+    val names = pastedNames.lines().map { it.trim().replace(Regex("\\s+"), " ") }.filter { it.length >= 2 }
+    val uniqueNames = names.distinctBy { it.lowercase() }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { PageHeader("سجل الطلاب والتحقق من الشعب", "الصق قائمة نصية معتمدة؛ كل اسم في سطر مستقل. لن تُعتمد شعبة الطالب من اختياره وحده.") }
+        item {
+            Card {
+                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(value = grade, onValueChange = { grade = it }, label = { Text("الصف") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = section, onValueChange = { section = it.uppercase().take(1) }, label = { Text("الشعبة (A–F)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = pastedNames, onValueChange = { pastedNames = it }, label = { Text("الأسماء — كل اسم بسطر") }, modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp), minLines = 5)
+                    Text("بعد التنظيف: ${uniqueNames.size} اسم فريد • ${names.size - uniqueNames.size} تكرار داخل النص", color = Muted, fontSize = 12.sp)
+                    Button(onClick = {
+                        scope.launch {
+                            loading = true; error = null; message = null
+                            try {
+                                val result = backend.importStudentRosterText(session, grade, section, pastedNames)
+                                message = "تم حفظ ${result.first} اسمًا. سجلات لم تُحفظ/أخطاء: ${result.second}."
+                                pastedNames = ""
+                                entries = backend.loadStudentRoster(session)
+                            } catch (e: Exception) { error = e.message ?: "تعذر حفظ القائمة." }
+                            finally { loading = false }
+                        }
+                    }, enabled = !loading && grade.isNotBlank() && section in setOf("A","B","C","D","E","F") && uniqueNames.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                        Text(if (loading) "جارٍ الحفظ…" else "حفظ قائمة الشعبة")
+                    }
+                    TextButton(onClick = { reload() }, enabled = !loading) { Text("تحديث السجل") }
+                    message?.let { Text(it, color = Blue) }
+                    error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            }
+        }
+        item { PageHeader("الأسماء المحفوظة", "إجمالي السجلات: ${entries.size}") }
+        items(entries, key = { it.id }) { entry ->
+            Card {
+                Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Text(entry.fullName, fontWeight = FontWeight.SemiBold, color = Ink)
+                    Text("${entry.gradeName} — ${entry.sectionCode} • ${entry.status}", color = Muted, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun OwnerSectionsScreen(session: SupabaseBackend.Session, backend: SupabaseBackend) {
     var sections by remember { mutableStateOf<List<SupabaseBackend.ManagedSection>>(emptyList()) }
     var sectionSearch by remember { mutableStateOf("") }
