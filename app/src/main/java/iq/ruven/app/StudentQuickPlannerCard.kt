@@ -97,6 +97,7 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     var editingTaskId by remember { mutableStateOf<String?>(null) }
     var editingDraft by remember { mutableStateOf("") }
     var showClearConfirmation by remember { mutableStateOf(false) }
+    var pendingDeleteTask by remember { mutableStateOf<PlannerTask?>(null) }
     val doneCount = tasks.count { it.done }
     val progressPercent = if (tasks.isEmpty()) 0 else doneCount * 100 / tasks.size
     var focusMode by remember { mutableStateOf(false) }
@@ -349,11 +350,7 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                                     )
                                 }
                                 androidx.compose.material3.IconButton(
-                                    onClick = {
-                                        tasks.removeAll { it.id == task.id }
-                                        if (editingTaskId == task.id) { editingTaskId = null; editingDraft = "" }
-                                        savePlannerTasks(context, tasks.toList())
-                                    }
+                                    onClick = { pendingDeleteTask = task }
                                 ) {
                                     Icon(
                                         Icons.Rounded.DeleteOutline,
@@ -410,3 +407,33 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
         )
     }
 }
+    pendingDeleteTask?.let { taskToDelete ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteTask = null },
+            title = { Text(if (isEnglish) "Delete this task?" else "حذف هذه المهمة؟") },
+            text = {
+                Text(
+                    if (isEnglish) "“" + taskToDelete.title + "” will be removed from this device."
+                    else "سيتم حذف «" + taskToDelete.title + "» من هذا الجهاز."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        tasks.removeAll { it.id == taskToDelete.id }
+                        if (editingTaskId == taskToDelete.id) {
+                            editingTaskId = null
+                            editingDraft = ""
+                        }
+                        savePlannerTasks(context, tasks.toList())
+                        pendingDeleteTask = null
+                    }
+                ) { Text(if (isEnglish) "Delete" else "حذف") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteTask = null }) {
+                    Text(if (isEnglish) "Cancel" else "إلغاء")
+                }
+            }
+        )
+    }
