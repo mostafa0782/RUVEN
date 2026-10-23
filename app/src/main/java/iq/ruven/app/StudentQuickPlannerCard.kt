@@ -71,12 +71,13 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     }
     var draft by remember { mutableStateOf("") }
     val doneCount = tasks.count { it.done }
+    val progressPercent = if (tasks.isEmpty()) 0 else doneCount * 100 / tasks.size
     val title = if (isEnglish) "My quick study plan" else "خطتي الدراسية السريعة"
     val subtitle = if (isEnglish) "Small steps, saved on this device" else "قسّم يومك لخطوات صغيرة — تنحفظ على جهازك"
     val placeholder = if (isEnglish) "Add a task (e.g. review chemistry)" else "أضف مهمة (مثلاً: أراجع الكيمياء)"
     val addLabel = if (isEnglish) "Add" else "إضافة"
     val emptyLabel = if (isEnglish) "Add your first small task above." else "أضف أول مهمة صغيرة من الحقل أعلاه."
-    val progressLabel = if (isEnglish) doneCount.toString() + " of " + tasks.size + " completed" else "أنجزت " + doneCount + " من " + tasks.size + " مهام"
+    val progressLabel = if (isEnglish) doneCount.toString() + " of " + tasks.size + " completed (" + progressPercent + "%)" else "أنجزت " + doneCount + " من " + tasks.size + " مهام (" + progressPercent + "%)"
     val resetLabel = if (isEnglish) "Clear completed" else "مسح المنجز"
     Card(
         modifier = Modifier.fillMaxWidth(),
