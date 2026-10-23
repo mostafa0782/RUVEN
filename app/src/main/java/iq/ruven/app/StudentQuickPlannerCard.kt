@@ -182,77 +182,88 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                             }
                         }
                     } else {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = task.done,
-                                onCheckedChange = { checked ->
-                                    val index = tasks.indexOfFirst { it.id == task.id }
-                                    if (index >= 0) {
-                                        tasks[index] = tasks[index].copy(done = checked)
-                                        savePlannerTasks(context, tasks.toList())
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = task.done,
+                                    onCheckedChange = { checked ->
+                                        val index = tasks.indexOfFirst { it.id == task.id }
+                                        if (index >= 0) {
+                                            tasks[index] = tasks[index].copy(done = checked)
+                                            savePlannerTasks(context, tasks.toList())
+                                        }
                                     }
-                                }
-                            )
-                            Text(
-                                task.title,
-                                modifier = Modifier.weight(1f),
-                                color = if (task.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                                fontSize = 13.sp
-                            )
-                            val taskIndex = tasks.indexOfFirst { it.id == task.id }
-                            androidx.compose.material3.IconButton(
-                                enabled = taskIndex > 0,
-                                onClick = {
-                                    if (taskIndex > 0) {
-                                        val item = tasks.removeAt(taskIndex)
-                                        tasks.add(taskIndex - 1, item)
-                                        savePlannerTasks(context, tasks.toList())
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Rounded.KeyboardArrowUp,
-                                    contentDescription = if (isEnglish) "Move task up" else "نقل المهمة للأعلى",
-                                    tint = if (taskIndex > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+                                )
+                                Text(
+                                    task.title,
+                                    modifier = Modifier.weight(1f),
+                                    color = if (task.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 13.sp
                                 )
                             }
-                            androidx.compose.material3.IconButton(
-                                enabled = taskIndex >= 0 && taskIndex < tasks.lastIndex,
-                                onClick = {
-                                    if (taskIndex >= 0 && taskIndex < tasks.lastIndex) {
-                                        val item = tasks.removeAt(taskIndex)
-                                        tasks.add(taskIndex + 1, item)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val taskIndex = tasks.indexOfFirst { it.id == task.id }
+                                androidx.compose.material3.IconButton(
+                                    enabled = taskIndex > 0,
+                                    onClick = {
+                                        if (taskIndex > 0) {
+                                            val item = tasks.removeAt(taskIndex)
+                                            tasks.add(taskIndex - 1, item)
+                                            savePlannerTasks(context, tasks.toList())
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.KeyboardArrowUp,
+                                        contentDescription = if (isEnglish) "Move task up" else "نقل المهمة للأعلى",
+                                        tint = if (taskIndex > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                                androidx.compose.material3.IconButton(
+                                    enabled = taskIndex >= 0 && taskIndex < tasks.lastIndex,
+                                    onClick = {
+                                        if (taskIndex >= 0 && taskIndex < tasks.lastIndex) {
+                                            val item = tasks.removeAt(taskIndex)
+                                            tasks.add(taskIndex + 1, item)
+                                            savePlannerTasks(context, tasks.toList())
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.KeyboardArrowDown,
+                                        contentDescription = if (isEnglish) "Move task down" else "نقل المهمة للأسفل",
+                                        tint = if (taskIndex >= 0 && taskIndex < tasks.lastIndex) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                                androidx.compose.material3.IconButton(
+                                    onClick = { editingTaskId = task.id; editingDraft = task.title }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.EditNote,
+                                        contentDescription = if (isEnglish) "Edit task" else "تعديل المهمة",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                androidx.compose.material3.IconButton(
+                                    onClick = {
+                                        tasks.removeAll { it.id == task.id }
+                                        if (editingTaskId == task.id) { editingTaskId = null; editingDraft = "" }
                                         savePlannerTasks(context, tasks.toList())
                                     }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.DeleteOutline,
+                                        contentDescription = if (isEnglish) "Delete task" else "حذف المهمة",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    Icons.Rounded.KeyboardArrowDown,
-                                    contentDescription = if (isEnglish) "Move task down" else "نقل المهمة للأسفل",
-                                    tint = if (taskIndex >= 0 && taskIndex < tasks.lastIndex) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
-                                )
-                            }
-                            androidx.compose.material3.IconButton(
-                                onClick = { editingTaskId = task.id; editingDraft = task.title }
-                            ) {
-                                Icon(
-                                    Icons.Rounded.EditNote,
-                                    contentDescription = if (isEnglish) "Edit task" else "تعديل المهمة",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            androidx.compose.material3.IconButton(
-                                onClick = {
-                                    tasks.removeAll { it.id == task.id }
-                                    if (editingTaskId == task.id) { editingTaskId = null; editingDraft = "" }
-                                    savePlannerTasks(context, tasks.toList())
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Rounded.DeleteOutline,
-                                    contentDescription = if (isEnglish) "Delete task" else "حذف المهمة",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
                         }
                     }
