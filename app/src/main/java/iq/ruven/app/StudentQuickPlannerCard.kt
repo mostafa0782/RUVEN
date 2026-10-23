@@ -46,7 +46,23 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-private data class PlannerTask(val id: String, val title: String, val done: Boolean)
+internal data class PlannerTask(val id: String, val title: String, val done: Boolean)
+
+internal fun filterPlannerTasks(
+    tasks: List<PlannerTask>,
+    focusMode: Boolean,
+    taskFilter: String,
+    searchQuery: String
+): List<PlannerTask> {
+    val query = searchQuery.trim()
+    return tasks.filter { task ->
+        (!focusMode || !task.done) &&
+            (taskFilter == "all" ||
+                (taskFilter == "open" && !task.done) ||
+                (taskFilter == "done" && task.done)) &&
+            task.title.contains(query, ignoreCase = true)
+    }
+}
 
 private fun readPlannerTasks(context: Context): List<PlannerTask> = runCatching {
     val raw = context.getSharedPreferences("ruven_student_planner", Context.MODE_PRIVATE)
@@ -84,11 +100,7 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val doneCount = tasks.count { it.done }
     val progressPercent = if (tasks.isEmpty()) 0 else doneCount * 100 / tasks.size
     var focusMode by remember { mutableStateOf(false) }
-    val visibleTasks = tasks.filter { task ->
-        (!focusMode || !task.done) &&
-            (taskFilter == "all" || (taskFilter == "open" && !task.done) || (taskFilter == "done" && task.done)) &&
-            task.title.contains(searchQuery.trim(), ignoreCase = true)
-    }
+    val visibleTasks = filterPlannerTasks(tasks, focusMode, taskFilter, searchQuery)
     val title = if (isEnglish) "My quick study plan" else "خطتي الدراسية السريعة"
     val subtitle = if (isEnglish) "Small steps, saved on this device" else "قسّم يومك لخطوات صغيرة — تنحفظ على جهازك"
     val placeholder = if (isEnglish) "Add a task (e.g. review chemistry)" else "أضف مهمة (مثلاً: أراجع الكيمياء)"
