@@ -78,7 +78,6 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     var draft by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
     var taskFilter by remember { mutableStateOf("all") }
-    var showCompletedOnly by remember { mutableStateOf(false) }
     var editingTaskId by remember { mutableStateOf<String?>(null) }
     var editingDraft by remember { mutableStateOf("") }
     var showClearConfirmation by remember { mutableStateOf(false) }
@@ -88,7 +87,6 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val visibleTasks = tasks.filter { task ->
         (!focusMode || !task.done) &&
             (taskFilter == "all" || (taskFilter == "open" && !task.done) || (taskFilter == "done" && task.done)) &&
-            (!showCompletedOnly || task.done) &&
             task.title.contains(searchQuery.trim(), ignoreCase = true)
     }
     val title = if (isEnglish) "My quick study plan" else "خطتي الدراسية السريعة"
@@ -104,7 +102,6 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val filterAll = if (isEnglish) "All" else "الكل"
     val filterOpen = if (isEnglish) "To do" else "المتبقية"
     val filterDone = if (isEnglish) "Done" else "المنجزة"
-    val completedFilterLabel = if (showCompletedOnly) { if (isEnglish) "Show all status" else "عرض كل الحالات" } else { if (isEnglish) "Completed only" else "المنجزة فقط" }
     val noMatchesLabel = if (isEnglish) "No tasks match this filter." else "ماكو مهام تطابق البحث أو التصفية."
     val estimateLabel = if (isEnglish) "Approx. remaining: " + (tasks.count { !it.done } * 15) + " min (15 min/task)" else "الوقت المتبقي تقريبًا: " + (tasks.count { !it.done } * 15) + " دقيقة (15 دقيقة لكل مهمة)"
     val completeAllLabel = if (isEnglish) "Complete all remaining" else "إنجاز كل المتبقي"
@@ -215,24 +212,11 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     shape = RoundedCornerShape(14.dp)
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(
-                        onClick = {
-                            val enableFocusMode = !focusMode
-                            focusMode = enableFocusMode
-                            if (enableFocusMode) showCompletedOnly = false
-                        }
-                    ) { Text(focusLabel) }
-                    TextButton(
-                        onClick = {
-                            val enableCompletedOnly = !showCompletedOnly
-                            showCompletedOnly = enableCompletedOnly
-                            if (enableCompletedOnly) focusMode = false
-                        }
-                    ) { Text(completedFilterLabel) }
+                    TextButton(onClick = { focusMode = !focusMode }) { Text(focusLabel) }
                 }
                 if (visibleTasks.isEmpty()) {
                     Text(
-                        if (tasks.isNotEmpty() && tasks.all { it.done } && !showCompletedOnly && searchQuery.isBlank()) allDoneLabel else noMatchesLabel,
+                        if (tasks.isNotEmpty() && tasks.all { it.done } && taskFilter != "open" && searchQuery.isBlank()) allDoneLabel else noMatchesLabel,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
