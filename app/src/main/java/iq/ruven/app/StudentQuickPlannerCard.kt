@@ -107,6 +107,12 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val searchLabel = if (isEnglish) "Search tasks" else "ابحث بالمهام"
     val completedFilterLabel = if (showCompletedOnly) { if (isEnglish) "Show all status" else "عرض كل الحالات" } else { if (isEnglish) "Completed only" else "المنجزة فقط" }
     val noMatchesLabel = if (isEnglish) "No tasks match this filter." else "ماكو مهام تطابق البحث أو التصفية."
+    val addPresetTask: (String) -> Unit = { preset ->
+        if (tasks.size < 20) {
+            tasks.add(PlannerTask(UUID.randomUUID().toString(), preset.take(100), false))
+            savePlannerTasks(context, tasks.toList())
+        }
+    }
     val addTask = {
         val value = draft.trim()
         if (value.isNotEmpty() && tasks.size < 20) {
@@ -150,6 +156,17 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     enabled = draft.trim().isNotEmpty() && tasks.size < 20,
                     shape = RoundedCornerShape(14.dp)
                 ) { Text(addLabel) }
+            }
+            Text(
+                if (isEnglish) "Quick add" else "إضافة سريعة",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TextButton(onClick = { addPresetTask(if (isEnglish) "Review today’s lesson" else "مراجعة درس اليوم") }, enabled = tasks.size < 20) { Text(if (isEnglish) "Review" else "مراجعة") }
+                TextButton(onClick = { addPresetTask(if (isEnglish) "Solve practice questions" else "حل أسئلة تدريبية") }, enabled = tasks.size < 20) { Text(if (isEnglish) "Practice" else "تدريب") }
+                TextButton(onClick = { addPresetTask(if (isEnglish) "Prepare for tomorrow" else "تحضير باچر") }, enabled = tasks.size < 20) { Text(if (isEnglish) "Prepare" else "تحضير") }
             }
             if (tasks.size >= 20) {
                 Text(
