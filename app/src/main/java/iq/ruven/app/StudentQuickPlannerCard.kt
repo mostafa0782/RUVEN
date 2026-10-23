@@ -380,6 +380,11 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                 TextButton(
                     onClick = {
                         tasks.removeAll { it.done }
+                        if (taskFilter == "done") taskFilter = "all"
+                        if (editingTaskId != null && tasks.none { it.id == editingTaskId }) {
+                            editingTaskId = null
+                            editingDraft = ""
+                        }
                         savePlannerTasks(context, tasks.toList())
                         showClearConfirmation = false
                     }
