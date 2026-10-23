@@ -77,6 +77,8 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     }
     var draft by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
+    var taskFilter by remember { mutableStateOf("all") }
+    var searchQuery by remember { mutableStateOf("") }
     var showCompletedOnly by remember { mutableStateOf(false) }
     var editingTaskId by remember { mutableStateOf<String?>(null) }
     var editingDraft by remember { mutableStateOf("") }
@@ -97,6 +99,11 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val resetLabel = if (isEnglish) "Clear completed" else "مسح المنجز"
     val focusLabel = if (focusMode) { if (isEnglish) "Show all tasks" else "عرض كل المهام" } else { if (isEnglish) "Focus on unfinished" else "التركيز على غير المنجز" }
     val allDoneLabel = if (isEnglish) "All tasks are completed. Good work!" else "كل المهام منجزة، أحسنت!"
+    val searchLabel = if (isEnglish) "Search tasks" else "ابحث في المهام"
+    val filterAll = if (isEnglish) "All" else "الكل"
+    val filterOpen = if (isEnglish) "To do" else "المتبقية"
+    val filterDone = if (isEnglish) "Done" else "المنجزة"
+    val filteredEmpty = if (isEnglish) "No tasks match this view." else "ماكو مهام تطابق هذا العرض."
     val searchLabel = if (isEnglish) "Search tasks" else "ابحث بالمهام"
     val completedFilterLabel = if (showCompletedOnly) { if (isEnglish) "Show all status" else "عرض كل الحالات" } else { if (isEnglish) "Completed only" else "المنجزة فقط" }
     val noMatchesLabel = if (isEnglish) "No tasks match this filter." else "ماكو مهام تطابق البحث أو التصفية."
@@ -151,6 +158,21 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
+            }
+            if (tasks.isNotEmpty()) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it.take(100) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(searchLabel, fontSize = 12.sp) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp)
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { taskFilter = "all" }) { Text(if (taskFilter == "all") "• " + filterAll else filterAll) }
+                    TextButton(onClick = { taskFilter = "open" }) { Text(if (taskFilter == "open") "• " + filterOpen else filterOpen) }
+                    TextButton(onClick = { taskFilter = "done" }) { Text(if (taskFilter == "done") "• " + filterDone else filterDone) }
+                }
             }
             if (tasks.isEmpty()) {
                 Text(emptyLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
