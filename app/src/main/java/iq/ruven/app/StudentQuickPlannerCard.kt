@@ -49,9 +49,9 @@ private fun readPlannerTasks(context: Context): List<PlannerTask> = runCatching 
     (0 until array.length()).mapNotNull { index ->
         val item = array.optJSONObject(index) ?: return@mapNotNull null
         val id = item.optString("id")
-        val title = item.optString("title").trim()
+        val title = item.optString("title").trim().take(100)
         if (id.isBlank() || title.isBlank()) null else PlannerTask(id, title, item.optBoolean("done"))
-    }
+    }.take(20)
 }.getOrDefault(emptyList())
 
 private fun savePlannerTasks(context: Context, tasks: List<PlannerTask>) {
