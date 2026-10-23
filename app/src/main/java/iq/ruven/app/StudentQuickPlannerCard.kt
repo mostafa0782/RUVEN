@@ -72,6 +72,8 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     var draft by remember { mutableStateOf("") }
     val doneCount = tasks.count { it.done }
     val progressPercent = if (tasks.isEmpty()) 0 else doneCount * 100 / tasks.size
+    var focusMode by remember { mutableStateOf(false) }
+    val visibleTasks = if (focusMode) tasks.filterNot { it.done } else tasks.toList()
     val title = if (isEnglish) "My quick study plan" else "خطتي الدراسية السريعة"
     val subtitle = if (isEnglish) "Small steps, saved on this device" else "قسّم يومك لخطوات صغيرة — تنحفظ على جهازك"
     val placeholder = if (isEnglish) "Add a task (e.g. review chemistry)" else "أضف مهمة (مثلاً: أراجع الكيمياء)"
@@ -79,6 +81,8 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val emptyLabel = if (isEnglish) "Add your first small task above." else "أضف أول مهمة صغيرة من الحقل أعلاه."
     val progressLabel = if (isEnglish) doneCount.toString() + " of " + tasks.size + " completed (" + progressPercent + "%)" else "أنجزت " + doneCount + " من " + tasks.size + " مهام (" + progressPercent + "%)"
     val resetLabel = if (isEnglish) "Clear completed" else "مسح المنجز"
+    val focusLabel = if (focusMode) { if (isEnglish) "Show all tasks" else "عرض كل المهام" } else { if (isEnglish) "Focus on unfinished" else "التركيز على غير المنجز" }
+    val allDoneLabel = if (isEnglish) "All tasks are completed. Good work!" else "كل المهام منجزة، أحسنت!"
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -138,7 +142,13 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     color = Color(0xFF2867D8),
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
-                tasks.forEach { task ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = { focusMode = !focusMode }) { Text(focusLabel) }
+                }
+                if (visibleTasks.isEmpty()) {
+                    Text(allDoneLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
+                visibleTasks.forEach { task ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = task.done,
