@@ -70,6 +70,8 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
         mutableStateListOf<PlannerTask>().apply { addAll(readPlannerTasks(context)) }
     }
     var draft by remember { mutableStateOf("") }
+    var editingTaskId by remember { mutableStateOf<String?>(null) }
+    var editingDraft by remember { mutableStateOf("") }
     val doneCount = tasks.count { it.done }
     val progressPercent = if (tasks.isEmpty()) 0 else doneCount * 100 / tasks.size
     var focusMode by remember { mutableStateOf(false) }
@@ -149,34 +151,74 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     Text(allDoneLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
                 visibleTasks.forEach { task ->
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = task.done,
-                            onCheckedChange = { checked ->
-                                val index = tasks.indexOfFirst { it.id == task.id }
-                                if (index >= 0) {
-                                    tasks[index] = tasks[index].copy(done = checked)
+                    if (editingTaskId == task.id) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedTextField(
+                                value = editingDraft,
+                                onValueChange = { editingDraft = it.take(100) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text(if (isEnglish) "Edit task" else "تعديل المهمة") },
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(onClick = { editingTaskId = null; editingDraft = "" }) {
+                                    Text(if (isEnglish) "Cancel" else "إلغاء")
+                                }
+                                TextButton(
+                                    enabled = editingDraft.trim().isNotEmpty(),
+                                    onClick = {
+                                        val index = tasks.indexOfFirst { it.id == task.id }
+                                        if (index >= 0) {
+                                            tasks[index] = tasks[index].copy(title = editingDraft.trim())
+                                            savePlannerTasks(context, tasks.toList())
+                                        }
+                                        editingTaskId = null
+                                        editingDraft = ""
+                                    }
+                                ) { Text(if (isEnglish) "Save" else "حفظ") }
+                            }
+                        }
+                    } else {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = task.done,
+                                onCheckedChange = { checked ->
+                                    val index = tasks.indexOfFirst { it.id == task.id }
+                                    if (index >= 0) {
+                                        tasks[index] = tasks[index].copy(done = checked)
+                                        savePlannerTasks(context, tasks.toList())
+                                    }
+                                }
+                            )
+                            Text(
+                                task.title,
+                                modifier = Modifier.weight(1f),
+                                color = if (task.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                fontSize = 13.sp
+                            )
+                            androidx.compose.material3.IconButton(
+                                onClick = { editingTaskId = task.id; editingDraft = task.title }
+                            ) {
+                                Icon(
+                                    Icons.Rounded.EditNote,
+                                    contentDescription = if (isEnglish) "Edit task" else "تعديل المهمة",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            androidx.compose.material3.IconButton(
+                                onClick = {
+                                    tasks.removeAll { it.id == task.id }
+                                    if (editingTaskId == task.id) { editingTaskId = null; editingDraft = "" }
                                     savePlannerTasks(context, tasks.toList())
                                 }
+                            ) {
+                                Icon(
+                                    Icons.Rounded.DeleteOutline,
+                                    contentDescription = if (isEnglish) "Delete task" else "حذف المهمة",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                        )
-                        Text(
-                            task.title,
-                            modifier = Modifier.weight(1f),
-                            color = if (task.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                            fontSize = 13.sp
-                        )
-                        androidx.compose.material3.IconButton(
-                            onClick = {
-                                tasks.removeAll { it.id == task.id }
-                                savePlannerTasks(context, tasks.toList())
-                            }
-                        ) {
-                            Icon(
-                                Icons.Rounded.DeleteOutline,
-                                contentDescription = if (isEnglish) "Delete task" else "حذف المهمة",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
                 }
