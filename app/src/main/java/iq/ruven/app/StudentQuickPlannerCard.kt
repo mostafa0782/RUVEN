@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -74,6 +75,7 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     var draft by remember { mutableStateOf("") }
     var editingTaskId by remember { mutableStateOf<String?>(null) }
     var editingDraft by remember { mutableStateOf("") }
+    var showClearConfirmation by remember { mutableStateOf(false) }
     val doneCount = tasks.count { it.done }
     val progressPercent = if (tasks.isEmpty()) 0 else doneCount * 100 / tasks.size
     var focusMode by remember { mutableStateOf(false) }
@@ -282,10 +284,7 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(
-                        onClick = {
-                            tasks.removeAll { it.done }
-                            savePlannerTasks(context, tasks.toList())
-                        },
+                        onClick = { showClearConfirmation = true },
                         enabled = tasks.any { it.done }
                     ) {
                         Icon(Icons.Rounded.RestartAlt, contentDescription = null)
@@ -294,5 +293,31 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                 }
             }
         }
+    if (showClearConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmation = false },
+            title = { Text(if (isEnglish) "Clear completed tasks?" else "مسح المهام المنجزة؟") },
+            text = {
+                Text(
+                    if (isEnglish) "This removes " + doneCount + " completed task(s) from this device. This cannot be undone."
+                    else "سيتم حذف " + doneCount + " من المهام المنجزة من هذا الجهاز، ولا يمكن التراجع عن ذلك."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        tasks.removeAll { it.done }
+                        savePlannerTasks(context, tasks.toList())
+                        showClearConfirmation = false
+                    }
+                ) { Text(if (isEnglish) "Clear" else "مسح") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmation = false }) {
+                    Text(if (isEnglish) "Cancel" else "إلغاء")
+                }
+            }
+        )
+    }
     }
 }
