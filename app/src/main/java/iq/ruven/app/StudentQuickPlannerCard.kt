@@ -18,6 +18,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -130,6 +131,12 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                 Text(emptyLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             } else {
                 Text(progressLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                LinearProgressIndicator(
+                    progress = { doneCount.toFloat() / tasks.size.coerceAtLeast(1).toFloat() },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF2867D8),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
                 tasks.forEach { task ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
