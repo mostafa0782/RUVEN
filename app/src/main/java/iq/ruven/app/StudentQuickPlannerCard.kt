@@ -37,6 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONArray
@@ -89,6 +92,14 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val resetLabel = if (isEnglish) "Clear completed" else "مسح المنجز"
     val focusLabel = if (focusMode) { if (isEnglish) "Show all tasks" else "عرض كل المهام" } else { if (isEnglish) "Focus on unfinished" else "التركيز على غير المنجز" }
     val allDoneLabel = if (isEnglish) "All tasks are completed. Good work!" else "كل المهام منجزة، أحسنت!"
+    val addTask = {
+        val value = draft.trim()
+        if (value.isNotEmpty() && tasks.size < 20) {
+            tasks.add(PlannerTask(UUID.randomUUID().toString(), value, false))
+            savePlannerTasks(context, tasks.toList())
+            draft = ""
+        }
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -115,17 +126,12 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     modifier = Modifier.weight(1f),
                     placeholder = { Text(placeholder, fontSize = 12.sp) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { addTask() }),
                     shape = RoundedCornerShape(14.dp)
                 )
                 Button(
-                    onClick = {
-                        val value = draft.trim()
-                        if (value.isNotEmpty() && tasks.size < 20) {
-                            tasks.add(PlannerTask(UUID.randomUUID().toString(), value, false))
-                            savePlannerTasks(context, tasks.toList())
-                            draft = ""
-                        }
-                    },
+                    onClick = { addTask() },
                     enabled = draft.trim().isNotEmpty() && tasks.size < 20,
                     shape = RoundedCornerShape(14.dp)
                 ) { Text(addLabel) }
