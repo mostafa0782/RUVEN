@@ -293,6 +293,7 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                 }
             }
         }
+    }
     if (showClearConfirmation) {
         AlertDialog(
             onDismissRequest = { showClearConfirmation = false },
@@ -318,6 +319,5 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                 }
             }
         )
-    }
     }
 }
