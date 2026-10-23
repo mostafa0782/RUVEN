@@ -76,13 +76,18 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
         mutableStateListOf<PlannerTask>().apply { addAll(readPlannerTasks(context)) }
     }
     var draft by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
+    var showCompletedOnly by remember { mutableStateOf(false) }
     var editingTaskId by remember { mutableStateOf<String?>(null) }
     var editingDraft by remember { mutableStateOf("") }
     var showClearConfirmation by remember { mutableStateOf(false) }
     val doneCount = tasks.count { it.done }
     val progressPercent = if (tasks.isEmpty()) 0 else doneCount * 100 / tasks.size
     var focusMode by remember { mutableStateOf(false) }
-    val visibleTasks = if (focusMode) tasks.filterNot { it.done } else tasks.toList()
+    val visibleTasks = tasks.filter { task ->
+        (!focusMode || !task.done) && (!showCompletedOnly || task.done) &&
+            task.title.contains(searchQuery.trim(), ignoreCase = true)
+    }
     val title = if (isEnglish) "My quick study plan" else "خطتي الدراسية السريعة"
     val subtitle = if (isEnglish) "Small steps, saved on this device" else "قسّم يومك لخطوات صغيرة — تنحفظ على جهازك"
     val placeholder = if (isEnglish) "Add a task (e.g. review chemistry)" else "أضف مهمة (مثلاً: أراجع الكيمياء)"
@@ -92,6 +97,9 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val resetLabel = if (isEnglish) "Clear completed" else "مسح المنجز"
     val focusLabel = if (focusMode) { if (isEnglish) "Show all tasks" else "عرض كل المهام" } else { if (isEnglish) "Focus on unfinished" else "التركيز على غير المنجز" }
     val allDoneLabel = if (isEnglish) "All tasks are completed. Good work!" else "كل المهام منجزة، أحسنت!"
+    val searchLabel = if (isEnglish) "Search tasks" else "ابحث بالمهام"
+    val completedFilterLabel = if (showCompletedOnly) { if (isEnglish) "Show all status" else "عرض كل الحالات" } else { if (isEnglish) "Completed only" else "المنجزة فقط" }
+    val noMatchesLabel = if (isEnglish) "No tasks match this filter." else "ماكو مهام تطابق البحث أو التصفية."
     val addTask = {
         val value = draft.trim()
         if (value.isNotEmpty() && tasks.size < 20) {
@@ -154,11 +162,24 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     color = Color(0xFF2867D8),
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it.take(100) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(searchLabel) },
+                    shape = RoundedCornerShape(14.dp)
+                )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = { focusMode = !focusMode }) { Text(focusLabel) }
+                    TextButton(onClick = { showCompletedOnly = !showCompletedOnly }) { Text(completedFilterLabel) }
                 }
                 if (visibleTasks.isEmpty()) {
-                    Text(allDoneLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text(
+                        if (tasks.isNotEmpty() && tasks.all { it.done } && !showCompletedOnly && searchQuery.isBlank()) allDoneLabel else noMatchesLabel,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
                 }
                 visibleTasks.forEach { task ->
                     if (editingTaskId == task.id) {
