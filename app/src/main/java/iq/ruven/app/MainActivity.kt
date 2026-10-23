@@ -1946,6 +1946,7 @@ private fun HomeScreen(
         }
         if (role == SchoolRole.STUDENT) {
             item { StudentQuickPlannerCard(isEnglish = isEnglish) }
+            item { StudentFeatureHubCard(isEnglish = isEnglish) }
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
