@@ -178,14 +178,6 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                 )
             }
             if (tasks.isNotEmpty()) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it.take(100) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(searchLabel, fontSize = 12.sp) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
-                )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { taskFilter = "all" }) { Text(if (taskFilter == "all") "• " + filterAll else filterAll) }
                     TextButton(onClick = { taskFilter = "open" }) { Text(if (taskFilter == "open") "• " + filterOpen else filterOpen) }
