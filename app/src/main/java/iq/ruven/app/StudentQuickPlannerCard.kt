@@ -406,7 +406,6 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
             }
         )
     }
-}
     pendingDeleteTask?.let { taskToDelete ->
         AlertDialog(
             onDismissRequest = { pendingDeleteTask = null },
@@ -437,3 +436,4 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
             }
         )
     }
+}
