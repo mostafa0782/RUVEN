@@ -72,6 +72,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
     var input by remember { mutableStateOf("") }
     var output by remember { mutableStateOf("") }
     var focusEnabled by remember { mutableStateOf(false) }
+    var focusTask by remember { mutableStateOf("") }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -88,28 +89,44 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            ruvenStudentTools.chunked(2).forEach { pair ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    pair.forEach { tool ->
-                        Button(
-                            onClick = {
-                                selected = tool
-                                input = ""
-                                output = prefs.getString("result_${tool.id}", "") ?: ""
-                                prefs.edit().putString("recent_${System.currentTimeMillis()}", tool.ar).apply()
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(13.dp)
-                        ) {
-                            Text(if (isEnglish) tool.en else tool.ar, style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
             if (focusEnabled) {
-                Text(if (isEnglish) "Focus mode is on. Tap below to exit." else "وضع التركيز مفعّل. اضغط لإيقافه.", fontWeight = FontWeight.SemiBold)
-                TextButton(onClick = { focusEnabled = false }) { Text(if (isEnglish) "Exit focus mode" else "إيقاف وضع التركيز") }
+                Text(
+                    if (isEnglish) "FOCUS MODE" else "وضع التركيز",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    if (isEnglish) "Current task: $focusTask" else "المهمة الحالية: $focusTask",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    if (isEnglish) "Other tools are hidden until you exit focus mode." else "بقية الأدوات مخفية إلى أن تطلع من وضع التركيز.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                TextButton(onClick = { focusEnabled = false; focusTask = "" }) {
+                    Text(if (isEnglish) "Exit focus mode" else "إيقاف وضع التركيز")
+                }
+            } else {
+                ruvenStudentTools.chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        pair.forEach { tool ->
+                            Button(
+                                onClick = {
+                                    selected = tool
+                                    input = ""
+                                    output = prefs.getString("result_${tool.id}", "") ?: ""
+                                    prefs.edit().putString("recent_${System.currentTimeMillis()}", tool.ar).apply()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(13.dp)
+                            ) {
+                                Text(if (isEnglish) tool.en else tool.ar, style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
@@ -154,7 +171,10 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         .putString("input_${tool.id}", input.trim())
                         .putLong("updated_${tool.id}", System.currentTimeMillis())
                         .apply()
-                    if (tool.id == 4) focusEnabled = input.isNotBlank()
+                    if (tool.id == 4 && input.isNotBlank()) {
+                        focusTask = input.trim()
+                        focusEnabled = true
+                    }
                     if (tool.id == 8 && input.isNotBlank()) speakWithSystemTts(context, input.trim())
                 }) { Text(if (isEnglish) "Generate / Save" else "إنشاء / حفظ") }
             },
