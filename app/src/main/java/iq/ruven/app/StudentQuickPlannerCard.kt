@@ -118,6 +118,14 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     shape = RoundedCornerShape(14.dp)
                 ) { Text(addLabel) }
             }
+            if (tasks.size >= 20) {
+                Text(
+                    if (isEnglish) "Maximum 20 tasks. Delete a task to add another."
+                    else "وصلت للحد الأقصى (20 مهمة). احذف مهمة حتى تضيف غيرها.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp
+                )
+            }
             if (tasks.isEmpty()) {
                 Text(emptyLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             } else {
