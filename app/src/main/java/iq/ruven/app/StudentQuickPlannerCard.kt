@@ -210,36 +210,47 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 val taskIndex = tasks.indexOfFirst { it.id == task.id }
+                                val visibleIndex = visibleTasks.indexOfFirst { it.id == task.id }
                                 androidx.compose.material3.IconButton(
-                                    enabled = taskIndex > 0,
+                                    enabled = visibleIndex > 0,
                                     onClick = {
-                                        if (taskIndex > 0) {
-                                            val item = tasks.removeAt(taskIndex)
-                                            tasks.add(taskIndex - 1, item)
-                                            savePlannerTasks(context, tasks.toList())
+                                        if (visibleIndex > 0) {
+                                            val previousId = visibleTasks[visibleIndex - 1].id
+                                            val previousIndex = tasks.indexOfFirst { it.id == previousId }
+                                            if (taskIndex >= 0 && previousIndex >= 0) {
+                                                val current = tasks[taskIndex]
+                                                tasks[taskIndex] = tasks[previousIndex]
+                                                tasks[previousIndex] = current
+                                                savePlannerTasks(context, tasks.toList())
+                                            }
                                         }
                                     }
                                 ) {
                                     Icon(
                                         Icons.Rounded.KeyboardArrowUp,
                                         contentDescription = if (isEnglish) "Move task up" else "نقل المهمة للأعلى",
-                                        tint = if (taskIndex > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+                                        tint = if (visibleIndex > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
                                     )
                                 }
                                 androidx.compose.material3.IconButton(
-                                    enabled = taskIndex >= 0 && taskIndex < tasks.lastIndex,
+                                    enabled = visibleIndex >= 0 && visibleIndex < visibleTasks.lastIndex,
                                     onClick = {
-                                        if (taskIndex >= 0 && taskIndex < tasks.lastIndex) {
-                                            val item = tasks.removeAt(taskIndex)
-                                            tasks.add(taskIndex + 1, item)
-                                            savePlannerTasks(context, tasks.toList())
+                                        if (visibleIndex >= 0 && visibleIndex < visibleTasks.lastIndex) {
+                                            val nextId = visibleTasks[visibleIndex + 1].id
+                                            val nextIndex = tasks.indexOfFirst { it.id == nextId }
+                                            if (taskIndex >= 0 && nextIndex >= 0) {
+                                                val current = tasks[taskIndex]
+                                                tasks[taskIndex] = tasks[nextIndex]
+                                                tasks[nextIndex] = current
+                                                savePlannerTasks(context, tasks.toList())
+                                            }
                                         }
                                     }
                                 ) {
                                     Icon(
                                         Icons.Rounded.KeyboardArrowDown,
                                         contentDescription = if (isEnglish) "Move task down" else "نقل المهمة للأسفل",
-                                        tint = if (taskIndex >= 0 && taskIndex < tasks.lastIndex) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+                                        tint = if (visibleIndex >= 0 && visibleIndex < visibleTasks.lastIndex) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
                                     )
                                 }
                                 androidx.compose.material3.IconButton(
