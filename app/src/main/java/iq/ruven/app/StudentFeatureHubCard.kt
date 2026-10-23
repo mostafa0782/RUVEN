@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -146,7 +145,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         if (recent.isEmpty()) {
                             if (isEnglish) "Nothing viewed in this toolkit yet." else "ماكو عناصر حديثة بعد."
                         } else {
-                            (if (isEnglish) "Recently viewed:\\n" else "آخر العناصر:\\n") + recent.joinToString("\\n")
+                            (if (isEnglish) "Recently viewed:\n" else "آخر العناصر:\n") + recent.joinToString("\n")
                         }
                     } else buildToolResult(tool.id, input.trim(), isEnglish)
                     output = result
