@@ -137,7 +137,18 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val result = buildToolResult(tool.id, input.trim(), isEnglish)
+                    val result = if (tool.id == 14 && input.isBlank()) {
+                        val recent = prefs.all.entries
+                            .filter { it.key.startsWith("recent_") }
+                            .sortedByDescending { it.key.removePrefix("recent_").toLongOrNull() ?: 0L }
+                            .take(8)
+                            .mapNotNull { it.value as? String }
+                        if (recent.isEmpty()) {
+                            if (isEnglish) "Nothing viewed in this toolkit yet." else "ماكو عناصر حديثة بعد."
+                        } else {
+                            (if (isEnglish) "Recently viewed:\\n" else "آخر العناصر:\\n") + recent.joinToString("\\n")
+                        }
+                    } else buildToolResult(tool.id, input.trim(), isEnglish)
                     output = result
                     prefs.edit()
                         .putString("result_${tool.id}", result)
@@ -145,13 +156,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         .putLong("updated_${tool.id}", System.currentTimeMillis())
                         .apply()
                     if (tool.id == 4) focusEnabled = input.isNotBlank()
-                    if (tool.id == 8 && input.isNotBlank()) {
-                        runCatching {
-                            val tts = TextToSpeech(context) { status ->
-                                if (status == TextToSpeech.SUCCESS) ttsSafeSpeak(context, input.trim())
-                            }
-                        }
-                    }
+                    if (tool.id == 8 && input.isNotBlank()) speakWithSystemTts(context, input.trim())
                 }) { Text(if (isEnglish) "Generate / Save" else "إنشاء / حفظ") }
             },
             dismissButton = {
@@ -161,10 +166,15 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
     }
 }
 
-private fun ttsSafeSpeak(context: Context, text: String) {
+private fun speakWithSystemTts(context: Context, text: String) {
     runCatching {
-        val engine = TextToSpeech(context) {}
-        engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ruven_read_aloud")
+        lateinit var engine: TextToSpeech
+        engine = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                engine.language = Locale("ar")
+                engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ruven_read_aloud")
+            }
+        }
     }
 }
 
