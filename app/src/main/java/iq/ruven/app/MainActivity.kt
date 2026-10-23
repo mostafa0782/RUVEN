@@ -1944,7 +1944,9 @@ private fun HomeScreen(
                 }
             }
         }
-        item { StudentQuickPlannerCard(isEnglish = isEnglish) }
+        if (role == SchoolRole.STUDENT) {
+            item { StudentQuickPlannerCard(isEnglish = isEnglish) }
+        }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SectionHeading(ruvenText(translated("اختصارات سريعة"), "Quick shortcuts", isEnglish), ruvenText(translated("اختَر شنو تحتاج هسه"), "Choose what you need", isEnglish))
