@@ -77,6 +77,7 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     }
     var draft by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
+    var taskFilter by remember { mutableStateOf("all") }
     var searchQuery by remember { mutableStateOf("") }
     var showCompletedOnly by remember { mutableStateOf(false) }
     var editingTaskId by remember { mutableStateOf<String?>(null) }
@@ -86,7 +87,9 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val progressPercent = if (tasks.isEmpty()) 0 else doneCount * 100 / tasks.size
     var focusMode by remember { mutableStateOf(false) }
     val visibleTasks = tasks.filter { task ->
-        (!focusMode || !task.done) && (!showCompletedOnly || task.done) &&
+        (!focusMode || !task.done) &&
+            (taskFilter == "all" || (taskFilter == "open" && !task.done) || (taskFilter == "done" && task.done)) &&
+            (!showCompletedOnly || task.done) &&
             task.title.contains(searchQuery.trim(), ignoreCase = true)
     }
     val title = if (isEnglish) "My quick study plan" else "خطتي الدراسية السريعة"
@@ -99,6 +102,9 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val focusLabel = if (focusMode) { if (isEnglish) "Show all tasks" else "عرض كل المهام" } else { if (isEnglish) "Focus on unfinished" else "التركيز على غير المنجز" }
     val allDoneLabel = if (isEnglish) "All tasks are completed. Good work!" else "كل المهام منجزة، أحسنت!"
     val searchLabel = if (isEnglish) "Search tasks" else "ابحث بالمهام"
+    val filterAll = if (isEnglish) "All" else "الكل"
+    val filterOpen = if (isEnglish) "To do" else "المتبقية"
+    val filterDone = if (isEnglish) "Done" else "المنجزة"
     val completedFilterLabel = if (showCompletedOnly) { if (isEnglish) "Show all status" else "عرض كل الحالات" } else { if (isEnglish) "Completed only" else "المنجزة فقط" }
     val noMatchesLabel = if (isEnglish) "No tasks match this filter." else "ماكو مهام تطابق البحث أو التصفية."
     val estimateLabel = if (isEnglish) "Approx. remaining: " + (tasks.count { !it.done } * 15) + " min (15 min/task)" else "الوقت المتبقي تقريبًا: " + (tasks.count { !it.done } * 15) + " دقيقة (15 دقيقة لكل مهمة)"
