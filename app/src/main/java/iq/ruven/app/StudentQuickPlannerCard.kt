@@ -78,7 +78,6 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     var draft by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
     var taskFilter by remember { mutableStateOf("all") }
-    var searchQuery by remember { mutableStateOf("") }
     var showCompletedOnly by remember { mutableStateOf(false) }
     var editingTaskId by remember { mutableStateOf<String?>(null) }
     var editingDraft by remember { mutableStateOf("") }
