@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -140,6 +141,18 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                             color = if (task.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                             fontSize = 13.sp
                         )
+                        androidx.compose.material3.IconButton(
+                            onClick = {
+                                tasks.removeAll { it.id == task.id }
+                                savePlannerTasks(context, tasks.toList())
+                            }
+                        ) {
+                            Icon(
+                                Icons.Rounded.DeleteOutline,
+                                contentDescription = if (isEnglish) "Delete task" else "حذف المهمة",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
