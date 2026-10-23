@@ -49,6 +49,9 @@ jobs:
           test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" version
 
+      - name: Run unit tests
+        run: gradle :app:testDebugUnitTest -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.0
+
       - name: Configure stable APK signing (if secrets are set)
         shell: bash
         env:
@@ -77,9 +80,6 @@ jobs:
             echo "Only some signing secrets are configured. Set all four signing secrets." >&2
             exit 1
           fi
-
-      - name: Run unit tests
-        run: gradle :app:testDebugUnitTest -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.0
 
       - name: Assemble signed release APK
         run: gradle :app:assembleRelease -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.${{ github.run_number }}
