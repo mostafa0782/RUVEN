@@ -178,7 +178,7 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { taskFilter = "all" }) { Text(if (taskFilter == "all") "• " + filterAll else filterAll) }
                     TextButton(onClick = { taskFilter = "open" }) { Text(if (taskFilter == "open") "• " + filterOpen else filterOpen) }
-                    TextButton(onClick = { taskFilter = "done" }) { Text(if (taskFilter == "done") "• " + filterDone else filterDone) }
+                    TextButton(onClick = { taskFilter = "done"; focusMode = false }) { Text(if (taskFilter == "done") "• " + filterDone else filterDone) }
                 }
             }
             if (tasks.isEmpty()) {
@@ -212,7 +212,12 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     shape = RoundedCornerShape(14.dp)
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { focusMode = !focusMode }) { Text(focusLabel) }
+                    TextButton(
+                        onClick = {
+                            focusMode = !focusMode
+                            if (focusMode && taskFilter == "done") taskFilter = "all"
+                        }
+                    ) { Text(focusLabel) }
                 }
                 if (visibleTasks.isEmpty()) {
                     Text(
