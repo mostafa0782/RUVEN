@@ -77,7 +77,6 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     }
     var draft by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
-    var taskFilter by remember { mutableStateOf("all") }
     var searchQuery by remember { mutableStateOf("") }
     var showCompletedOnly by remember { mutableStateOf(false) }
     var editingTaskId by remember { mutableStateOf<String?>(null) }
@@ -99,14 +98,11 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
     val resetLabel = if (isEnglish) "Clear completed" else "مسح المنجز"
     val focusLabel = if (focusMode) { if (isEnglish) "Show all tasks" else "عرض كل المهام" } else { if (isEnglish) "Focus on unfinished" else "التركيز على غير المنجز" }
     val allDoneLabel = if (isEnglish) "All tasks are completed. Good work!" else "كل المهام منجزة، أحسنت!"
-    val searchLabel = if (isEnglish) "Search tasks" else "ابحث في المهام"
-    val filterAll = if (isEnglish) "All" else "الكل"
-    val filterOpen = if (isEnglish) "To do" else "المتبقية"
-    val filterDone = if (isEnglish) "Done" else "المنجزة"
-    val filteredEmpty = if (isEnglish) "No tasks match this view." else "ماكو مهام تطابق هذا العرض."
     val searchLabel = if (isEnglish) "Search tasks" else "ابحث بالمهام"
     val completedFilterLabel = if (showCompletedOnly) { if (isEnglish) "Show all status" else "عرض كل الحالات" } else { if (isEnglish) "Completed only" else "المنجزة فقط" }
     val noMatchesLabel = if (isEnglish) "No tasks match this filter." else "ماكو مهام تطابق البحث أو التصفية."
+    val estimateLabel = if (isEnglish) "Approx. remaining: " + (tasks.count { !it.done } * 15) + " min (15 min/task)" else "الوقت المتبقي تقريبًا: " + (tasks.count { !it.done } * 15) + " دقيقة (15 دقيقة لكل مهمة)"
+    val completeAllLabel = if (isEnglish) "Complete all remaining" else "إنجاز كل المتبقي"
     val addPresetTask: (String) -> Unit = { preset ->
         if (tasks.size < 20) {
             tasks.add(PlannerTask(UUID.randomUUID().toString(), preset.take(100), false))
@@ -195,6 +191,18 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                 Text(emptyLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             } else {
                 Text(progressLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Text(estimateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(
+                        onClick = {
+                            for (index in tasks.indices) {
+                                if (!tasks[index].done) tasks[index] = tasks[index].copy(done = true)
+                            }
+                            savePlannerTasks(context, tasks.toList())
+                        },
+                        enabled = tasks.any { !it.done }
+                    ) { Text(completeAllLabel) }
+                }
                 LinearProgressIndicator(
                     progress = { doneCount.toFloat() / tasks.size.coerceAtLeast(1).toFloat() },
                     modifier = Modifier.fillMaxWidth(),
