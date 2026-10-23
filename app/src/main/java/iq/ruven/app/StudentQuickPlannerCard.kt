@@ -215,8 +215,20 @@ internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
                     shape = RoundedCornerShape(14.dp)
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { focusMode = !focusMode }) { Text(focusLabel) }
-                    TextButton(onClick = { showCompletedOnly = !showCompletedOnly }) { Text(completedFilterLabel) }
+                    TextButton(
+                        onClick = {
+                            val enableFocusMode = !focusMode
+                            focusMode = enableFocusMode
+                            if (enableFocusMode) showCompletedOnly = false
+                        }
+                    ) { Text(focusLabel) }
+                    TextButton(
+                        onClick = {
+                            val enableCompletedOnly = !showCompletedOnly
+                            showCompletedOnly = enableCompletedOnly
+                            if (enableCompletedOnly) focusMode = false
+                        }
+                    ) { Text(completedFilterLabel) }
                 }
                 if (visibleTasks.isEmpty()) {
                     Text(
