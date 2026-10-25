@@ -2,6 +2,12 @@ package iq.ruven.app
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
+import android.os.Build
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,6 +79,20 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
     var output by remember { mutableStateOf("") }
     var focusEnabled by remember { mutableStateOf(false) }
     var focusTask by remember { mutableStateOf("") }
+    var bagItems by remember { mutableStateOf(listOf<String>()) }
+    var checkedBagItems by remember { mutableStateOf(setOf<Int>()) }
+    var pendingReviewLesson by remember { mutableStateOf<String?>(null) }
+    val reviewPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val lesson = pendingReviewLesson
+        pendingReviewLesson = null
+        if (granted && !lesson.isNullOrBlank()) {
+            scheduleSpacedReviewReminders(context, lesson)
+            output = if (isEnglish) "Review reminders scheduled for $lesson (in 1, 3, and 7 days)." else "تمت جدولة مراجعات «$lesson» بعد يوم و3 أيام و7 أيام."
+            prefs.edit().putString("result_3", output).apply()
+        } else if (!granted) {
+            output = if (isEnglish) "Notifications are disabled. Allow RUVEN notifications in Android settings, then schedule the lesson again." else "الإشعارات مرفوضة. فعّل إشعارات RUVEN من إعدادات أندرويد، وبعدها أعد جدولة الدرس."
+        }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -114,8 +134,12 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                             Button(
                                 onClick = {
                                     selected = tool
-                                    input = ""
+                                    input = prefs.getString("input_${tool.id}", "") ?: ""
                                     output = prefs.getString("result_${tool.id}", "") ?: ""
+                                    if (tool.id == 1) {
+                                        bagItems = input.split(',', '،', '\\n').map { it.trim() }.filter { it.isNotEmpty() }
+                                        checkedBagItems = prefs.getString("bag_checked", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() }.toSet()
+                                    }
                                     prefs.edit().putString("recent_${System.currentTimeMillis()}", tool.ar).apply()
                                 },
                                 modifier = Modifier.weight(1f),
@@ -147,7 +171,19 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         maxLines = 6
                     )
                     if (output.isNotBlank()) {
-                        Text(output, style = MaterialTheme.typography.bodyMedium)
+                        if (tool.id == 1 && bagItems.isNotEmpty()) {
+                            Text(if (isEnglish) "Bag checklist" else "قائمة الجنطة", fontWeight = FontWeight.SemiBold)
+                            bagItems.forEachIndexed { index, item ->
+                                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                    androidx.compose.material3.Checkbox(checked = index in checkedBagItems, onCheckedChange = { checked ->
+                                        checkedBagItems = if (checked) checkedBagItems + index else checkedBagItems - index
+                                        prefs.edit().putString("bag_checked", checkedBagItems.sorted().joinToString(",")).apply()
+                                    })
+                                    Text(item, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                            Text(if (isEnglish) "${checkedBagItems.count { it in bagItems.indices }} of ${bagItems.size} packed" else "جهّزت ${checkedBagItems.count { it in bagItems.indices }} من ${bagItems.size}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else Text(output, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             },
@@ -166,8 +202,24 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         }
                     } else buildToolResult(tool.id, input.trim(), isEnglish)
                     output = result
+                    if (tool.id == 1) {
+                        bagItems = input.split(',', '،', '\\n').map { it.trim() }.filter { it.isNotEmpty() }
+                        checkedBagItems = emptySet()
+                        prefs.edit().putString("bag_checked", "").apply()
+                    }
+                    if (tool.id == 3 && input.isNotBlank()) {
+                        val allowed = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                        if (allowed) {
+                            scheduleSpacedReviewReminders(context, input.trim())
+                            output = if (isEnglish) "Review reminders scheduled for ${input.trim()} (in 1, 3, and 7 days)." else "تمت جدولة مراجعات «${input.trim()}» بعد يوم و3 أيام و7 أيام."
+                        } else {
+                            pendingReviewLesson = input.trim()
+                            reviewPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            output = if (isEnglish) "Allow notifications to schedule reminders." else "اسمح بالإشعارات حتى نكدر نحدد مواعيد المراجعة."
+                        }
+                    }
                     prefs.edit()
-                        .putString("result_${tool.id}", result)
+                        .putString("result_${tool.id}", output)
                         .putString("input_${tool.id}", input.trim())
                         .putLong("updated_${tool.id}", System.currentTimeMillis())
                         .apply()
