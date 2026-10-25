@@ -185,6 +185,39 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
     }
 }
 
+
+private fun buildHomeworkBreakdown(value: String, isEnglish: Boolean): String {
+    val customSteps = value.lines().map { it.trim() }.filter { it.isNotEmpty() }
+    val steps = if (customSteps.size > 1) {
+        customSteps
+    } else {
+        val task = value.trim()
+        if (isEnglish) listOf(
+            "Read the full instructions for: $task",
+            "Gather the required books, notes, and materials",
+            "Complete the first part of the assignment",
+            "Complete the remaining questions or sections",
+            "Review answers and check the teacher's requirements"
+        ) else listOf(
+            "اقرأ تعليمات الواجب كاملة: $task",
+            "جهّز الكتاب والدفتر والملاحظات المطلوبة",
+            "أنجز الجزء الأول من الواجب",
+            "كمّل بقية الأسئلة أو الأجزاء",
+            "راجع الإجابات وطابقها ويا المطلوب من المدرّس"
+        )
+    }
+    val numbered = steps.mapIndexed { index, step ->
+        val number = index + 1
+        if (isEnglish) "$number. ☐ $step (about 10 min)" else "$number. ☐ $step (حوالي ١٠ دقائق)"
+    }.joinToString("\n")
+    val totalMinutes = steps.size * 10
+    return if (isEnglish) {
+        "HOMEWORK PLAN\\n$numbered\\n\\nEstimated total: about $totalMinutes minutes. This is a flexible estimate, not a timer.\\nTip: enter one custom step per line to replace the suggested steps."
+    } else {
+        "خطة الواجب\\n$numbered\\n\\nالوقت التقريبي الكلي: حوالي $totalMinutes دقيقة. هذا تقدير قابل للتعديل وليس مؤقتًا فعليًا.\\nنصيحة: اكتب كل خطوة بسطر مستقل حتى تستخدم خطواتك الخاصة."
+    }
+}
+
 private fun speakWithSystemTts(context: Context, text: String) {
     runCatching {
         lateinit var engine: TextToSpeech
@@ -201,7 +234,7 @@ private fun buildToolResult(id: Int, value: String, isEnglish: Boolean): String 
     if (value.isBlank()) return if (isEnglish) "Enter something first." else "اكتب شي أولًا."
     return when (id) {
         1 -> if (isEnglish) "Bag checklist:\n" + value.split(',', '،', '\n').map { "☐ ${it.trim()}" }.filter { it != "☐ " }.joinToString("\n") else "قائمة الجنطة:\n" + value.split(',', '،', '\n').map { "☐ ${it.trim()}" }.filter { it != "☐ " }.joinToString("\n")
-        2 -> if (isEnglish) "1. Read the instructions\n2. Complete the first part\n3. Finish the remaining questions\n4. Review your answers\nTask: $value" else "١. اقرأ المطلوب كاملًا\n٢. أنجز الجزء الأول\n٣. كمّل بقية الأسئلة\n٤. راجع إجاباتك\nالواجب: $value"
+        2 -> buildHomeworkBreakdown(value, isEnglish)
         3 -> if (isEnglish) "Suggested reviews for “$value”: today, tomorrow, in 3 days, and in 7 days. These are suggestions, not scheduled notifications." else "مواعيد مراجعة مقترحة لـ«$value»: اليوم، باچر، بعد 3 أيام، وبعد 7 أيام. هاي مقترحات وليست إشعارات مجدولة."
         4 -> if (isEnglish) "Focus task: $value\nKeep only this task in front of you; take a break when needed." else "مهمة التركيز: $value\nخلّ تركيزك على هاي المهمة وخذ استراحة عند الحاجة."
         5 -> if (isEnglish) "Hint 1: Identify what the question asks.\nHint 2: List the facts or rules you know.\nHint 3: Try solving one step at a time, then verify with your textbook.\nTopic: $value" else "التلميح الأول: حدّد شنو المطلوب بالسؤال.\nالتلميح الثاني: اكتب المعطيات أو القواعد اللي تعرفها.\nالتلميح الثالث: حل خطوة خطوة وتأكد من الكتاب.\nالموضوع: $value"
@@ -209,7 +242,7 @@ private fun buildToolResult(id: Int, value: String, isEnglish: Boolean): String 
         7 -> if (isEnglish) "REVISION SHEET\n$value\n\nCheck each point against your teacher's material." else "ورقة مراجعة\n$value\n\nطابق كل نقطة ويا مادة المدرّس."
         8 -> if (isEnglish) "Read-aloud requested. If your device's speech engine is available, playback will start." else "تم طلب القراءة الصوتية. إذا محرّك النطق متوفر بالجهاز، يبدأ التشغيل."
         9 -> if (isEnglish) "Exam/deadline saved on this device:\n$value\nAdd it to your calendar too; this tool does not send reminders yet." else "تم حفظ موعد الامتحان/التسليم على هذا الجهاز:\n$value\nأضفه للتقويم أيضًا؛ الأداة حاليًا ما ترسل تذكيرات."
-        10 -> runCatching { val parts = value.split('/'); val score = parts[0].trim().toDouble(); val total = parts[1].trim().toDouble(); require(total > 0 && score >= 0); val pct = score / total * 100; if (isEnglish) "Estimated percentage: ${"%.1f".format(Locale.US, pct)}%. This is a calculation, not an official grade." else "النسبة الحسابية: ${"%.1f".format(Locale.US, pct)}٪. هاي عملية حسابية وليست درجة رسمية." }.getOrElse { if (isEnglish) "Use the format score/total, for example 42/50." else "اكتبها بهالشكل: درجتك/الدرجة الكلية، مثل 42/50." }
+        10 -> runCatching { val parts = value.split('/'); val score = parts[0].trim().toDouble(); val total = parts[1].trim().toDouble(); require(total > 0 && score >= 0 && score <= total); val pct = score / total * 100; if (isEnglish) "Estimated percentage: ${"%.1f".format(Locale.US, pct)}%. This is a calculation, not an official grade." else "النسبة الحسابية: ${"%.1f".format(Locale.US, pct)}٪. هاي عملية حسابية وليست درجة رسمية." }.getOrElse { if (isEnglish) "Use the format score/total, for example 42/50." else "اكتبها بهالشكل: درجتك/الدرجة الكلية، مثل 42/50." }
         13 -> if (isEnglish) "Saved locally:\n$value" else "انحفظ محليًا:\n$value"
         14 -> if (isEnglish) "Recent item recorded:\n$value" else "تم تسجيل العنصر ضمن آخر ما فتحته:\n$value"
         15 -> if (isEnglish) "WEEKLY RECAP\n$value\nChoose one small priority for next week." else "ملخص الأسبوع\n$value\nاختار هدف صغير واحد للأسبوع الجاي."
