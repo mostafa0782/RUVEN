@@ -137,7 +137,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                                     input = prefs.getString("input_${tool.id}", "") ?: ""
                                     output = prefs.getString("result_${tool.id}", "") ?: ""
                                     if (tool.id == 1) {
-                                        bagItems = input.split(',', '،', '\\n').map { it.trim() }.filter { it.isNotEmpty() }
+                                        bagItems = input.split(',', '،', '\n').map { it.trim() }.filter { it.isNotEmpty() }
                                         checkedBagItems = prefs.getString("bag_checked", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() }.toSet()
                                     }
                                     prefs.edit().putString("recent_${System.currentTimeMillis()}", tool.ar).apply()
@@ -203,7 +203,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                     } else buildToolResult(tool.id, input.trim(), isEnglish)
                     output = result
                     if (tool.id == 1) {
-                        bagItems = input.split(',', '،', '\\n').map { it.trim() }.filter { it.isNotEmpty() }
+                        bagItems = input.split(',', '،', '\n').map { it.trim() }.filter { it.isNotEmpty() }
                         checkedBagItems = emptySet()
                         prefs.edit().putString("bag_checked", "").apply()
                     }
