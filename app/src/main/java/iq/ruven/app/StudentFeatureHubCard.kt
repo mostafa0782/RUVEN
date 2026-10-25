@@ -212,9 +212,9 @@ private fun buildHomeworkBreakdown(value: String, isEnglish: Boolean): String {
     }.joinToString("\n")
     val totalMinutes = steps.size * 10
     return if (isEnglish) {
-        "HOMEWORK PLAN\\n$numbered\\n\\nEstimated total: about $totalMinutes minutes. This is a flexible estimate, not a timer.\\nTip: enter one custom step per line to replace the suggested steps."
+        "HOMEWORK PLAN\n$numbered\n\nEstimated total: about $totalMinutes minutes. This is a flexible estimate, not a timer.\nTip: enter one custom step per line to replace the suggested steps."
     } else {
-        "خطة الواجب\\n$numbered\\n\\nالوقت التقريبي الكلي: حوالي $totalMinutes دقيقة. هذا تقدير قابل للتعديل وليس مؤقتًا فعليًا.\\nنصيحة: اكتب كل خطوة بسطر مستقل حتى تستخدم خطواتك الخاصة."
+        "خطة الواجب\n$numbered\n\nالوقت التقريبي الكلي: حوالي $totalMinutes دقيقة. هذا تقدير قابل للتعديل وليس مؤقتًا فعليًا.\nنصيحة: اكتب كل خطوة بسطر مستقل حتى تستخدم خطواتك الخاصة."
     }
 }
 
