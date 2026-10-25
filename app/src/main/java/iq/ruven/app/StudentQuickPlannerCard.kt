@@ -1,0 +1,439 @@
+package iq.ruven.app
+
+import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
+
+internal data class PlannerTask(val id: String, val title: String, val done: Boolean)
+
+internal fun filterPlannerTasks(
+    tasks: List<PlannerTask>,
+    focusMode: Boolean,
+    taskFilter: String,
+    searchQuery: String
+): List<PlannerTask> {
+    val query = searchQuery.trim()
+    return tasks.filter { task ->
+        (!focusMode || !task.done) &&
+            (taskFilter == "all" ||
+                (taskFilter == "open" && !task.done) ||
+                (taskFilter == "done" && task.done)) &&
+            task.title.contains(query, ignoreCase = true)
+    }
+}
+
+private fun readPlannerTasks(context: Context): List<PlannerTask> = runCatching {
+    val raw = context.getSharedPreferences("ruven_student_planner", Context.MODE_PRIVATE)
+        .getString("tasks", "[]") ?: "[]"
+    val array = JSONArray(raw)
+    (0 until array.length()).mapNotNull { index ->
+        val item = array.optJSONObject(index) ?: return@mapNotNull null
+        val id = item.optString("id")
+        val title = item.optString("title").trim().take(100)
+        if (id.isBlank() || title.isBlank()) null else PlannerTask(id, title, item.optBoolean("done"))
+    }.take(20)
+}.getOrDefault(emptyList())
+
+private fun savePlannerTasks(context: Context, tasks: List<PlannerTask>) {
+    val array = JSONArray()
+    tasks.forEach { task ->
+        array.put(JSONObject().put("id", task.id).put("title", task.title).put("done", task.done))
+    }
+    context.getSharedPreferences("ruven_student_planner", Context.MODE_PRIVATE)
+        .edit().putString("tasks", array.toString()).apply()
+}
+
+@Composable
+internal fun StudentQuickPlannerCard(isEnglish: Boolean = false) {
+    val context = LocalContext.current
+    val tasks = remember {
+        mutableStateListOf<PlannerTask>().apply { addAll(readPlannerTasks(context)) }
+    }
+    var draft by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
+    var taskFilter by remember { mutableStateOf("all") }
+    var editingTaskId by remember { mutableStateOf<String?>(null) }
+    var editingDraft by remember { mutableStateOf("") }
+    var showClearConfirmation by remember { mutableStateOf(false) }
+    var pendingDeleteTask by remember { mutableStateOf<PlannerTask?>(null) }
+    val doneCount = tasks.count { it.done }
+    val progressPercent = if (tasks.isEmpty()) 0 else doneCount * 100 / tasks.size
+    var focusMode by remember { mutableStateOf(false) }
+    val visibleTasks = filterPlannerTasks(tasks, focusMode, taskFilter, searchQuery)
+    val title = if (isEnglish) "My quick study plan" else "خطتي الدراسية السريعة"
+    val subtitle = if (isEnglish) "Small steps, saved on this device" else "قسّم يومك لخطوات صغيرة — تنحفظ على جهازك"
+    val placeholder = if (isEnglish) "Add a task (e.g. review chemistry)" else "أضف مهمة (مثلاً: أراجع الكيمياء)"
+    val addLabel = if (isEnglish) "Add" else "إضافة"
+    val emptyLabel = if (isEnglish) "Add your first small task above." else "أضف أول مهمة صغيرة من الحقل أعلاه."
+    val progressLabel = if (isEnglish) doneCount.toString() + " of " + tasks.size + " completed (" + progressPercent + "%)" else "أنجزت " + doneCount + " من " + tasks.size + " مهام (" + progressPercent + "%)"
+    val resetLabel = if (isEnglish) "Clear completed" else "مسح المنجز"
+    val focusLabel = if (focusMode) { if (isEnglish) "Show all tasks" else "عرض كل المهام" } else { if (isEnglish) "Focus on unfinished" else "التركيز على غير المنجز" }
+    val allDoneLabel = if (isEnglish) "All tasks are completed. Good work!" else "كل المهام منجزة، أحسنت!"
+    val searchLabel = if (isEnglish) "Search tasks" else "ابحث بالمهام"
+    val filterAll = if (isEnglish) "All" else "الكل"
+    val filterOpen = if (isEnglish) "To do" else "المتبقية"
+    val filterDone = if (isEnglish) "Done" else "المنجزة"
+    val noMatchesLabel = if (isEnglish) "No tasks match this filter." else "ماكو مهام تطابق البحث أو التصفية."
+    val estimateLabel = if (isEnglish) "Approx. remaining: " + (tasks.count { !it.done } * 15) + " min (15 min/task)" else "الوقت المتبقي تقريبًا: " + (tasks.count { !it.done } * 15) + " دقيقة (15 دقيقة لكل مهمة)"
+    val completeAllLabel = if (isEnglish) "Complete all remaining" else "إنجاز كل المتبقي"
+    val addPresetTask: (String) -> Unit = { preset ->
+        if (tasks.size < 20) {
+            tasks.add(PlannerTask(UUID.randomUUID().toString(), preset.take(100), false))
+            savePlannerTasks(context, tasks.toList())
+        }
+    }
+    val addTask = {
+        val value = draft.trim()
+        if (value.isNotEmpty() && tasks.size < 20) {
+            tasks.add(PlannerTask(UUID.randomUUID().toString(), value, false))
+            savePlannerTasks(context, tasks.toList())
+            draft = ""
+        }
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                androidx.compose.foundation.layout.Box(
+                    Modifier.background(Color(0xFFE5F1FF), RoundedCornerShape(14.dp)).padding(10.dp)
+                ) {
+                    Icon(Icons.Rounded.EditNote, contentDescription = null, tint = Color(0xFF2867D8))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(doneCount.toString() + "/" + tasks.size, color = Color(0xFF2867D8), fontWeight = FontWeight.Bold)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it.take(100) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text(placeholder, fontSize = 12.sp) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { addTask() }),
+                    shape = RoundedCornerShape(14.dp)
+                )
+                Button(
+                    onClick = { addTask() },
+                    enabled = draft.trim().isNotEmpty() && tasks.size < 20,
+                    shape = RoundedCornerShape(14.dp)
+                ) { Text(addLabel) }
+            }
+            Text(
+                if (isEnglish) "Quick add" else "إضافة سريعة",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TextButton(onClick = { addPresetTask(if (isEnglish) "Review today’s lesson" else "مراجعة درس اليوم") }, enabled = tasks.size < 20) { Text(if (isEnglish) "Review" else "مراجعة") }
+                TextButton(onClick = { addPresetTask(if (isEnglish) "Solve practice questions" else "حل أسئلة تدريبية") }, enabled = tasks.size < 20) { Text(if (isEnglish) "Practice" else "تدريب") }
+                TextButton(onClick = { addPresetTask(if (isEnglish) "Prepare for tomorrow" else "تحضير باچر") }, enabled = tasks.size < 20) { Text(if (isEnglish) "Prepare" else "تحضير") }
+            }
+            if (tasks.size >= 20) {
+                Text(
+                    if (isEnglish) "Maximum 20 tasks. Delete a task to add another."
+                    else "وصلت للحد الأقصى (20 مهمة). احذف مهمة حتى تضيف غيرها.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp
+                )
+            }
+            if (tasks.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { taskFilter = "all" }) { Text(if (taskFilter == "all") "• " + filterAll else filterAll) }
+                    TextButton(onClick = { taskFilter = "open" }) { Text(if (taskFilter == "open") "• " + filterOpen else filterOpen) }
+                    TextButton(onClick = { taskFilter = "done"; focusMode = false }) { Text(if (taskFilter == "done") "• " + filterDone else filterDone) }
+                }
+            }
+            if (tasks.isEmpty()) {
+                Text(emptyLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            } else {
+                Text(progressLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Text(estimateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(
+                        onClick = {
+                            for (index in tasks.indices) {
+                                if (!tasks[index].done) tasks[index] = tasks[index].copy(done = true)
+                            }
+                            savePlannerTasks(context, tasks.toList())
+                        },
+                        enabled = tasks.any { !it.done }
+                    ) { Text(completeAllLabel) }
+                }
+                LinearProgressIndicator(
+                    progress = { doneCount.toFloat() / tasks.size.coerceAtLeast(1).toFloat() },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF2867D8),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it.take(100) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(searchLabel) },
+                    shape = RoundedCornerShape(14.dp)
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(
+                        onClick = {
+                            focusMode = !focusMode
+                            if (focusMode && taskFilter == "done") taskFilter = "all"
+                        }
+                    ) { Text(focusLabel) }
+                }
+                if (visibleTasks.isEmpty()) {
+                    Text(
+                        if (tasks.isNotEmpty() && tasks.all { it.done } && taskFilter != "open" && searchQuery.isBlank()) allDoneLabel else noMatchesLabel,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+                visibleTasks.forEach { task ->
+                    if (editingTaskId == task.id) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedTextField(
+                                value = editingDraft,
+                                onValueChange = { editingDraft = it.take(100) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text(if (isEnglish) "Edit task" else "تعديل المهمة") },
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(onClick = { editingTaskId = null; editingDraft = "" }) {
+                                    Text(if (isEnglish) "Cancel" else "إلغاء")
+                                }
+                                TextButton(
+                                    enabled = editingDraft.trim().isNotEmpty(),
+                                    onClick = {
+                                        val index = tasks.indexOfFirst { it.id == task.id }
+                                        if (index >= 0) {
+                                            tasks[index] = tasks[index].copy(title = editingDraft.trim())
+                                            savePlannerTasks(context, tasks.toList())
+                                        }
+                                        editingTaskId = null
+                                        editingDraft = ""
+                                    }
+                                ) { Text(if (isEnglish) "Save" else "حفظ") }
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = task.done,
+                                    onCheckedChange = { checked ->
+                                        val index = tasks.indexOfFirst { it.id == task.id }
+                                        if (index >= 0) {
+                                            tasks[index] = tasks[index].copy(done = checked)
+                                            savePlannerTasks(context, tasks.toList())
+                                        }
+                                    }
+                                )
+                                Text(
+                                    task.title,
+                                    modifier = Modifier.weight(1f),
+                                    color = if (task.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 13.sp
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val taskIndex = tasks.indexOfFirst { it.id == task.id }
+                                val visibleIndex = visibleTasks.indexOfFirst { it.id == task.id }
+                                androidx.compose.material3.IconButton(
+                                    enabled = visibleIndex > 0,
+                                    onClick = {
+                                        if (visibleIndex > 0) {
+                                            val previousId = visibleTasks[visibleIndex - 1].id
+                                            val previousIndex = tasks.indexOfFirst { it.id == previousId }
+                                            if (taskIndex >= 0 && previousIndex >= 0) {
+                                                val current = tasks[taskIndex]
+                                                tasks[taskIndex] = tasks[previousIndex]
+                                                tasks[previousIndex] = current
+                                                savePlannerTasks(context, tasks.toList())
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.KeyboardArrowUp,
+                                        contentDescription = if (isEnglish) "Move task up" else "نقل المهمة للأعلى",
+                                        tint = if (visibleIndex > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                                androidx.compose.material3.IconButton(
+                                    enabled = visibleIndex >= 0 && visibleIndex < visibleTasks.lastIndex,
+                                    onClick = {
+                                        if (visibleIndex >= 0 && visibleIndex < visibleTasks.lastIndex) {
+                                            val nextId = visibleTasks[visibleIndex + 1].id
+                                            val nextIndex = tasks.indexOfFirst { it.id == nextId }
+                                            if (taskIndex >= 0 && nextIndex >= 0) {
+                                                val current = tasks[taskIndex]
+                                                tasks[taskIndex] = tasks[nextIndex]
+                                                tasks[nextIndex] = current
+                                                savePlannerTasks(context, tasks.toList())
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.KeyboardArrowDown,
+                                        contentDescription = if (isEnglish) "Move task down" else "نقل المهمة للأسفل",
+                                        tint = if (visibleIndex >= 0 && visibleIndex < visibleTasks.lastIndex) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                                androidx.compose.material3.IconButton(
+                                    onClick = { editingTaskId = task.id; editingDraft = task.title }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.EditNote,
+                                        contentDescription = if (isEnglish) "Edit task" else "تعديل المهمة",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                androidx.compose.material3.IconButton(
+                                    onClick = { pendingDeleteTask = task }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.DeleteOutline,
+                                        contentDescription = if (isEnglish) "Delete task" else "حذف المهمة",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(
+                        onClick = { showClearConfirmation = true },
+                        enabled = tasks.any { it.done }
+                    ) {
+                        Icon(Icons.Rounded.RestartAlt, contentDescription = null)
+                        Text(resetLabel)
+                    }
+                }
+            }
+        }
+    }
+    if (showClearConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmation = false },
+            title = { Text(if (isEnglish) "Clear completed tasks?" else "مسح المهام المنجزة؟") },
+            text = {
+                Text(
+                    if (isEnglish) "This removes " + doneCount + " completed task(s) from this device. This cannot be undone."
+                    else "سيتم حذف " + doneCount + " من المهام المنجزة من هذا الجهاز، ولا يمكن التراجع عن ذلك."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        tasks.removeAll { it.done }
+                        if (taskFilter == "done") taskFilter = "all"
+                        if (editingTaskId != null && tasks.none { it.id == editingTaskId }) {
+                            editingTaskId = null
+                            editingDraft = ""
+                        }
+                        savePlannerTasks(context, tasks.toList())
+                        showClearConfirmation = false
+                    }
+                ) { Text(if (isEnglish) "Clear" else "مسح") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmation = false }) {
+                    Text(if (isEnglish) "Cancel" else "إلغاء")
+                }
+            }
+        )
+    }
+    pendingDeleteTask?.let { taskToDelete ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteTask = null },
+            title = { Text(if (isEnglish) "Delete this task?" else "حذف هذه المهمة؟") },
+            text = {
+                Text(
+                    if (isEnglish) "“" + taskToDelete.title + "” will be removed from this device."
+                    else "سيتم حذف «" + taskToDelete.title + "» من هذا الجهاز."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        tasks.removeAll { it.id == taskToDelete.id }
+                        if (editingTaskId == taskToDelete.id) {
+                            editingTaskId = null
+                            editingDraft = ""
+                        }
+                        savePlannerTasks(context, tasks.toList())
+                        pendingDeleteTask = null
+                    }
+                ) { Text(if (isEnglish) "Delete" else "حذف") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteTask = null }) {
+                    Text(if (isEnglish) "Cancel" else "إلغاء")
+                }
+            }
+        )
+    }
+}
