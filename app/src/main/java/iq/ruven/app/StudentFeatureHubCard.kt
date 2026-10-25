@@ -82,6 +82,8 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
     var bagItems by remember { mutableStateOf(listOf<String>()) }
     var checkedBagItems by remember { mutableStateOf(setOf<Int>()) }
     var pendingReviewLesson by remember { mutableStateOf<String?>(null) }
+    var hintLevel by remember { mutableStateOf(0) }
+    var hintTopic by remember { mutableStateOf("") }
     val reviewPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         val lesson = pendingReviewLesson
         pendingReviewLesson = null
@@ -134,6 +136,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                             Button(
                                 onClick = {
                                     selected = tool
+                                    if (tool.id == 5) { hintLevel = 0; hintTopic = "" }
                                     input = prefs.getString("input_${tool.id}", "") ?: ""
                                     output = prefs.getString("result_${tool.id}", "") ?: ""
                                     if (tool.id == 1) {
@@ -170,6 +173,15 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         minLines = 2,
                         maxLines = 6
                     )
+                    if (tool.id == 5 && hintTopic.isNotBlank()) {
+                        Text(if (isEnglish) "Hint ladder · reveal one level at a time" else "سُلّم التلميحات · اكشف تلميحًا واحدًا كل مرة", fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            (1..3).forEach { level ->
+                                TextButton(onClick = { hintLevel = level }) { Text(if (isEnglish) "Hint $level" else "تلميح $level") }
+                            }
+                        }
+                        if (hintLevel > 0) Text(buildProgressiveHint(hintTopic, hintLevel, isEnglish), style = MaterialTheme.typography.bodyMedium)
+                    }
                     if (output.isNotBlank()) {
                         if (tool.id == 1 && bagItems.isNotEmpty()) {
                             Text(if (isEnglish) "Bag checklist" else "قائمة الجنطة", fontWeight = FontWeight.SemiBold)
@@ -202,6 +214,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         }
                     } else buildToolResult(tool.id, input.trim(), isEnglish)
                     output = result
+                    if (tool.id == 5 && input.isNotBlank()) { hintTopic = input.trim(); hintLevel = 0; output = if (isEnglish) "Choose Hint 1 first. Each level gives a little more guidance without immediately giving the answer." else "ابدأ بالتلميح الأول؛ كل مستوى يوضح أكثر من السابق بدون ما يكشف الجواب مباشرة." }
                     if (tool.id == 1) {
                         bagItems = input.split(',', '،', '\n').map { it.trim() }.filter { it.isNotEmpty() }
                         checkedBagItems = emptySet()
@@ -270,6 +283,33 @@ private fun buildHomeworkBreakdown(value: String, isEnglish: Boolean): String {
     }
 }
 
+private fun buildProgressiveHint(topic: String, level: Int, isEnglish: Boolean): String {
+    val hints = if (isEnglish) listOf(
+        "Restate the question in your own words. What exactly must be found or explained?",
+        "Write down the known information, relevant definitions, and the rule or formula that connects them.",
+        "Try one small step using that rule, then compare your reasoning with the textbook or class notes. Topic: $topic"
+    ) else listOf(
+        "أعد صياغة السؤال بكلماتك. شنو المطلوب تحديدًا: إيجاد قيمة لو تفسير فكرة؟",
+        "اكتب المعطيات والتعريفات المهمة، وحدد القاعدة أو القانون اللي يربط بينها.",
+        "جرّب خطوة صغيرة باستخدام القاعدة، وبعدها قارن استدلالك بالكتاب أو ملاحظات الصف. الموضوع: $topic"
+    )
+    return hints.getOrElse(level - 1) { hints.last() }
+}
+
+private fun buildStudyTimePlan(value: String, isEnglish: Boolean): String {
+    val minutes = value.toIntOrNull()?.takeIf { it in 1..600 }
+        ?: return if (isEnglish) "Enter a whole number from 1 to 600 minutes." else "اكتب عددًا صحيحًا من 1 إلى 600 دقيقة."
+    val focusBlock = if (minutes < 25) minutes else 25
+    val sessions = (minutes + focusBlock - 1) / focusBlock
+    val breaks = if (minutes >= 25) (sessions - 1).coerceAtLeast(0) * 5 else 0
+    val total = minutes + breaks
+    return if (isEnglish) {
+        "STUDY PLAN\\n• Focus time: $minutes minutes\\n• Suggested focus blocks: $sessions × up to $focusBlock minutes\\n• Short breaks: $breaks minutes total\\n• Approximate elapsed time: $total minutes\\n\\nAdjust the blocks to your energy and subject. This is a plan only; it does not start a background timer."
+    } else {
+        "خطة الدراسة\\n• وقت الدراسة الصافي: $minutes دقيقة\\n• جلسات التركيز المقترحة: $sessions، مدة كل جلسة حتى $focusBlock دقيقة\\n• الاستراحات القصيرة: $breaks دقيقة بالمجموع\\n• الوقت الكلي التقريبي: $total دقيقة\\n\\nعدّل الجلسات حسب طاقتك والمادة. هاي خطة فقط وما تشغّل مؤقتًا بالخلفية."
+    }
+}
+
 private fun speakWithSystemTts(context: Context, text: String) {
     runCatching {
         lateinit var engine: TextToSpeech
@@ -289,8 +329,8 @@ private fun buildToolResult(id: Int, value: String, isEnglish: Boolean): String 
         2 -> buildHomeworkBreakdown(value, isEnglish)
         3 -> if (isEnglish) "Suggested reviews for “$value”: today, tomorrow, in 3 days, and in 7 days. These are suggestions, not scheduled notifications." else "مواعيد مراجعة مقترحة لـ«$value»: اليوم، باچر، بعد 3 أيام، وبعد 7 أيام. هاي مقترحات وليست إشعارات مجدولة."
         4 -> if (isEnglish) "Focus task: $value\nKeep only this task in front of you; take a break when needed." else "مهمة التركيز: $value\nخلّ تركيزك على هاي المهمة وخذ استراحة عند الحاجة."
-        5 -> if (isEnglish) "Hint 1: Identify what the question asks.\nHint 2: List the facts or rules you know.\nHint 3: Try solving one step at a time, then verify with your textbook.\nTopic: $value" else "التلميح الأول: حدّد شنو المطلوب بالسؤال.\nالتلميح الثاني: اكتب المعطيات أو القواعد اللي تعرفها.\nالتلميح الثالث: حل خطوة خطوة وتأكد من الكتاب.\nالموضوع: $value"
-        6 -> runCatching { val mins = value.toInt(); if (isEnglish) "Plan about ${(mins * 0.8).toInt()}–${(mins * 1.2).toInt()} minutes, with a short break if needed. Estimate only." else "خطط تقريبًا لـ${(mins * 0.8).toInt()}–${(mins * 1.2).toInt()} دقيقة، وخذ استراحة قصيرة إذا تحتاج. هذا تقدير فقط." }.getOrElse { if (isEnglish) "Enter minutes as a number." else "اكتب عدد الدقائق بالأرقام." }
+        5 -> if (isEnglish) "Select a hint level above to get guidance for: $value" else "اختار مستوى التلميح أعلاه حتى تحصل على إرشاد لموضوع: $value"
+        6 -> buildStudyTimePlan(value, isEnglish)
         7 -> if (isEnglish) "REVISION SHEET\n$value\n\nCheck each point against your teacher's material." else "ورقة مراجعة\n$value\n\nطابق كل نقطة ويا مادة المدرّس."
         8 -> if (isEnglish) "Read-aloud requested. If your device's speech engine is available, playback will start." else "تم طلب القراءة الصوتية. إذا محرّك النطق متوفر بالجهاز، يبدأ التشغيل."
         9 -> if (isEnglish) "Exam/deadline saved on this device:\n$value\nAdd it to your calendar too; this tool does not send reminders yet." else "تم حفظ موعد الامتحان/التسليم على هذا الجهاز:\n$value\nأضفه للتقويم أيضًا؛ الأداة حاليًا ما ترسل تذكيرات."
