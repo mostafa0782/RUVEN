@@ -1954,6 +1954,11 @@ private fun HomeScreen(
             }
         }
         item {
+            if (isSchoolAdminRole(role)) {
+                TextbookAdminCard(session = session, backend = backend, isEnglish = isEnglish)
+            }
+        }
+        item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SectionHeading(ruvenText(translated("اختصارات سريعة"), "Quick shortcuts", isEnglish), ruvenText(translated("اختَر شنو تحتاج هسه"), "Choose what you need", isEnglish))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
