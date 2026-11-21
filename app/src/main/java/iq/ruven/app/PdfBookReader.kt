@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import java.io.File
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -38,8 +39,14 @@ fun PdfBookReaderDialog(
         error = null
         val result = withContext(Dispatchers.IO) {
             runCatching {
-                val descriptor: ParcelFileDescriptor = context.contentResolver.openFileDescriptor(Uri.parse(uriString), "r")
-                    ?: throw IllegalStateException("تعذر فتح ملف PDF.")
+                val uri = Uri.parse(uriString)
+                val descriptor: ParcelFileDescriptor = if (uri.scheme == "file") {
+                    val path = uri.path ?: throw IllegalStateException("مسار ملف PDF غير صالح.")
+                    ParcelFileDescriptor.open(File(path), ParcelFileDescriptor.MODE_READ_ONLY)
+                } else {
+                    context.contentResolver.openFileDescriptor(uri, "r")
+                        ?: throw IllegalStateException("تعذر فتح ملف PDF.")
+                }
                 descriptor.use { fd ->
                     PdfRenderer(fd).use { renderer ->
                         require(renderer.pageCount > 0) { "ملف PDF لا يحتوي صفحات." }
