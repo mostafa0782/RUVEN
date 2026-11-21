@@ -1,19 +1,44 @@
 # RUVEN security review
 
-## Applied changes
-- Moved RLS helper functions (`current_school_class`, `current_school_role`, `is_school_admin`, `is_school_owner`, and `teacher_has_assignment`) into the non-exposed `private` schema.
-- Updated table and storage RLS policies to call the private helpers.
-- Revoked authenticated access to the old public helper RPCs.
-- Added indexes covering foreign-key columns flagged by the Supabase advisor.
-- Created a private `ruven-school-files` bucket with a 20 MiB size cap, MIME-type allowlist, and role-/publication-aware storage policies.
-- Moved privileged profile-role changes to the `owner-set-profile-role` Edge Function. It validates the caller's JWT, verifies the caller's owner flag server-side, rejects owner promotion and protects the existing owner account, then updates the target profile with the service-role key kept server-side.
-- Revoked `EXECUTE` for `public.owner_set_profile_role` from `PUBLIC`, `anon`, and `authenticated`, removing the direct authenticated RPC path.
+**Audit date:** 2026-11-21  
+**Scope:** Live Supabase database and Storage, Auth/Edge Functions, Android client, updater, and GitHub Actions release workflow.  
+**Status:** Hardening changes committed to `feature/ruven-announcements`; final CI verification is pending for the latest commit.
 
-## Remaining administrator action
-The latest Supabase Security Advisor reports **Leaked Password Protection Disabled** as the remaining security warning. This is an Auth configuration setting, not a Postgres table or migration setting, and no connected tool exposes the required Auth configuration update. An authorized project administrator must enable it in the Supabase Dashboard under **Authentication → Settings (or Security/Password policy) → Leaked password protection**, then re-run the Security Advisor. Supabase may require an appropriate plan/configuration for this feature.
+## Verified database controls
 
-## Verification notes
-- Re-run the Security Advisor after enabling leaked-password protection.
-- The direct `owner_set_profile_role` RPC warning cleared after revoking client execution. Do not restore client grants or expose any service-role key to the app.
-- Multiple permissive RLS policies are still flagged for performance. They have different authorization purposes; consolidate only after regression tests prove all role workflows remain valid.
-- Indexes reported as unused may simply be new or not exercised by the current small dataset; do not delete them based solely on a fresh-project advisor snapshot.
+- RLS is enabled on all 15 public application tables. No public application table was found with RLS disabled.
+- `anon` has no table-level grants on the 15 public application tables. Authenticated access is governed by the reviewed RLS policies.
+- Role/authorization helpers are in the non-exposed `private` schema, use `SECURITY DEFINER` with an empty `search_path`, and derive role/class from the authenticated profile rather than client-supplied claims.
+- The Auth user trigger always creates a least-privileged `student` profile and ignores user-supplied role or owner metadata.
+- The private `ruven-school-files` bucket enforces role-, publication-, and approval-aware access. Restrictive INSERT policies prevent ordinary teacher/monitor upload grants from bypassing admin-only textbook and 3D catalog paths.
+- Trusted-actor triggers derive uploader, reviewer, report creator, leave reviewer/attendance marker, and decision execution actor from `auth.uid()`.
+- Overlapping permissive RLS policies were consolidated while preserving their previous predicates. RLS probes and rollback-based workflow tests passed.
+- `anon` and `authenticated` have no `TRUNCATE`, `TRIGGER`, `REFERENCES`, or `MAINTAIN` privileges on public tables. The same defaults are revoked for tables created by the `postgres` migration role.
+- **Completed 2026-11-21:** the same unnecessary table DDL/maintenance privileges were revoked from `service_role` on all current public tables and from `postgres`-created future tables. Live verification returned zero such privileges across the 15 public tables.
+- The two active Edge Functions verify the caller's JWT and the caller's `profiles.is_owner` flag before account provisioning or role changes. The service-role key remains server-side.
+- `service_role` can SELECT profiles and update only the provisioning columns `email`, `full_name`, `role`, `class_name`, and `is_owner`; it cannot update `id` or `created_at`.
+
+## Android and release hardening
+
+The following source changes are committed; the final Android CI run must pass before calling them build-verified:
+
+- Refresh tokens are stored with AES-GCM encryption using a non-exportable Android Keystore key. Existing plaintext refresh-token preferences are migrated and removed.
+- App backup is disabled and cleartext network traffic is explicitly disabled.
+- FileProvider access is narrowed to the updater's dedicated cache directory rather than the entire cache.
+- The updater accepts only HTTPS release assets from this repository, validates the final download host, enforces a 100 MiB download ceiling, verifies SHA-256, and deletes incomplete or invalid downloads.
+- Sign-out now revokes the session once rather than issuing the same request twice.
+- The tagged-release workflow rejects non-numeric versions and prevents a 0.1.x release whose Android `versionCode` would be less than or equal to the latest CI build number on that exact commit.
+
+## Outstanding blockers and weaknesses
+
+1. **Multi-school isolation is not implemented.** No public application table has a tenant identifier or school membership boundary. Treat the database as single-school only. Do not onboard a second school into the same project until tenant-aware RLS, parent-child constraints, Storage paths, and cross-tenant negative tests are complete.
+2. **Leaked-password protection is disabled.** Supabase Security Advisor still reports this Auth warning. It is an Auth dashboard configuration, not a SQL migration; an authorized project administrator must enable it and rerun the advisor.
+3. **`supabase_admin` default ACL remains a platform-level caveat.** Its default ACL still grants client roles broad privileges on future objects it creates. The available migration role cannot alter this superuser-owned default. Continue creating app objects as `postgres`; platform-level remediation is needed before creating application tables as `supabase_admin`.
+4. **Provisioning rate limits are not implemented in the Edge Functions.** The endpoints are owner-only, but a database-backed per-owner rate limit and abuse audit should be added before wider deployment.
+5. **Privacy policy is still a draft.** School approval, official contact details, retention periods, deletion procedures, and guardian notices must be confirmed before public deployment.
+6. **CI coverage is incomplete.** The current workflow runs unit tests, release assembly, and APK signature verification; automated UI smoke tests, dependency vulnerability scanning, and action pinning to immutable commit SHAs remain to be added.
+7. **Unused-index findings are informational.** The advisor reports 29 unused indexes while the database contains very little production data. Do not drop them without representative workload measurements.
+
+## Verification boundary
+
+A passing CI build does not prove correct behavior on a physical device or complete production security. Before release, test login/session migration, sign-out, role boundaries, storage upload/download, updater installation, and notification behavior on supported Android devices. Never put a Supabase service-role key in the APK or repository.
