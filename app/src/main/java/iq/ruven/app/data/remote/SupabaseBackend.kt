@@ -713,6 +713,7 @@ class SupabaseBackend(
                 publisher = row.optString("publisher").takeIf { it.isNotBlank() && it != "null" },
                 sourceName = row.optString("source_name").takeIf { it.isNotBlank() && it != "null" },
                 sourceUrl = row.optString("source_url").takeIf { it.startsWith("https://") },
+                storagePath = row.getString("storage_path"),
                 fileSizeBytes = row.optLong("file_size_bytes"),
                 status = row.optString("status", "pending"),
                 createdAt = row.optString("created_at")
