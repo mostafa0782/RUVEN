@@ -21,8 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -100,6 +103,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var textbookCatalogBusy by remember { mutableStateOf(false) }
     var textbookCatalogLoaded by remember { mutableStateOf(false) }
     var textbookCatalogError by remember { mutableStateOf("") }
+    var textbookDownloadingId by remember { mutableStateOf<String?>(null) }
     var homework by remember { mutableStateOf(readStudyHomework(context)) }
     var newHomework by remember { mutableStateOf("") }
     var newStatus by remember { mutableStateOf("لم ينجز") }
@@ -199,6 +203,33 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                 Text(if (isEnglish) "Edition: ${entry.editionLabel}" else "الطبعة: ${entry.editionLabel}", style = MaterialTheme.typography.bodySmall)
                                 Text(listOfNotNull(entry.publisher, entry.publicationYear?.toString()).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                                 entry.sourceName?.let { Text(if (isEnglish) "Source: $it" else "المصدر: $it", style = MaterialTheme.typography.bodySmall) }
+                                Text(if (isEnglish) "File size: ${(entry.fileSizeBytes / 1024).coerceAtLeast(1)} KB" else "حجم الملف: ${(entry.fileSizeBytes / 1024).coerceAtLeast(1)} كيلوبايت", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (entry.status == "approved") {
+                                    TextButton(
+                                        enabled = textbookDownloadingId == null,
+                                        onClick = {
+                                            scope.launch {
+                                                textbookDownloadingId = entry.id
+                                                textbookCatalogError = ""
+                                                try {
+                                                    val bytes = backend.downloadApprovedTextbook(session, entry.storagePath)
+                                                    val file = withContext(Dispatchers.IO) {
+                                                        File(context.filesDir, "ruven_textbook_${entry.id}.pdf").apply { writeBytes(bytes) }
+                                                    }
+                                                    pdfUri = Uri.fromFile(file).toString()
+                                                    prefs.edit().putString("pdf_uri", pdfUri).apply()
+                                                    showPdfReader = true
+                                                } catch (error: Exception) {
+                                                    textbookCatalogError = error.message ?: if (isEnglish) "Could not download this PDF." else "تعذر تنزيل الكتاب."
+                                                } finally {
+                                                    textbookDownloadingId = null
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Text(if (textbookDownloadingId == entry.id) (if (isEnglish) "Downloading…" else "جارٍ التنزيل…") else (if (isEnglish) "Download and read PDF" else "تنزيل وقراءة الكتاب"))
+                                    }
+                                }
                                 if (entry.status != "approved") Text(if (isEnglish) "Awaiting approval" else "بانتظار الاعتماد", color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.labelSmall)
                                 entry.sourceUrl?.let { sourceUrl ->
                                     TextButton(onClick = {
