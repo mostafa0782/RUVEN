@@ -96,6 +96,10 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var page by remember { mutableStateOf(prefs.getString("last_page", "") ?: "") }
     var pdfUri by remember { mutableStateOf(prefs.getString("pdf_uri", "") ?: "") }
     var showPdfReader by remember { mutableStateOf(false) }
+    var textbookEntries by remember { mutableStateOf<List<iq.ruven.app.data.remote.SupabaseBackend.TextbookCatalogEntry>>(emptyList()) }
+    var textbookCatalogBusy by remember { mutableStateOf(false) }
+    var textbookCatalogLoaded by remember { mutableStateOf(false) }
+    var textbookCatalogError by remember { mutableStateOf("") }
     var homework by remember { mutableStateOf(readStudyHomework(context)) }
     var newHomework by remember { mutableStateOf("") }
     var newStatus by remember { mutableStateOf("لم ينجز") }
@@ -158,6 +162,51 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     Text(if (isEnglish) "FOCUS / BREAK" else "التركيز والاستراحة", fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         listOf("25/5", "50/10", "بلا استراحة").forEach { value -> FilterChip(selected = interval == value, onClick = { interval = value }, label = { Text(value) }) }
+                    }
+                }
+                item {
+                    HorizontalDivider()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(if (isEnglish) "APPROVED TEXTBOOK CATALOG" else "فهرس الكتب المعتمدة", fontWeight = FontWeight.Bold)
+                            Text(if (isEnglish) "Official edition details supplied by school administration." else "الكتب لا تظهر إلا بعد إدخال بيانات الطبعة واعتمادها من إدارة المدرسة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        TextButton(enabled = !textbookCatalogBusy, onClick = {
+                            scope.launch {
+                                textbookCatalogBusy = true
+                                textbookCatalogError = ""
+                                try {
+                                    textbookEntries = backend.loadTextbookCatalog(session, subjectName = subject)
+                                    textbookCatalogLoaded = true
+                                } catch (error: Exception) {
+                                    textbookCatalogError = error.message ?: if (isEnglish) "Could not load catalog." else "تعذر تحميل الفهرس."
+                                } finally {
+                                    textbookCatalogBusy = false
+                                }
+                            }
+                        }) { Text(if (textbookCatalogBusy) (if (isEnglish) "Loading…" else "جارٍ التحميل…") else (if (isEnglish) "Refresh" else "تحديث")) }
+                    }
+                    if (textbookCatalogBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    if (textbookCatalogError.isNotBlank()) Text(textbookCatalogError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    if (textbookCatalogLoaded && textbookEntries.isEmpty()) {
+                        Text(if (isEnglish) "No approved entries for this subject yet." else "لا توجد كتب معتمدة لهذه المادة حالياً. لن نعرض كتباً أو طبعات غير موثقة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    textbookEntries.forEach { entry ->
+                        Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(entry.title, fontWeight = FontWeight.SemiBold)
+                                Text("${entry.gradeName} · ${entry.subjectName}", style = MaterialTheme.typography.bodySmall)
+                                Text(if (isEnglish) "Edition: ${entry.editionLabel}" else "الطبعة: ${entry.editionLabel}", style = MaterialTheme.typography.bodySmall)
+                                Text(listOfNotNull(entry.publisher, entry.publicationYear?.toString()).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+                                entry.sourceName?.let { Text(if (isEnglish) "Source: $it" else "المصدر: $it", style = MaterialTheme.typography.bodySmall) }
+                                if (entry.status != "approved") Text(if (isEnglish) "Awaiting approval" else "بانتظار الاعتماد", color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.labelSmall)
+                                entry.sourceUrl?.let { sourceUrl ->
+                                    TextButton(onClick = {
+                                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(sourceUrl))) }
+                                    }) { Text(if (isEnglish) "Open official source" else "فتح رابط المصدر") }
+                                }
+                            }
+                        }
                     }
                 }
                 item {
