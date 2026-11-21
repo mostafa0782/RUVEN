@@ -125,6 +125,44 @@ private fun buildWeeklyStudentRecap(context: Context, isEnglish: Boolean): Strin
     }
 }
 
+private data class RuvenHomeworkStep(val title: String, val minutes: Int, val done: Boolean = false)
+
+private fun defaultHomeworkSteps(task: String, isEnglish: Boolean): List<RuvenHomeworkStep> {
+    val custom = task.lines().map { it.trim() }.filter { it.isNotBlank() }.take(20)
+    val titles = if (custom.size > 1) custom else if (isEnglish) listOf(
+        "Read the full assignment instructions",
+        "Gather the required books and notes",
+        "Complete the first part",
+        "Finish the remaining questions",
+        "Review answers against the teacher's requirements"
+    ) else listOf(
+        "اقرأ تعليمات الواجب كاملة: $task",
+        "جهّز الكتاب والدفتر والملاحظات",
+        "أنجز الجزء الأول من الواجب",
+        "كمّل بقية الأسئلة",
+        "راجع الإجابات حسب المطلوب"
+    )
+    return titles.map { RuvenHomeworkStep(it.take(180), 10) }
+}
+
+private fun readHomeworkPlan(prefs: android.content.SharedPreferences): List<RuvenHomeworkStep> = runCatching {
+    val array = JSONArray(prefs.getString("homework_plan_v1", "[]") ?: "[]")
+    (0 until array.length()).mapNotNull { index ->
+        val item = array.optJSONObject(index) ?: return@mapNotNull null
+        val title = item.optString("title").trim().take(180)
+        val minutes = item.optInt("minutes", 10)
+        if (title.isBlank() || minutes !in 5..15) null else RuvenHomeworkStep(title, minutes, item.optBoolean("done"))
+    }.take(20)
+}.getOrDefault(emptyList())
+
+private fun writeHomeworkPlan(prefs: android.content.SharedPreferences, steps: List<RuvenHomeworkStep>) {
+    val array = JSONArray()
+    steps.take(20).forEach { step ->
+        array.put(JSONObject().put("title", step.title).put("minutes", step.minutes).put("done", step.done))
+    }
+    prefs.edit().putString("homework_plan_v1", array.toString()).apply()
+}
+
 private data class RuvenSavedContent(val id: Long, val text: String)
 
 private fun readRuvenSavedContent(prefs: android.content.SharedPreferences): List<RuvenSavedContent> =
@@ -181,6 +219,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
     var output by remember { mutableStateOf("") }
     var lostItemQrToken by remember { mutableStateOf("") }
     var savedContent by remember { mutableStateOf(readRuvenSavedContent(prefs)) }
+    var homeworkPlan by remember { mutableStateOf(readHomeworkPlan(prefs)) }
     val revisionExportLauncher = rememberLauncherForActivityResult(CreateDocument("text/plain")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(output) }
@@ -246,6 +285,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                                 onClick = {
                                     selected = tool
                                     if (tool.id == 5) { hintLevel = 0; hintTopic = "" }
+                                    if (tool.id == 2) homeworkPlan = readHomeworkPlan(prefs)
                                     if (tool.id == 13) savedContent = readRuvenSavedContent(prefs)
                                     input = prefs.getString("input_${tool.id}", "") ?: ""
                                     output = prefs.getString("result_${tool.id}", "") ?: ""
@@ -301,6 +341,32 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         }
                         if (hintLevel > 0) Text(buildProgressiveHint(hintTopic, hintLevel, isEnglish), style = MaterialTheme.typography.bodyMedium)
                     }
+                    if (tool.id == 2 && homeworkPlan.isNotEmpty()) {
+                        Text(if (isEnglish) "Editable steps · ${homeworkPlan.count { it.done }}/${homeworkPlan.size} completed" else "خطوات قابلة للتعديل · ${homeworkPlan.count { it.done }} من ${homeworkPlan.size } مكتملة", style = MaterialTheme.typography.labelMedium)
+                        homeworkPlan.forEachIndexed { index, step ->
+                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                androidx.compose.material3.Checkbox(checked = step.done, onCheckedChange = { checked ->
+                                    homeworkPlan = homeworkPlan.toMutableList().also { it[index] = it[index].copy(done = checked) }
+                                    writeHomeworkPlan(prefs, homeworkPlan)
+                                })
+                                Column(Modifier.weight(1f)) {
+                                    OutlinedTextField(value = step.title, onValueChange = { value ->
+                                        homeworkPlan = homeworkPlan.toMutableList().also { it[index] = it[index].copy(title = value.take(180)) }
+                                        writeHomeworkPlan(prefs, homeworkPlan)
+                                    }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                        Text(if (isEnglish) "${step.minutes} min" else "${step.minutes} دقيقة", style = MaterialTheme.typography.labelSmall)
+                                        TextButton(onClick = {
+                                            val next = when (step.minutes) { 5 -> 10; 10 -> 15; else -> 5 }
+                                            homeworkPlan = homeworkPlan.toMutableList().also { it[index] = it[index].copy(minutes = next) }
+                                            writeHomeworkPlan(prefs, homeworkPlan)
+                                        }) { Text(if (isEnglish) "Change 5/10/15" else "تغيير 5/10/15") }
+                                    }
+                                }
+                            }
+                        }
+                        Text(if (isEnglish) "Estimated total: ${homeworkPlan.sumOf { it.minutes }} minutes" else "الوقت التقديري: ${homeworkPlan.sumOf { it.minutes }} دقيقة", style = MaterialTheme.typography.labelMedium)
+                    }
                     if (tool.id == 23 && lostItemQrToken.isNotBlank()) {
                         LostItemClaimQr(lostItemQrToken)
                     }
@@ -349,7 +415,11 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val result = if (tool.id == 23) {
+                    val result = if (tool.id == 2) {
+                        homeworkPlan = defaultHomeworkSteps(input, isEnglish)
+                        writeHomeworkPlan(prefs, homeworkPlan)
+                        if (isEnglish) "Editable homework plan created. Change each step and its 5/10/15-minute estimate below." else "انعملت خطة واجب قابلة للتعديل. غيّر كل خطوة ووقتها 5 أو 10 أو 15 دقيقة من القائمة أدناه."
+                    } else if (tool.id == 23) {
                         lostItemQrToken = createLostItemClaimToken()
                         if (isEnglish) "Random claim token created for: ${input.trim().take(100)}" else "تم إنشاء رمز مطالبة عشوائي للغرض: ${input.trim().take(100)}"
                     } else if (tool.id == 15) {
