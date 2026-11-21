@@ -99,6 +99,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var page by remember { mutableStateOf(prefs.getString("last_page", "") ?: "") }
     var pdfUri by remember { mutableStateOf(prefs.getString("pdf_uri", "") ?: "") }
     var showPdfReader by remember { mutableStateOf(false) }
+    var show3DViewer by remember { mutableStateOf(false) }
     var textbookEntries by remember { mutableStateOf<List<iq.ruven.app.data.remote.SupabaseBackend.TextbookCatalogEntry>>(emptyList()) }
     var textbookCatalogBusy by remember { mutableStateOf(false) }
     var textbookCatalogLoaded by remember { mutableStateOf(false) }
@@ -267,7 +268,10 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                         Checkbox(checked = lessonCompleted, onCheckedChange = { lessonCompleted = it })
                         Text(if (isEnglish) "Lesson completed" else "الدرس مكتمل")
                     }
-                    Text(if (isEnglish) "3D learning models will be loaded here after licensed curriculum assets are connected." else "مكان النماذج التعليمية ثلاثية الأبعاد؛ ستُحمّل عند ربط أصول المنهج المرخّصة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(onClick = { show3DViewer = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (isEnglish) "Open 3D model viewer (GLB)" else "فتح عارض المجسمات ثلاثية الأبعاد (GLB)")
+                    }
+                    Text(if (isEnglish) "Open a licensed or teacher-provided GLB model. Drag to orbit and pinch to zoom." else "افتح مجسماً بصيغة GLB تملكه أو وفره المدرّس. اسحب للتدوير واستخدم إصبعين للتقريب والإبعاد.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 item {
                     HorizontalDivider()
@@ -416,6 +420,9 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
             onDismiss = { showPdfReader = false },
             isEnglish = isEnglish
         )
+    }
+    if (show3DViewer) {
+        StudyModelViewerDialog(isEnglish = isEnglish, onDismiss = { show3DViewer = false })
     }
 
 }
