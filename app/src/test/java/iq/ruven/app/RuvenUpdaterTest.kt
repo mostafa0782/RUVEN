@@ -6,6 +6,25 @@ import org.junit.Test
 
 class RuvenUpdaterTest {
     @Test
+    fun acceptsOnlyHttpsReleaseAssetsFromThisRepository() {
+        assertTrue(RuvenUpdater.isTrustedReleaseAssetUrl(
+            "https://github.com/mostafa0782/RUVEN/releases/download/v0.1.155/RUVEN.apk"
+        ))
+        assertFalse(RuvenUpdater.isTrustedReleaseAssetUrl(
+            "http://github.com/mostafa0782/RUVEN/releases/download/v0.1.155/RUVEN.apk"
+        ))
+        assertFalse(RuvenUpdater.isTrustedReleaseAssetUrl(
+            "https://example.com/mostafa0782/RUVEN/releases/download/v0.1.155/RUVEN.apk"
+        ))
+        assertFalse(RuvenUpdater.isTrustedReleaseAssetUrl(
+            "https://github.com/other/repo/releases/download/v0.1.155/RUVEN.apk"
+        ))
+        assertFalse(RuvenUpdater.isTrustedReleaseAssetUrl(
+            "https://user@github.com/mostafa0782/RUVEN/releases/download/v0.1.155/RUVEN.apk"
+        ))
+    }
+
+    @Test
     fun detectsNewerPatchVersion() {
         assertTrue(RuvenUpdater.isNewer("0.1.154", "0.1.155"))
     }
