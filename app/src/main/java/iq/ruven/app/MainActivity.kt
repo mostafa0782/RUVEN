@@ -998,8 +998,6 @@ private fun RuvenAuthenticatedApp(
     }
 }
 
-@Composable
-
 private fun isSchoolAdminRole(role: SchoolRole): Boolean = role in setOf(
     SchoolRole.OWNER, SchoolRole.PRINCIPAL, SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.EDUCATIONAL_COUNSELOR
 )
