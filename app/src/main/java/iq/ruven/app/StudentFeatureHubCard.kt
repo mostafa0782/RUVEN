@@ -166,6 +166,7 @@ private val ruvenStudentTools = listOf(
     RuvenStudentTool(20, "تحضير باچر", "Prepare for tomorrow", "اكتب جدول باچر أو واجباته", "Enter tomorrow's timetable or homework"),
     RuvenStudentTool(21, "تذكير المغادرة", "Departure reminder", "بعد كم دقيقة تريد تنبيه الاستعداد للمغادرة؟", "How many minutes until you want a departure reminder?"),
     RuvenStudentTool(22, "اقتراح وقت الاستيقاظ", "Wake-up suggestion", "اكتب وقت الخروج ودقائق الاستعداد والطريق", "Enter departure time, preparation minutes, and travel minutes", "مثال: 07:30،25،20", "Example: 07:30,25,20"),
+    RuvenStudentTool(23, "ملصق QR للمفقودات", "Lost-item QR label", "اكتب وصفًا مختصرًا للغرض لإنشاء رمز مطالبة عشوائي", "Enter a short item description to create a random claim token"),
     RuvenStudentTool(31, "تسجيل المزاج", "Mood check-in", "سجّل شعورك بكلمات بسيطة (خاص على جهازك)", "Describe your mood briefly (private on this device)"),
     RuvenStudentTool(32, "دقيقة هدوء", "Quiet minute", "اكتب شنو تريد تتركه مؤقتًا حتى ترتاح", "Write what you want to pause and set aside"),
     RuvenStudentTool(36, "رسالة شكر", "Thank-you helper", "اكتب شنو الشخص ساعدك بيه", "Describe how the person helped you")
@@ -178,6 +179,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
     var selected by remember { mutableStateOf<RuvenStudentTool?>(null) }
     var input by remember { mutableStateOf("") }
     var output by remember { mutableStateOf("") }
+    var lostItemQrToken by remember { mutableStateOf("") }
     var savedContent by remember { mutableStateOf(readRuvenSavedContent(prefs)) }
     val revisionExportLauncher = rememberLauncherForActivityResult(CreateDocument("text/plain")) { uri: Uri? ->
         if (uri != null) runCatching {
@@ -299,6 +301,9 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         }
                         if (hintLevel > 0) Text(buildProgressiveHint(hintTopic, hintLevel, isEnglish), style = MaterialTheme.typography.bodyMedium)
                     }
+                    if (tool.id == 23 && lostItemQrToken.isNotBlank()) {
+                        LostItemClaimQr(lostItemQrToken)
+                    }
                     if (tool.id == 13) {
                         Text(if (isEnglish) "Saved on this device · ${savedContent.size}/100" else "محفوظة على هذا الجهاز · ${savedContent.size}/100", style = MaterialTheme.typography.labelMedium)
                         if (savedContent.isEmpty()) {
@@ -344,7 +349,10 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val result = if (tool.id == 15) {
+                    val result = if (tool.id == 23) {
+                        lostItemQrToken = createLostItemClaimToken()
+                        if (isEnglish) "Random claim token created for: ${input.trim().take(100)}" else "تم إنشاء رمز مطالبة عشوائي للغرض: ${input.trim().take(100)}"
+                    } else if (tool.id == 15) {
                         buildWeeklyStudentRecap(context, isEnglish)
                     } else if (tool.id == 17) {
                         val minutes = input.trim().toIntOrNull()
