@@ -544,6 +544,7 @@ class SupabaseBackend(
         val publisher: String?,
         val sourceName: String?,
         val sourceUrl: String?,
+        val storagePath: String,
         val fileSizeBytes: Long,
         val status: String,
         val createdAt: String
@@ -679,6 +680,7 @@ class SupabaseBackend(
         publisher = row.optString("publisher").takeIf { it.isNotBlank() && it != "null" },
         sourceName = row.optString("source_name").takeIf { it.isNotBlank() && it != "null" },
         sourceUrl = row.optString("source_url").takeIf { it.startsWith("https://") },
+        storagePath = row.getString("storage_path"),
         fileSizeBytes = row.optLong("file_size_bytes"),
         status = row.optString("status", "pending"),
         createdAt = row.optString("created_at")
@@ -695,7 +697,7 @@ class SupabaseBackend(
             gradeName?.trim()?.takeIf { it.isNotBlank() }?.let { append("&grade_name=eq.${encode(it)}") }
         }
         val rows = requestArray(
-            "/rest/v1/textbook_catalog?select=id,grade_name,class_name,subject_name,title,edition_label,publication_year,publisher,source_name,source_url,file_size_bytes,status,created_at&order=grade_name.asc,subject_name.asc,updated_at.desc&limit=200$filters",
+            "/rest/v1/textbook_catalog?select=id,grade_name,class_name,subject_name,title,edition_label,publication_year,publisher,source_name,source_url,storage_path,file_size_bytes,status,created_at&order=grade_name.asc,subject_name.asc,updated_at.desc&limit=200$filters",
             session
         )
         (0 until rows.length()).map { i ->
