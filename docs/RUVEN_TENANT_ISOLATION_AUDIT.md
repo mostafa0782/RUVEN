@@ -82,6 +82,7 @@ Do not add a default school UUID or fabricate a school record. Before backfill:
 - **Completed 2026-11-21:** consolidated 23 overlapping permissive-policy findings; a follow-up query returned no duplicate table/action policy groups among the affected tables.
 - **Completed 2026-11-21:** revoked client-role table DDL/maintenance privileges from existing public tables and from default privileges for objects created by the `postgres` migration role. Verification showed zero public tables with `TRUNCATE` or `TRIGGER` privileges for either client role.
 - **Platform-owner follow-up:** the database role available to project migrations cannot change the separate `supabase_admin` default ACL (that role is superuser and is not granted to `postgres`). If future application tables are ever created as `supabase_admin`, the platform owner must remove client-role DDL grants from that role's default privileges. Continue creating application migrations as `postgres`, whose defaults are now hardened.
+- **Performance note:** the advisor reports 29 INFO-level unused indexes. The live database is nearly empty (2 profiles, 1 school item, and no roster, reports, leave requests, decisions, study records, textbooks, or 3D resources), so these usage counters are not representative. Retain foreign-key and planned-query indexes until real workload data supports a safe removal.
 - Run Supabase security/performance advisors after each schema change.
 
 ## Rollout gates
