@@ -86,6 +86,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     val scope = rememberCoroutineScope()
     var cloudStatus by remember { mutableStateOf(if (isEnglish) "Cloud sync ready" else "المزامنة السحابية جاهزة") }
     var cloudBusy by remember { mutableStateOf(false) }
+    var pendingOutboxCount by remember { mutableIntStateOf(0) }
     var subject by remember { mutableStateOf(prefs.getString("last_subject", studySubjects.first()) ?: studySubjects.first()) }
     var chapter by remember { mutableStateOf(prefs.getString("chapter", "") ?: "") }
     var lesson by remember { mutableStateOf(prefs.getString("lesson", "") ?: "") }
@@ -124,6 +125,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     }
     LaunchedEffect(session.userId) {
         val pendingSync = StudyRecordOutbox.syncPending(context, backend, session)
+        pendingOutboxCount = pendingSync.pendingCount
         if (pendingSync.syncedCount > 0 || pendingSync.pendingCount > 0) {
             cloudStatus = if (pendingSync.pendingCount == 0) {
                 if (isEnglish) "Pending study records synced" else "تمت مزامنة السجلات الدراسية المعلّقة"
@@ -318,6 +320,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                             StudyRecordDraft("homework_status", subject, chapter, lesson, homeworkTitle = savedTitle, homeworkStatus = newStatus)
                                         )
                                     }.onSuccess { result ->
+                                        pendingOutboxCount = result.pendingCount
                                         cloudStatus = if (result.pendingCount == 0) {
                                             if (isEnglish) "Homework synced to school account" else "تمت مزامنة الواجب مع حساب المدرسة"
                                         } else {
@@ -348,6 +351,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                         StudyRecordDraft("homework_status", subject, chapter, lesson, homeworkTitle = item.first, homeworkStatus = next)
                                     )
                                 }.onSuccess { result ->
+                                    pendingOutboxCount = result.pendingCount
                                     cloudStatus = if (result.pendingCount == 0) {
                                         if (isEnglish) "Homework status synced" else "تمت مزامنة حالة الواجب"
                                     } else {
@@ -382,6 +386,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                     StudyRecordDraft("exam_scope", subject, chapterName = marker, lessonName = lesson.takeIf { it.isNotBlank() }, examKind = examKind)
                                 )
                             }.onSuccess { result ->
+                                pendingOutboxCount = result.pendingCount
                                 cloudStatus = if (result.pendingCount == 0) {
                                     if (isEnglish) "Exam scope synced" else "تمت مزامنة نطاق الامتحان"
                                 } else {
@@ -449,6 +454,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                         break
                                     }
                                 }
+                                pendingOutboxCount = pending
                                 cloudStatus = when {
                                     failureMessage != null -> (if (isEnglish) "Queue save failed: " else "فشل حفظ قائمة المزامنة: ") + failureMessage
                                     pending > 0 -> (if (isEnglish) "Saved offline · pending: " else "حُفظ محلياً · بانتظار المزامنة: ") + pending
@@ -471,6 +477,27 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                         context.startActivity(Intent.createChooser(send, if (isEnglish) "Share study report" else "مشاركة تقرير الدراسة"))
                     }, modifier = Modifier.fillMaxWidth()) { Text(if (isEnglish) "Share study report" else "مشاركة تقرير الدراسة") }
                     Text(cloudStatus, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    if (pendingOutboxCount > 0) {
+                        OutlinedButton(
+                            enabled = !cloudBusy,
+                            onClick = {
+                                cloudBusy = true
+                                scope.launch {
+                                    val result = StudyRecordOutbox.syncPending(context, backend, session)
+                                    pendingOutboxCount = result.pendingCount
+                                    cloudStatus = if (result.pendingCount == 0) {
+                                        if (isEnglish) "All queued study records synced" else "تمت مزامنة جميع السجلات المعلّقة"
+                                    } else {
+                                        (if (isEnglish) "Still waiting: " else "ما زالت بانتظار المزامنة: ") + result.pendingCount
+                                    }
+                                    cloudBusy = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (isEnglish) "Retry pending sync ($pendingOutboxCount)" else "إعادة محاولة المزامنة ($pendingOutboxCount)")
+                        }
+                    }
                     if (cloudBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     Text(if (isEnglish) "School administrators can read synced records; students can only add and view their own records." else "تستطيع إدارة المدرسة الاطلاع على السجلات المتزامنة، والطالب لا يستطيع إضافة أو قراءة إلا سجلات حسابه.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
