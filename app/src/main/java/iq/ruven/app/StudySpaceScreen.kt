@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -53,7 +54,7 @@ private fun saveExamMarkers(context: Context, markers: List<String>) {
 }
 
 @Composable
-fun StudySpaceCard(isEnglish: Boolean) {
+fun StudySpaceCard(isEnglish: Boolean, session: iq.ruven.app.data.remote.SupabaseBackend.Session, backend: iq.ruven.app.data.remote.SupabaseBackend) {
     val context = LocalContext.current
     var open by remember { mutableStateOf(false) }
     val lastSubject = remember { studyPrefs(context).getString("last_subject", "الرياضيات") ?: "الرياضيات" }
@@ -71,14 +72,17 @@ fun StudySpaceCard(isEnglish: Boolean) {
             Button(onClick = { open = true }) { Text(if (isEnglish) "Open" else "افتح") }
         }
     }
-    if (open) StudySpaceDialog(isEnglish, { open = false })
+    if (open) StudySpaceDialog(isEnglish, session, backend, { open = false })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
+private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remote.SupabaseBackend.Session, backend: iq.ruven.app.data.remote.SupabaseBackend, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { studyPrefs(context) }
+    val scope = rememberCoroutineScope()
+    var cloudStatus by remember { mutableStateOf(if (isEnglish) "Cloud sync ready" else "المزامنة السحابية جاهزة") }
+    var cloudBusy by remember { mutableStateOf(false) }
     var subject by remember { mutableStateOf(prefs.getString("last_subject", studySubjects.first()) ?: studySubjects.first()) }
     var chapter by remember { mutableStateOf(prefs.getString("chapter", "") ?: "") }
     var lesson by remember { mutableStateOf(prefs.getString("lesson", "") ?: "") }
@@ -201,8 +205,16 @@ private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                         }
                         Button(onClick = {
                             if (newHomework.isNotBlank()) {
-                                homework = homework + (newHomework.trim() to newStatus)
+                                val savedTitle = newHomework.trim()
+                                homework = homework + (savedTitle to newStatus)
                                 saveStudyHomework(context, homework)
+                                cloudBusy = true
+                                scope.launch {
+                                    runCatching { backend.createStudentStudyRecord(session, "homework_status", subject, chapter, lesson, homeworkTitle = savedTitle, homeworkStatus = newStatus) }
+                                        .onSuccess { cloudStatus = if (isEnglish) "Homework synced to school account" else "تمت مزامنة الواجب مع حساب المدرسة" }
+                                        .onFailure { cloudStatus = (if (isEnglish) "Saved locally; sync failed: " else "حُفظ محلياً؛ فشلت المزامنة: ") + (it.message ?: "network error") }
+                                    cloudBusy = false
+                                }
                                 newHomework = ""
                             }
                         }, modifier = Modifier.fillMaxWidth()) { Text(if (isEnglish) "Save homework" else "حفظ الواجب") }
@@ -218,6 +230,11 @@ private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                                 val next = states[(states.indexOf(item.second).coerceAtLeast(0) + 1) % states.size]
                                 homework = homework.toMutableList().also { it[index] = item.first to next }
                                 saveStudyHomework(context, homework)
+                                scope.launch {
+                                    runCatching { backend.createStudentStudyRecord(session, "homework_status", subject, chapter, lesson, homeworkTitle = item.first, homeworkStatus = next) }
+                                        .onSuccess { cloudStatus = if (isEnglish) "Homework status synced" else "تمت مزامنة حالة الواجب" }
+                                        .onFailure { cloudStatus = (if (isEnglish) "Saved locally; sync failed: " else "حُفظ محلياً؛ فشلت المزامنة: ") + (it.message ?: "network error") }
+                                }
                             }) { Text(if (isEnglish) "Change" else "تغيير") }
                         }
                     }
@@ -234,7 +251,17 @@ private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                         }
                     }
                     OutlinedTextField(value = newExamMarker, onValueChange = { newExamMarker = it }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Chapter / lesson" else "الفصل أو الدرس") })
-                    Button(onClick = { if (newExamMarker.isNotBlank()) { examMarkers = examMarkers + (examKind + " · " + subject + " · " + newExamMarker.trim()); saveExamMarkers(context, examMarkers); newExamMarker = "" } }, modifier = Modifier.fillMaxWidth()) { Text(if (isEnglish) "Save exam scope" else "حفظ نطاق الامتحان") }
+                    Button(onClick = { if (newExamMarker.isNotBlank()) {
+                        val marker = newExamMarker.trim()
+                        examMarkers = examMarkers + (examKind + " · " + subject + " · " + marker)
+                        saveExamMarkers(context, examMarkers)
+                        scope.launch {
+                            runCatching { backend.createStudentStudyRecord(session, "exam_scope", subject, chapterName = marker, lessonName = lesson.takeIf { it.isNotBlank() }, examKind = examKind) }
+                                .onSuccess { cloudStatus = if (isEnglish) "Exam scope synced" else "تمت مزامنة نطاق الامتحان" }
+                                .onFailure { cloudStatus = (if (isEnglish) "Saved locally; sync failed: " else "حُفظ محلياً؛ فشلت المزامنة: ") + (it.message ?: "network error") }
+                        }
+                        newExamMarker = ""
+                    } }, modifier = Modifier.fillMaxWidth()) { Text(if (isEnglish) "Save exam scope" else "حفظ نطاق الامتحان") }
                     examMarkers.forEachIndexed { index, marker -> Row(verticalAlignment = Alignment.CenterVertically) { Text(marker, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall); TextButton(onClick = { examMarkers = examMarkers.toMutableList().also { it.removeAt(index) }; saveExamMarkers(context, examMarkers) }) { Text(if (isEnglish) "Remove" else "حذف") } } }
                 }
                 item {
@@ -250,10 +277,29 @@ private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                         OutlinedButton(onClick = { running = false; startAt = 0L }) { Text(if (isEnglish) "Pause" else "إيقاف مؤقت") }
                         TextButton(onClick = {
                             running = false
+                            val finishedSeconds = elapsed.coerceIn(0L, 86400L)
+                            val finishedLesson = lessonCompleted
                             sessions += 1
-                            if (lessonCompleted) completedLessons += 1
-                            prefs.edit().putInt("sessions", sessions).putInt("completed_lessons", completedLessons)
-                                .putLong("study_seconds", prefs.getLong("study_seconds", 0L) + elapsed).apply()
+                            if (finishedLesson) completedLessons += 1
+                            prefs.edit().putString("last_subject", subject).putInt("sessions", sessions).putInt("completed_lessons", completedLessons)
+                                .putLong("study_seconds", prefs.getLong("study_seconds", 0L) + finishedSeconds).apply()
+                            cloudBusy = true
+                            scope.launch {
+                                val syncResults = mutableListOf<Result<Unit>>()
+                                if (finishedSeconds > 0L) syncResults += runCatching {
+                                    backend.createStudentStudyRecord(session, "study_session", subject, chapter, lesson, durationSeconds = finishedSeconds, pageNumber = if (pageTracking) page.toIntOrNull() else null)
+                                }
+                                if (finishedLesson) syncResults += runCatching {
+                                    backend.createStudentStudyRecord(session, "lesson_progress", subject, chapter, lesson, lessonCompleted = true, pageNumber = if (pageTracking) page.toIntOrNull() else null)
+                                }
+                                val failed = syncResults.firstOrNull { it.isFailure }
+                                cloudStatus = if (failed == null) {
+                                    if (isEnglish) "Study progress synced to school account" else "تمت مزامنة تقدمك الدراسي مع حساب المدرسة"
+                                } else {
+                                    (if (isEnglish) "Saved locally; sync failed: " else "حُفظ محلياً؛ فشلت المزامنة: ") + (failed.exceptionOrNull()?.message ?: "network error")
+                                }
+                                cloudBusy = false
+                            }
                             elapsed = 0L; startAt = 0L; lessonCompleted = false
                         }) { Text(if (isEnglish) "Finish" else "إنهاء") }
                     }
@@ -268,7 +314,9 @@ private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                         val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, "Study progress report").putExtra(Intent.EXTRA_TEXT, report)
                         context.startActivity(Intent.createChooser(send, if (isEnglish) "Share study report" else "مشاركة تقرير الدراسة"))
                     }, modifier = Modifier.fillMaxWidth()) { Text(if (isEnglish) "Share study report" else "مشاركة تقرير الدراسة") }
-                    Text(if (isEnglish) "Saved locally. Secure school reporting requires account-linked backend policies." else "الحفظ محلي حالياً؛ إرسال التقارير للإدارة يحتاج ربطاً آمناً بالحساب وقواعد صلاحيات قاعدة البيانات.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(cloudStatus, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    if (cloudBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Text(if (isEnglish) "School administrators can read synced records; students can only add and view their own records." else "تستطيع إدارة المدرسة الاطلاع على السجلات المتزامنة، والطالب لا يستطيع إضافة أو قراءة إلا سجلات حسابه.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         },
