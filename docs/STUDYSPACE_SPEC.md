@@ -67,7 +67,7 @@ Delivered in the current Android branch:
 Still required before calling StudySpace complete:
 - Shared 3D resource catalogue, teacher/admin publication workflow, licence/attribution metadata, and accessible 2D fallback. The current GLB viewer is a local-file viewer, not a curriculum catalogue.
 - Teacher confirmation/correction with immutable audit events; current homework status is a student self-report.
-- Background/WorkManager retry while the app is closed, queue observability and manual retry controls. The in-app outbox retries on StudySpace open and new submissions; database uniqueness makes network retries idempotent.
+- Background/WorkManager retry while the app is closed. The in-app outbox retries on StudySpace open and new submissions, displays the pending count, and provides a manual retry action; database uniqueness makes network retries idempotent.
 - Server-side pagination/date filtering beyond the latest 500 records, true class-level aggregation, assigned-subject enforcement, and integration tests for role/row isolation.
 - True multi-school tenant isolation. The current `profiles` schema has no `school_id`; class-name matching alone is not a safe tenant boundary. Do not onboard multiple schools into one shared database until school membership and RLS are implemented and verified across every school-owned table and Storage policy.
 
