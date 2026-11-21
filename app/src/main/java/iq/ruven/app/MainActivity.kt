@@ -1950,8 +1950,10 @@ private fun HomeScreen(
             item { StudentQuickPlannerCard(isEnglish = isEnglish) }
             item { StudentFeatureHubCard(isEnglish = isEnglish) }
         }
-        if (isSchoolAdminRole(role)) {
-            item { StudyReportsCard(session = session, backend = backend, isEnglish = isEnglish) }
+        item {
+            if (isSchoolAdminRole(role)) {
+                StudyReportsCard(session = session, backend = backend, isEnglish = isEnglish)
+            }
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
