@@ -23,6 +23,7 @@ Consequently, the current design must be treated as one school per Supabase proj
 
 - RLS is enabled on the inspected application tables.
 - **Completed 2026-11-21:** revoked `TRUNCATE`, `TRIGGER`, `REFERENCES`, and `MAINTAIN` table privileges from `anon` and `authenticated` on all existing public tables. Verified both client roles have zero truncatable public tables and zero trigger-privileged public tables.
+- **RLS behavior smoke test:** simulated the `authenticated` role with the existing student account; it could read its own profile but not the owner profile (1 visible row). Simulated the owner account; it could read both profiles (2 visible rows). Tests ran in rolled-back read-only transactions.
 - The bucket `ruven-school-files` is private; it stores approved PDF textbooks and pending/approved GLB study models with server-side approval checks.
 - Textbook and 3D-resource uploads are admin-gated; student downloads require approved catalogue metadata.
 - The 3D catalogue records subject/chapter, licence, attribution, source, required 2D fallback, bounded GLB size, uploader, reviewer, and approval state. A database trigger now derives uploader/reviewer identity from `auth.uid()`, forces new uploads to `pending`, and makes uploader identity immutable.
