@@ -977,7 +977,7 @@ private fun RuvenAuthenticatedApp(
                     },
                     label = "ruven-tab-transition", modifier = Modifier.weight(1f)) { current ->
                     when (current) {
-                        0 -> HomeScreen(role, remoteItems.count { it.itemType == "homework" }, remoteItems.count { it.itemType == "preparation" }, remoteItems.count { it.itemType == "timetable" }, remoteItems, feedError, isEnglish) { tab = it }
+                        0 -> HomeScreen(role, remoteItems.count { it.itemType == "homework" }, remoteItems.count { it.itemType == "preparation" }, remoteItems.count { it.itemType == "timetable" }, remoteItems, feedError, isEnglish, session, backend) { tab = it }
                         1 -> ServerSchoolItemsScreen(session, backend, remoteItems, "timetable", ruvenText(translated("الجدول الدراسي"), "Timetable", isEnglish), ruvenText(translated("الجداول المنشورة من إدارة المدرسة."), "Timetables published by school administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
                         2 -> ServerSchoolItemsScreen(session, backend, remoteItems, "homework", ruvenText(translated("الواجبات"), "Homework", isEnglish), ruvenText(translated("الواجبات المنشورة حسب المادة والشعبة."), "Homework published by subject and class.", isEnglish), role, profile.className, onRefresh, isEnglish)
                         3 -> ServerSchoolItemsScreen(session, backend, remoteItems, "preparation", ruvenText(translated("التحاضير"), "Preparations", isEnglish), ruvenText(translated("تحاضير الدروس المنشورة من المدرسين والإدارة."), "Lesson preparations published by teachers and administration.", isEnglish), role, profile.className, onRefresh, isEnglish)
@@ -1843,6 +1843,7 @@ private fun OwnerAccountManagementScreen(
 private fun HomeScreen(
     role: SchoolRole, homeworkCount: Int, prepCount: Int, scheduleCount: Int,
     remoteItems: List<SupabaseBackend.SchoolItem>, feedError: String?, isEnglish: Boolean = false,
+    session: SupabaseBackend.Session, backend: SupabaseBackend,
     onNavigate: (Int) -> Unit
 ) {
     var search by remember { mutableStateOf("") }
