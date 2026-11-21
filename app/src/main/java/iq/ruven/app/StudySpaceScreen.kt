@@ -218,7 +218,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                             running = true
                             prefs.edit().putString("last_subject", subject).putString("chapter", chapter).putString("lesson", lesson).putInt("duration", duration).putBoolean("unlimited", unlimited).putString("interval", interval).apply()
                         }) { Icon(Icons.Rounded.PlayArrow, null); Text(if (isEnglish) "Start" else "بدء") }
-                        OutlinedButton(onClick = { running = false }) { Text(if (isEnglish) "Pause" else "إيقاف مؤقت") }
+                        OutlinedButton(onClick = { running = false; startAt = 0L }) { Text(if (isEnglish) "Pause" else "إيقاف مؤقت") }
                         TextButton(onClick = {
                             running = false
                             sessions += 1
