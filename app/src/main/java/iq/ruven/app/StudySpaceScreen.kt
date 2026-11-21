@@ -42,6 +42,16 @@ private fun saveStudyHomework(context: Context, items: List<Pair<String, String>
     studyPrefs(context).edit().putString("homework", array.toString()).apply()
 }
 
+private fun readExamMarkers(context: Context): List<String> {
+    val array = runCatching { JSONArray(studyPrefs(context).getString("exam_markers", "[]")) }.getOrNull() ?: JSONArray()
+    return (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }
+}
+private fun saveExamMarkers(context: Context, markers: List<String>) {
+    val array = JSONArray()
+    markers.forEach { array.put(it) }
+    studyPrefs(context).edit().putString("exam_markers", array.toString()).apply()
+}
+
 @Composable
 fun StudySpaceCard(isEnglish: Boolean) {
     val context = LocalContext.current
@@ -87,6 +97,9 @@ private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
     var lessonCompleted by remember { mutableStateOf(false) }
     var sessions by remember { mutableIntStateOf(prefs.getInt("sessions", 0)) }
     var completedLessons by remember { mutableIntStateOf(prefs.getInt("completed_lessons", 0)) }
+    var examMarkers by remember { mutableStateOf(readExamMarkers(context)) }
+    var newExamMarker by remember { mutableStateOf("") }
+    var examKind by remember { mutableStateOf("شهري") }
     val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -210,6 +223,21 @@ private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                 }
                 item {
                     HorizontalDivider()
+                    Text(if (isEnglish) "EXAM SCOPE" else "نطاق الامتحانات", fontWeight = FontWeight.Bold)
+                    Text(if (isEnglish) "Mark chapters and lessons included in exams." else "حدد الفصول والدروس الداخلة في الامتحانات.")
+                    var kindMenu by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(expanded = kindMenu, onExpandedChange = { kindMenu = !kindMenu }) {
+                        OutlinedTextField(value = examKind, onValueChange = {}, readOnly = true, modifier = Modifier.fillMaxWidth().menuAnchor(), label = { Text(if (isEnglish) "Exam type" else "نوع الامتحان") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(kindMenu) })
+                        ExposedDropdownMenu(expanded = kindMenu, onDismissRequest = { kindMenu = false }) {
+                            listOf("شهري", "نصف السنة", "نهائي", "تجريبي", "أخرى").forEach { kind -> DropdownMenuItem(text = { Text(kind) }, onClick = { examKind = kind; kindMenu = false }) }
+                        }
+                    }
+                    OutlinedTextField(value = newExamMarker, onValueChange = { newExamMarker = it }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Chapter / lesson" else "الفصل أو الدرس") })
+                    Button(onClick = { if (newExamMarker.isNotBlank()) { examMarkers = examMarkers + (examKind + " · " + subject + " · " + newExamMarker.trim()); saveExamMarkers(context, examMarkers); newExamMarker = "" } }, modifier = Modifier.fillMaxWidth()) { Text(if (isEnglish) "Save exam scope" else "حفظ نطاق الامتحان") }
+                    examMarkers.forEachIndexed { index, marker -> Row(verticalAlignment = Alignment.CenterVertically) { Text(marker, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall); TextButton(onClick = { examMarkers = examMarkers.toMutableList().also { it.removeAt(index) }; saveExamMarkers(context, examMarkers) }) { Text(if (isEnglish) "Remove" else "حذف") } } }
+                }
+                item {
+                    HorizontalDivider()
                     Text(if (isEnglish) "FOCUS TIMER" else "مؤقت التركيز", fontWeight = FontWeight.Bold)
                     Text(timer, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -234,6 +262,11 @@ private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                     Text(if (isEnglish) "MY STUDY SUMMARY" else "ملخص إنجازي", fontWeight = FontWeight.Bold)
                     Text(if (isEnglish) "Completed lessons: " + completedLessons + " · Sessions: " + sessions else "الدروس المكتملة: " + completedLessons + " · الجلسات: " + sessions)
                     Text("الواجبات: " + homework.count { it.second == "كُتب" } + " كُتب · " + homework.count { it.second == "اكتمل" } + " مكتمل · " + homework.count { it.second == "شبه منجز" } + " شبه منجز · " + homework.count { it.second == "لم ينجز" } + " لم ينجز", style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(onClick = {
+                        val report = "RUVEN Study Report\nSubject: " + subject + "\nCompleted lessons: " + completedLessons + "\nSessions: " + sessions + "\nHomework: " + homework.joinToString { it.first + " — " + it.second } + "\nExam scope: " + examMarkers.joinToString(" | ")
+                        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, "Study progress report").putExtra(Intent.EXTRA_TEXT, report)
+                        context.startActivity(Intent.createChooser(send, if (isEnglish) "Share study report" else "مشاركة تقرير الدراسة"))
+                    }, modifier = Modifier.fillMaxWidth()) { Text(if (isEnglish) "Share study report" else "مشاركة تقرير الدراسة") }
                     Text(if (isEnglish) "Saved locally. Secure school reporting requires account-linked backend policies." else "الحفظ محلي حالياً؛ إرسال التقارير للإدارة يحتاج ربطاً آمناً بالحساب وقواعد صلاحيات قاعدة البيانات.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
