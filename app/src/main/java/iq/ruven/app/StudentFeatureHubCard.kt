@@ -52,6 +52,36 @@ private data class RuvenStudentTool(
     val hintEn: String = ""
 )
 
+private fun buildMissedPublishedSummary(items: List<iq.ruven.app.data.remote.SupabaseBackend.SchoolItem>, date: String, isEnglish: Boolean): String {
+    val parsedDate = runCatching { java.time.LocalDate.parse(date.trim()) }.getOrNull()
+        ?: return if (isEnglish) "Enter a date as YYYY-MM-DD." else "اكتب التاريخ بصيغة YYYY-MM-DD."
+    val matching = items.filter { item ->
+        item.createdAt.substringBefore('T') == parsedDate.toString() &&
+            item.itemType in setOf("homework", "preparation", "announcement")
+    }
+    if (matching.isEmpty()) return if (isEnglish) {
+        "No published homework, preparations, or announcements were found for $parsedDate in the currently loaded school feed."
+    } else {
+        "ما لقينا واجبات أو تحضيرات أو إعلانات منشورة بتاريخ $parsedDate ضمن محتوى المدرسة المحمّل حاليًا."
+    }
+    return buildString {
+        append(if (isEnglish) "Published school content for $parsedDate" else "المحتوى المدرسي المنشور بتاريخ $parsedDate")
+        matching.forEach { item ->
+            appendLine()
+            appendLine()
+            append(when (item.itemType) {
+                "homework" -> if (isEnglish) "[Homework]" else "[واجب]"
+                "preparation" -> if (isEnglish) "[Preparation]" else "[تحضير]"
+                else -> if (isEnglish) "[Announcement]" else "[إعلان]"
+            })
+            append(item.title)
+            if (item.body.isNotBlank()) appendLine().append(item.body.take(1200))
+        }
+        appendLine()
+        append(if (isEnglish) "This includes only published items currently loaded by RUVEN; it cannot report unrecorded classroom activity." else "هذا يشمل المنشورات المعتمدة المحمّلة حاليًا فقط، ولا يكشف ما حدث داخل الصف ولم يُسجّل بالتطبيق.")
+    }
+}
+
 private fun suggestWakeTime(input: String, isEnglish: Boolean): String {
     val parts = input.split(',', '،').map { it.trim() }
     if (parts.size != 3) return if (isEnglish) "Enter: departure time, preparation minutes, travel minutes. Example: 07:30,25,20" else "اكتب: وقت الخروج، دقائق الاستعداد، دقائق الطريق. مثال: 07:30،25،20"
@@ -205,6 +235,7 @@ private val ruvenStudentTools = listOf(
     RuvenStudentTool(21, "تذكير المغادرة", "Departure reminder", "بعد كم دقيقة تريد تنبيه الاستعداد للمغادرة؟", "How many minutes until you want a departure reminder?"),
     RuvenStudentTool(22, "اقتراح وقت الاستيقاظ", "Wake-up suggestion", "اكتب وقت الخروج ودقائق الاستعداد والطريق", "Enter departure time, preparation minutes, and travel minutes", "مثال: 07:30،25،20", "Example: 07:30,25,20"),
     RuvenStudentTool(23, "ملصق QR للمفقودات", "Lost-item QR label", "اكتب وصفًا مختصرًا للغرض لإنشاء رمز مطالبة عشوائي", "Enter a short item description to create a random claim token"),
+    RuvenStudentTool(27, "شنو فاتني؟", "What did I miss?", "اكتب تاريخ الغياب حتى أعرض الواجبات والإعلانات المنشورة", "Enter an absence date to review published homework and announcements", "YYYY-MM-DD", "YYYY-MM-DD"),
     RuvenStudentTool(33, "استراحة العين", "Eye-break reminder", "حدد التذكير كل كم دقيقة (15–180)، أو اكتب إيقاف", "Set a reminder interval in minutes (15–180), or type off"),
     RuvenStudentTool(31, "تسجيل المزاج", "Mood check-in", "سجّل شعورك بكلمات بسيطة (خاص على جهازك)", "Describe your mood briefly (private on this device)"),
     RuvenStudentTool(32, "دقيقة هدوء", "Quiet minute", "اكتب شنو تريد تتركه مؤقتًا حتى ترتاح", "Write what you want to pause and set aside"),
@@ -212,7 +243,7 @@ private val ruvenStudentTools = listOf(
 )
 
 @Composable
-fun StudentFeatureHubCard(isEnglish: Boolean) {
+fun StudentFeatureHubCard(isEnglish: Boolean, publishedItems: List<iq.ruven.app.data.remote.SupabaseBackend.SchoolItem> = emptyList()) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("ruven_student_tools", Context.MODE_PRIVATE) }
     var selected by remember { mutableStateOf<RuvenStudentTool?>(null) }
@@ -288,7 +319,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                                     if (tool.id == 5) { hintLevel = 0; hintTopic = "" }
                                     if (tool.id == 2) homeworkPlan = readHomeworkPlan(prefs)
                                     if (tool.id == 13) savedContent = readRuvenSavedContent(prefs)
-                                    input = prefs.getString("input_${tool.id}", "") ?: ""
+                                    input = if (tool.id == 27) java.time.LocalDate.now().toString() else prefs.getString("input_${tool.id}", "") ?: ""
                                     output = prefs.getString("result_${tool.id}", "") ?: ""
                                     if (tool.id == 1 || tool.id == 18 || tool.id == 20) {
                                         val itemsKey = when (tool.id) { 1 -> "bag_items"; 18 -> "morning_items"; else -> "tomorrow_items" }
@@ -423,7 +454,9 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val result = if (tool.id == 2) {
+                    val result = if (tool.id == 27) {
+                        buildMissedPublishedSummary(publishedItems, input, isEnglish)
+                    } else if (tool.id == 2) {
                         homeworkPlan = defaultHomeworkSteps(input, isEnglish)
                         writeHomeworkPlan(prefs, homeworkPlan)
                         if (isEnglish) "Editable homework plan created. Change each step and its 5/10/15-minute estimate below." else "انعملت خطة واجب قابلة للتعديل. غيّر كل خطوة ووقتها 5 أو 10 أو 15 دقيقة من القائمة أدناه."
