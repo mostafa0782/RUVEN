@@ -30,6 +30,17 @@ class SchoolPermissionsTest {
     }
 
     @Test
+    fun onlyPrincipalAssistantAndOwnerCanAccessAdminWorkspace() {
+        assertTrue(SchoolPermissions.canAccessSchoolAdminWorkspace(SchoolRole.OWNER))
+        assertTrue(SchoolPermissions.canAccessSchoolAdminWorkspace(SchoolRole.PRINCIPAL))
+        assertTrue(SchoolPermissions.canAccessSchoolAdminWorkspace(SchoolRole.ASSISTANT_PRINCIPAL))
+        assertFalse(SchoolPermissions.canAccessSchoolAdminWorkspace(SchoolRole.EDUCATIONAL_COUNSELOR))
+        assertFalse(SchoolPermissions.canAccessSchoolAdminWorkspace(SchoolRole.MINISTRY_EDUCATION_MEMBER))
+        assertFalse(SchoolPermissions.canAccessSchoolAdminWorkspace(SchoolRole.TEACHER))
+        assertFalse(SchoolPermissions.canAccessSchoolAdminWorkspace(SchoolRole.STUDENT))
+    }
+
+    @Test
     fun onlySchoolLeadershipCanPublishAnnouncements() {
         assertTrue(SchoolPermissions.canPublishAnnouncements(SchoolRole.PRINCIPAL))
         assertTrue(SchoolPermissions.canPublishAnnouncements(SchoolRole.ASSISTANT_PRINCIPAL))
