@@ -58,7 +58,7 @@ Admin view: individual student and class/section summaries, time range filters, 
 Delivered in the current Android branch:
 - Compose StudySpace with subject, optional chapter/lesson, 30-minute through 4-hour and unlimited sessions.
 - Pause/resume and active 25/5 or 50/10 focus/rest phase display; no-break mode.
-- Local persistence with visible cloud-sync outcomes for student-submitted study, lesson, homework, and exam-scope records.
+- Local persistence with visible cloud-sync outcomes and a durable account-scoped outbox for student-submitted study, lesson, homework, and exam-scope records. Records are committed locally before upload, retried when StudySpace opens and after new submissions, and carry stable client UUIDs backed by a unique `(student_id, client_record_id)` index so retries cannot duplicate accepted rows.
 - Optional page tracking and an in-app PDF reader.
 - Private approved-PDF catalogue with administrator upload/review and class-eligible student download.
 - Admin study report with student-submitted activity clearly distinguished from verified learning; client-side search across student/class/subject and a 7-day, 30-day, or all-loaded filter; filtered summary counts for distinct students, study minutes, completed lessons, and all four homework states; export applies the active filters. The endpoint currently returns at most the latest 500 records, and the UI discloses this cap.
@@ -67,7 +67,7 @@ Delivered in the current Android branch:
 Still required before calling StudySpace complete:
 - Shared 3D resource catalogue, teacher/admin publication workflow, licence/attribution metadata, and accessible 2D fallback. The current GLB viewer is a local-file viewer, not a curriculum catalogue.
 - Teacher confirmation/correction with immutable audit events; current homework status is a student self-report.
-- Durable offline outbox with idempotency keys and retry; local fallback currently does not guarantee exactly-once synchronization.
+- Background/WorkManager retry while the app is closed, queue observability and manual retry controls. The in-app outbox retries on StudySpace open and new submissions; database uniqueness makes network retries idempotent.
 - Server-side pagination/date filtering beyond the latest 500 records, true class-level aggregation, assigned-subject enforcement, and integration tests for role/row isolation.
 - True multi-school tenant isolation. The current `profiles` schema has no `school_id`; class-name matching alone is not a safe tenant boundary. Do not onboard multiple schools into one shared database until school membership and RLS are implemented and verified across every school-owned table and Storage policy.
 
