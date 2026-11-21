@@ -74,6 +74,7 @@ fun StudySpaceCard(isEnglish: Boolean) {
     if (open) StudySpaceDialog(isEnglish, { open = false })
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StudySpaceDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
     val context = LocalContext.current
