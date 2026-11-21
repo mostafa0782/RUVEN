@@ -39,7 +39,7 @@ fun PdfBookReaderDialog(
         val result = withContext(Dispatchers.IO) {
             runCatching {
                 val descriptor: ParcelFileDescriptor = context.contentResolver.openFileDescriptor(Uri.parse(uriString), "r")
-                    ?: error("تعذر فتح ملف PDF.")
+                    ?: throw IllegalStateException("تعذر فتح ملف PDF.")
                 descriptor.use { fd ->
                     PdfRenderer(fd).use { renderer ->
                         require(renderer.pageCount > 0) { "ملف PDF لا يحتوي صفحات." }
@@ -67,7 +67,7 @@ fun PdfBookReaderDialog(
         loading = false
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(bitmap) {
         onDispose { bitmap?.recycle() }
     }
 
