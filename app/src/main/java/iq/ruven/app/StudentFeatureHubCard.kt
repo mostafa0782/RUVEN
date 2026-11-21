@@ -52,6 +52,21 @@ private data class RuvenStudentTool(
     val hintEn: String = ""
 )
 
+private fun buildTomorrowPreparationItems(context: Context, extra: String): List<String> {
+    val studyPrefs = context.getSharedPreferences("ruven_study_space_v1", Context.MODE_PRIVATE)
+    val homeworkItems = runCatching {
+        val array = JSONArray(studyPrefs.getString("homework", "[]") ?: "[]")
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val title = item.optString("title").trim()
+            val status = item.optString("status").trim()
+            if (title.isBlank() || status == "اكتمل" || status.equals("completed", true)) null else "واجب: $title"
+        }
+    }.getOrDefault(emptyList())
+    val manualItems = extra.split(',', '،', '|').map { it.trim() }.filter { it.isNotEmpty() }
+    return (homeworkItems + manualItems).distinct().take(40)
+}
+
 private fun buildWeeklyStudentRecap(context: Context, isEnglish: Boolean): String {
     val prefs = context.getSharedPreferences("ruven_study_space_v1", Context.MODE_PRIVATE)
     val cutoff = System.currentTimeMillis() - 7L * 24L * 60L * 60L * 1000L
@@ -216,10 +231,11 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                                     if (tool.id == 13) savedContent = readRuvenSavedContent(prefs)
                                     input = prefs.getString("input_${tool.id}", "") ?: ""
                                     output = prefs.getString("result_${tool.id}", "") ?: ""
-                                    if (tool.id == 1 || tool.id == 18) {
-                                        val itemsKey = if (tool.id == 1) "bag_items" else "morning_items"
-                                        val checkedKey = if (tool.id == 1) "bag_checked" else "morning_checked"
-                                        bagItems = prefs.getString(itemsKey, "").orEmpty().split('|').map { it.trim() }.filter { it.isNotEmpty() }
+                                    if (tool.id == 1 || tool.id == 18 || tool.id == 20) {
+                                        val itemsKey = when (tool.id) { 1 -> "bag_items"; 18 -> "morning_items"; else -> "tomorrow_items" }
+                                        val checkedKey = when (tool.id) { 1 -> "bag_checked"; 18 -> "morning_checked"; else -> "tomorrow_checked" }
+                                        val stored = prefs.getString(itemsKey, "").orEmpty().split('|').map { it.trim() }.filter { it.isNotEmpty() }
+                                        bagItems = if (tool.id == 20 && stored.isEmpty()) buildTomorrowPreparationItems(context, "") else stored
                                         checkedBagItems = prefs.getString(checkedKey, "").orEmpty().split(',').mapNotNull { it.toIntOrNull() }.toSet()
                                     }
                                     val recentEditor = prefs.edit()
@@ -294,13 +310,13 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                                 Text(if (isEnglish) "Share sheet" else "مشاركة الورقة")
                             }
                         }
-                        if ((tool.id == 1 || tool.id == 18) && bagItems.isNotEmpty()) {
-                            Text(if (tool.id == 18) { if (isEnglish) "Morning checklist" else "قائمة الصباح" } else { if (isEnglish) "Bag checklist" else "قائمة الجنطة" }, fontWeight = FontWeight.SemiBold)
+                        if ((tool.id == 1 || tool.id == 18 || tool.id == 20) && bagItems.isNotEmpty()) {
+                            Text(if (tool.id == 20) { if (isEnglish) "Tomorrow preparation" else "تحضير باچر" } else if (tool.id == 18) { if (isEnglish) "Morning checklist" else "قائمة الصباح" } else { if (isEnglish) "Bag checklist" else "قائمة الجنطة" }, fontWeight = FontWeight.SemiBold)
                             bagItems.forEachIndexed { index, item ->
                                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                     androidx.compose.material3.Checkbox(checked = index in checkedBagItems, onCheckedChange = { checked ->
                                         checkedBagItems = if (checked) checkedBagItems + index else checkedBagItems - index
-                                        prefs.edit().putString(if (tool.id == 18) "morning_checked" else "bag_checked", checkedBagItems.sorted().joinToString(",")).apply()
+                                        prefs.edit().putString(when (tool.id) { 18 -> "morning_checked"; 20 -> "tomorrow_checked"; else -> "bag_checked" }, checkedBagItems.sorted().joinToString(",")).apply()
                                     })
                                     Text(item, style = MaterialTheme.typography.bodyMedium)
                                 }
@@ -342,11 +358,11 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                     } else buildToolResult(tool.id, input.trim(), isEnglish)
                     output = result
                     if (tool.id == 5 && input.isNotBlank()) { hintTopic = input.trim(); hintLevel = 0; output = if (isEnglish) "Choose Hint 1 first. Each level gives a little more guidance without immediately giving the answer." else "ابدأ بالتلميح الأول؛ كل مستوى يوضح أكثر من السابق بدون ما يكشف الجواب مباشرة." }
-                    if (tool.id == 1 || tool.id == 18) {
-                        bagItems = input.split(',', '،', '\n', '|').map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(40)
+                    if (tool.id == 1 || tool.id == 18 || tool.id == 20) {
+                        bagItems = if (tool.id == 20) buildTomorrowPreparationItems(context, input) else input.split(',', '،', '|').map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(40)
                         checkedBagItems = emptySet()
-                        val itemsKey = if (tool.id == 1) "bag_items" else "morning_items"
-                        val checkedKey = if (tool.id == 1) "bag_checked" else "morning_checked"
+                        val itemsKey = when (tool.id) { 1 -> "bag_items"; 18 -> "morning_items"; else -> "tomorrow_items" }
+                        val checkedKey = when (tool.id) { 1 -> "bag_checked"; 18 -> "morning_checked"; else -> "tomorrow_checked" }
                         prefs.edit().putString(itemsKey, bagItems.joinToString("|")).putString(checkedKey, "").apply()
                         output = if (isEnglish) "Checklist saved. Tick each item as you complete it." else "انحفظت القائمة. علّم على كل مهمة بعد ما تنجزها."
                     }
