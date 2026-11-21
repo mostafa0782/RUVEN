@@ -101,6 +101,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var pdfUri by remember { mutableStateOf(prefs.getString("pdf_uri", "") ?: "") }
     var showPdfReader by remember { mutableStateOf(false) }
     var show3DViewer by remember { mutableStateOf(false) }
+    var selectedCatalogModel by remember { mutableStateOf<File?>(null) }
     var textbookEntries by remember { mutableStateOf<List<iq.ruven.app.data.remote.SupabaseBackend.TextbookCatalogEntry>>(emptyList()) }
     var textbookCatalogBusy by remember { mutableStateOf(false) }
     var textbookCatalogLoaded by remember { mutableStateOf(false) }
@@ -291,6 +292,18 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                         Text(if (isEnglish) "Open 3D model viewer (GLB)" else "فتح عارض المجسمات ثلاثية الأبعاد (GLB)")
                     }
                     Text(if (isEnglish) "Open a licensed or teacher-provided GLB model. Drag to orbit and pinch to zoom." else "افتح مجسماً بصيغة GLB تملكه أو وفره المدرّس. اسحب للتدوير واستخدم إصبعين للتقريب والإبعاد.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                item {
+                    Study3DResourceSection(
+                        session = session,
+                        backend = backend,
+                        subjectName = subject,
+                        isEnglish = isEnglish,
+                        onOpenModel = { file ->
+                            selectedCatalogModel = file
+                            show3DViewer = true
+                        }
+                    )
                 }
                 item {
                     HorizontalDivider()
@@ -520,7 +533,14 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
         )
     }
     if (show3DViewer) {
-        StudyModelViewerDialog(isEnglish = isEnglish, onDismiss = { show3DViewer = false })
+        StudyModelViewerDialog(
+            isEnglish = isEnglish,
+            initialModelFile = selectedCatalogModel,
+            onDismiss = {
+                show3DViewer = false
+                selectedCatalogModel = null
+            }
+        )
     }
 
 }
