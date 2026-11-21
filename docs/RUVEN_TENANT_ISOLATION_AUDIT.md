@@ -31,7 +31,7 @@ Consequently, the current design must be treated as one school per Supabase proj
 - The 3D catalogue records subject/chapter, licence, attribution, source, required 2D fallback, bounded GLB size, uploader, reviewer, and approval state. A database trigger now derives uploader/reviewer identity from `auth.uid()`, forces new uploads to `pending`, and makes uploader identity immutable.
 - Study records are student-owned for student reads/inserts; admin reporting is role-gated.
 - **Completed 2026-11-21:** database triggers now derive daily-report creators and publish timestamps, preserve report class identity, stamp leave-review and attendance actors, prevent class monitors from altering review metadata, and stamp school-decision execution identity. Authenticated-role RLS probes passed end-to-end for student report/leave submission, owner leave review and decision creation, and assigned-monitor attendance/decision execution; every probe row was rolled back.
-- The client uses a publishable key; the service-role key must remain server-side.
+- The client uses a publishable key; the service-role key must remain server-side. **Completed 2026-11-21:** profile provisioning grants `service_role` table-wide SELECT but UPDATE only on `email`, `full_name`, `role`, `class_name`, and `is_owner`; verification confirmed it cannot update `id` or `created_at`.
 - The latest branch-head CI run completed successfully, including unit tests, release APK assembly, and APK signature verification.
 
 These controls are useful, but they do not substitute for tenant isolation.
