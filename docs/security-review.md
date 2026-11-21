@@ -10,6 +10,8 @@
 - `anon` has no table-level grants on the 15 public application tables. Authenticated access is governed by the reviewed RLS policies.
 - Role/authorization helpers are in the non-exposed `private` schema, use `SECURITY DEFINER` with an empty `search_path`, and derive role/class from the authenticated profile rather than client-supplied claims.
 - The Auth user trigger always creates a least-privileged `student` profile and ignores user-supplied role or owner metadata.
+- **Fixed 2026-11-21:** class-monitor leave-request visibility now requires both the student's class and the monitor's own class to match. Class-monitor report creation and report updates are restricted to their own class and their own report records. Assigned decision recipients must be `class_monitor` accounts, and only a class monitor can read a decision through the assigned-monitor branch.
+- **Fixed 2026-11-21:** `educational_counselor` was removed from `private.is_school_admin()` and from the Android admin-workspace helper. Broad school-wide administration is now limited to owner, principal, and assistant principal. Counselor-specific access must be designed as narrow policies rather than inheriting admin access.
 - The private `ruven-school-files` bucket enforces role-, publication-, and approval-aware access. Restrictive INSERT policies prevent ordinary teacher/monitor upload grants from bypassing admin-only textbook and 3D catalog paths.
 - Trusted-actor triggers derive uploader, reviewer, report creator, leave reviewer/attendance marker, and decision execution actor from `auth.uid()`.
 - Overlapping permissive RLS policies were consolidated while preserving their previous predicates. RLS probes and rollback-based workflow tests passed.
@@ -28,6 +30,10 @@ The following source changes are committed; the final Android CI run must pass b
 - The updater accepts only HTTPS release assets from this repository, validates the final download host, enforces a 100 MiB download ceiling, verifies SHA-256, and deletes incomplete or invalid downloads.
 - Sign-out now revokes the session once rather than issuing the same request twice.
 - The tagged-release workflow rejects non-numeric versions and prevents a 0.1.x release whose Android `versionCode` would be less than or equal to the latest CI build number on that exact commit.
+
+## Verification limitations
+
+The affected workflow tables were empty when the cross-class policies were corrected, so no existing workflow records required migration. The updated policy definitions were re-read from the live catalog. Dedicated live negative tests using separate authenticated class-monitor accounts are still required before production launch; the current tool session did not complete a synthetic cross-role fixture.
 
 ## Outstanding blockers and weaknesses
 
