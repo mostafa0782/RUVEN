@@ -137,3 +137,10 @@ A second pass over the live policy catalog found and corrected two class-boundar
 - The affected workflow tables (`leave_requests`, `school_decisions`, `report_updates`, and `school_items` rows of type `report`) had zero records at the time of the migration, so the policy correction did not hide or rewrite existing workflow records.
 
 The live policy catalog was queried after migration. A dedicated authenticated negative/positive test matrix with separate monitor accounts remains a release gate; do not infer it passed merely from successful migration application.
+
+
+## Migration history reconciliation — 2026-11-21
+
+The repository migration directory now has 44 SQL files, and their 14-digit filename versions match all 44 remote versions returned by the connected Supabase project. Two historical entries absent from the repository were restored as replay-order files; two semantically equivalent local files were renamed to the remote migration names. The four newest migrations were also renamed to their actual remote version numbers.
+
+This only aligns the migration ledger versions. It does **not** prove a clean database replay: `supabase/config.toml` is not yet present and `supabase db reset` has not been run. Do not run `supabase db push` until local initialization, replay, and a linked-project dry run are clean. See `docs/MIGRATION_HISTORY_RECONCILIATION.md`.
