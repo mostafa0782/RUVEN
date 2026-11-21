@@ -95,6 +95,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var pageTracking by remember { mutableStateOf(prefs.getBoolean("page_tracking", false)) }
     var page by remember { mutableStateOf(prefs.getString("last_page", "") ?: "") }
     var pdfUri by remember { mutableStateOf(prefs.getString("pdf_uri", "") ?: "") }
+    var showPdfReader by remember { mutableStateOf(false) }
     var homework by remember { mutableStateOf(readStudyHomework(context)) }
     var newHomework by remember { mutableStateOf("") }
     var newStatus by remember { mutableStateOf("لم ينجز") }
@@ -166,9 +167,9 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                         Icon(Icons.Rounded.Book, null); Spacer(Modifier.width(6.dp))
                         Text(if (pdfUri.isBlank()) (if (isEnglish) "Choose PDF" else "اختيار كتاب PDF") else (if (isEnglish) "PDF selected · change" else "تم اختيار الكتاب · تغيير"))
                     }
-                    if (pdfUri.isNotBlank()) TextButton(onClick = {
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(pdfUri), "application/pdf").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }
-                    }) { Text(if (isEnglish) "Open book" else "فتح الكتاب") }
+                    if (pdfUri.isNotBlank()) TextButton(onClick = { showPdfReader = true }) {
+                        Text(if (isEnglish) "Read book here" else "قراءة الكتاب داخل التطبيق")
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = pageTracking, onCheckedChange = {
                             pageTracking = it
@@ -322,4 +323,19 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(if (isEnglish) "Close" else "إغلاق") } }
     )
+    if (showPdfReader && pdfUri.isNotBlank()) {
+        PdfBookReaderDialog(
+            uriString = pdfUri,
+            initialPage = if (pageTracking) page.toIntOrNull() ?: 1 else 1,
+            onPageChanged = { currentPage ->
+                if (pageTracking) {
+                    page = currentPage.toString()
+                    prefs.edit().putString("last_page", page).apply()
+                }
+            },
+            onDismiss = { showPdfReader = false },
+            isEnglish = isEnglish
+        )
+    }
+
 }
