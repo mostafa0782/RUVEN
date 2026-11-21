@@ -1,12 +1,15 @@
 package iq.ruven.app
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.speech.tts.TextToSpeech
 import android.os.Build
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -73,6 +76,11 @@ private val ruvenStudentTools = listOf(
 @Composable
 fun StudentFeatureHubCard(isEnglish: Boolean) {
     val context = LocalContext.current
+    val revisionExportLauncher = rememberLauncherForActivityResult(CreateDocument("text/plain")) { uri: Uri? ->
+        if (uri != null) runCatching {
+            context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(output) }
+        }
+    }
     val prefs = remember { context.getSharedPreferences("ruven_student_tools", Context.MODE_PRIVATE) }
     var selected by remember { mutableStateOf<RuvenStudentTool?>(null) }
     var input by remember { mutableStateOf("") }
@@ -183,6 +191,14 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         if (hintLevel > 0) Text(buildProgressiveHint(hintTopic, hintLevel, isEnglish), style = MaterialTheme.typography.bodyMedium)
                     }
                     if (output.isNotBlank()) {
+                        if (tool.id == 7) {
+                            TextButton(onClick = { revisionExportLauncher.launch("RUVEN-revision-sheet.txt") }) {
+                                Text(if (isEnglish) "Export printable sheet" else "تصدير ورقة قابلة للطباعة")
+                            }
+                            TextButton(onClick = { shareRevisionSheet(context, output, isEnglish) }) {
+                                Text(if (isEnglish) "Share sheet" else "مشاركة الورقة")
+                            }
+                        }
                         if (tool.id == 1 && bagItems.isNotEmpty()) {
                             Text(if (isEnglish) "Bag checklist" else "قائمة الجنطة", fontWeight = FontWeight.SemiBold)
                             bagItems.forEachIndexed { index, item ->
@@ -240,7 +256,14 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         focusTask = input.trim()
                         focusEnabled = true
                     }
-                    if (tool.id == 8 && input.isNotBlank()) speakWithSystemTts(context, input.trim())
+                    if (tool.id == 9 && input.isNotBlank()) {
+                        parseExamDeadline(input.trim())?.let { deadline ->
+                            scheduleExamDeadlineReminder(context, deadline)
+                            output = if (isEnglish) "Saved ${deadline.subject} for ${deadline.date}. A reminder is scheduled for the day before at 9:00 AM, or immediately if that time has passed."
+                            else "انحفظ امتحان ${deadline.subject} بتاريخ ${deadline.date}. تمت جدولة تذكير قبل الموعد بيوم الساعة 9 صباحًا، أو فورًا إذا فات الوقت."
+                        }
+                    }
+                    if (tool.id == 8 && input.isNotBlank()) speakWithSystemTts(context, input.trim(), isEnglish)
                 }) { Text(if (isEnglish) "Generate / Save" else "إنشاء / حفظ") }
             },
             dismissButton = {
@@ -310,14 +333,36 @@ private fun buildStudyTimePlan(value: String, isEnglish: Boolean): String {
     }
 }
 
-private fun speakWithSystemTts(context: Context, text: String) {
+internal fun shareRevisionSheet(context: Context, text: String, isEnglish: Boolean) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, if (isEnglish) "RUVEN revision sheet" else "ورقة مراجعة RUVEN")
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(intent, if (isEnglish) "Export revision sheet" else "تصدير ورقة المراجعة"))
+}
+
+private fun speakWithSystemTts(context: Context, text: String, isEnglish: Boolean) {
     runCatching {
         lateinit var engine: TextToSpeech
         engine = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                engine.language = Locale("ar")
-                engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ruven_read_aloud")
+            if (status != TextToSpeech.SUCCESS) {
+                engine.shutdown()
+                return@TextToSpeech
             }
+            val language = if (isEnglish) Locale.ENGLISH else Locale("ar")
+            if (engine.isLanguageAvailable(language) < TextToSpeech.LANG_AVAILABLE) {
+                engine.shutdown()
+                return@TextToSpeech
+            }
+            engine.language = language
+            engine.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) = Unit
+                override fun onDone(utteranceId: String?) { engine.shutdown() }
+                @Deprecated("Deprecated in Java")
+                override fun onError(utteranceId: String?) { engine.shutdown() }
+            })
+            if (engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ruven_read_aloud") == TextToSpeech.ERROR) engine.shutdown()
         }
     }
 }
@@ -331,9 +376,9 @@ private fun buildToolResult(id: Int, value: String, isEnglish: Boolean): String 
         4 -> if (isEnglish) "Focus task: $value\nKeep only this task in front of you; take a break when needed." else "مهمة التركيز: $value\nخلّ تركيزك على هاي المهمة وخذ استراحة عند الحاجة."
         5 -> if (isEnglish) "Select a hint level above to get guidance for: $value" else "اختار مستوى التلميح أعلاه حتى تحصل على إرشاد لموضوع: $value"
         6 -> buildStudyTimePlan(value, isEnglish)
-        7 -> if (isEnglish) "REVISION SHEET\n$value\n\nCheck each point against your teacher's material." else "ورقة مراجعة\n$value\n\nطابق كل نقطة ويا مادة المدرّس."
+        7 -> if (isEnglish) "RUVEN · REVISION SHEET\n\n$value\n\nReview each point against the material published by your teacher." else "RUVEN · ورقة مراجعة\n\n$value\n\nراجع كل نقطة وطابقها ويا المادة المنشورة من المدرّس."
         8 -> if (isEnglish) "Read-aloud requested. If your device's speech engine is available, playback will start." else "تم طلب القراءة الصوتية. إذا محرّك النطق متوفر بالجهاز، يبدأ التشغيل."
-        9 -> if (isEnglish) "Exam/deadline saved on this device:\n$value\nAdd it to your calendar too; this tool does not send reminders yet." else "تم حفظ موعد الامتحان/التسليم على هذا الجهاز:\n$value\nأضفه للتقويم أيضًا؛ الأداة حاليًا ما ترسل تذكيرات."
+        9 -> parseExamDeadline(value)?.let { deadline -> if (isEnglish) "Exam saved: ${deadline.subject} · ${deadline.date}. A reminder will be scheduled." else "تم حفظ الامتحان: ${deadline.subject} · ${deadline.date}. راح ينجدول تذكير." } ?: if (isEnglish) "Use: subject | YYYY-MM-DD (example: Chemistry | 2026-12-03)." else "اكتب: المادة | YYYY-MM-DD (مثال: كيمياء | 2026-12-03)."
         10 -> runCatching { val parts = value.split('/'); val score = parts[0].trim().toDouble(); val total = parts[1].trim().toDouble(); require(total > 0 && score >= 0 && score <= total); val pct = score / total * 100; if (isEnglish) "Estimated percentage: ${"%.1f".format(Locale.US, pct)}%. This is a calculation, not an official grade." else "النسبة الحسابية: ${"%.1f".format(Locale.US, pct)}٪. هاي عملية حسابية وليست درجة رسمية." }.getOrElse { if (isEnglish) "Use the format score/total, for example 42/50." else "اكتبها بهالشكل: درجتك/الدرجة الكلية، مثل 42/50." }
         13 -> if (isEnglish) "Saved locally:\n$value" else "انحفظ محليًا:\n$value"
         14 -> if (isEnglish) "Recent item recorded:\n$value" else "تم تسجيل العنصر ضمن آخر ما فتحته:\n$value"
