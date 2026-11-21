@@ -533,6 +533,56 @@ class SupabaseBackend(
         val recordedAt: String
     )
 
+    data class TextbookCatalogEntry(
+        val id: String,
+        val gradeName: String,
+        val className: String?,
+        val subjectName: String,
+        val title: String,
+        val editionLabel: String,
+        val publicationYear: Int?,
+        val publisher: String?,
+        val sourceName: String?,
+        val sourceUrl: String?,
+        val fileSizeBytes: Long,
+        val status: String,
+        val createdAt: String
+    )
+
+    /** Published catalogue entries are filtered by RLS to the student's class. */
+    suspend fun loadTextbookCatalog(
+        session: Session,
+        subjectName: String? = null,
+        gradeName: String? = null
+    ): List<TextbookCatalogEntry> = withContext(Dispatchers.IO) {
+        val filters = buildString {
+            subjectName?.trim()?.takeIf { it.isNotBlank() }?.let { append("&subject_name=eq.${encode(it)}") }
+            gradeName?.trim()?.takeIf { it.isNotBlank() }?.let { append("&grade_name=eq.${encode(it)}") }
+        }
+        val rows = requestArray(
+            "/rest/v1/textbook_catalog?select=id,grade_name,class_name,subject_name,title,edition_label,publication_year,publisher,source_name,source_url,file_size_bytes,status,created_at&order=grade_name.asc,subject_name.asc,updated_at.desc&limit=200$filters",
+            session
+        )
+        (0 until rows.length()).map { i ->
+            val row = rows.getJSONObject(i)
+            TextbookCatalogEntry(
+                id = row.getString("id"),
+                gradeName = row.getString("grade_name"),
+                className = row.optString("class_name").takeIf { it.isNotBlank() && it != "null" },
+                subjectName = row.getString("subject_name"),
+                title = row.getString("title"),
+                editionLabel = row.getString("edition_label"),
+                publicationYear = if (row.isNull("publication_year")) null else row.optInt("publication_year"),
+                publisher = row.optString("publisher").takeIf { it.isNotBlank() && it != "null" },
+                sourceName = row.optString("source_name").takeIf { it.isNotBlank() && it != "null" },
+                sourceUrl = row.optString("source_url").takeIf { it.startsWith("https://") },
+                fileSizeBytes = row.optLong("file_size_bytes"),
+                status = row.optString("status", "pending"),
+                createdAt = row.optString("created_at")
+            )
+        }
+    }
+
     /** Admins can see all records through RLS; students can only retrieve their own. */
     suspend fun loadStudentStudyRecords(session: Session, studentId: String? = null): List<StudentStudyRecord> = withContext(Dispatchers.IO) {
         val filter = studentId?.takeIf { it.isNotBlank() }?.let { "&student_id=eq.${encode(it)}" }.orEmpty()
