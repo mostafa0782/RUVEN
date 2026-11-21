@@ -131,6 +131,13 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     }
     val seconds = if (unlimited) elapsed else (duration * 60L - elapsed).coerceAtLeast(0L)
     val timer = "%02d:%02d:%02d".format(seconds / 3600, (seconds % 3600) / 60, seconds % 60)
+    val selectedInterval = when (interval) {
+        "50/10" -> StudyInterval.LONG_50_10
+        "بلا استراحة" -> StudyInterval.NO_BREAKS
+        else -> StudyInterval.POMODORO_25_5
+    }
+    val cycleState = studyCycleState(elapsed, selectedInterval)
+    val phaseTime = "%02d:%02d".format(cycleState.remainingSeconds / 60, cycleState.remainingSeconds % 60)
 
     AlertDialog(onDismissRequest = onDismiss, modifier = Modifier.fillMaxWidth(),
         title = {
@@ -353,6 +360,15 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     HorizontalDivider()
                     Text(if (isEnglish) "FOCUS TIMER" else "مؤقت التركيز", fontWeight = FontWeight.Bold)
                     Text(timer, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        when (cycleState.phase) {
+                            StudyPhase.FOCUS -> if (isEnglish) "Focus block · $phaseTime remaining" else "وقت التركيز · متبقٍ $phaseTime"
+                            StudyPhase.BREAK -> if (isEnglish) "Break time · $phaseTime remaining" else "وقت الاستراحة · متبقٍ $phaseTime"
+                            StudyPhase.NO_BREAK -> if (isEnglish) "Breaks disabled" else "الاستراحات معطّلة"
+                        },
+                        color = if (cycleState.phase == StudyPhase.BREAK) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(enabled = !running, onClick = {
                             if (startAt == 0L) startAt = System.currentTimeMillis() - elapsed * 1000L
