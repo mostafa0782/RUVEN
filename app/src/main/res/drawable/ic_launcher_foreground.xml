@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Neon glass rim, kept inside the adaptive-icon safe zone -->
+    <path android:pathData="M23,18 L85,18 Q90,18 90,23 L90,85 Q90,90 85,90 L23,90 Q18,90 18,85 L18,23 Q18,18 23,18 Z"
+        android:strokeWidth="1.6" android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:startColor="#37E8FF" android:centerColor="#1677FF" android:endColor="#38CFFF" android:angle="45" />
+        </aapt:attr>
+    </path>
+    <!-- Graduation cap -->
+    <path android:pathData="M23,34 L52,23 L85,34 L54,45 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startColor="#DDFBFF" android:centerColor="#51C9FF" android:endColor="#1267F5" android:angle="90" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M34,38 L34,45 Q53,56 73,45 L73,38 L54,46 Z" android:fillColor="#188AFF" />
+    <path android:pathData="M83,34 L83,45" android:strokeColor="#C5F7FF" android:strokeWidth="1.8" android:strokeLineCap="round" />
+    <path android:pathData="M80.8,45.5 Q83,43.5 85.2,45.5 L85.2,51 Q83,53 80.8,51 Z" android:fillColor="#54D9FF" />
+    <!-- Letter R -->
+    <path android:pathData="M34,42 L52,42 C65,42 72,49 72,59 C72,66 68,71 61,73 L74,86 L61,86 L49,73 L45,73 L45,86 L34,86 Z M45,52 L45,64 L52,64 C58,64 61,62 61,58 C61,54 58,52 52,52 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startColor="#F0FEFF" android:centerColor="#75DDFF" android:endColor="#1784FF" android:angle="45" />
+        </aapt:attr>
+    </path>
+    <!-- Open book -->
+    <path android:pathData="M22,76 Q34,73 50,85 L50,91 Q34,80 22,84 Z" android:fillColor="#F0FCFF" />
+    <path android:pathData="M86,76 Q74,73 58,85 L58,91 Q74,80 86,84 Z" android:fillColor="#8BEAFF" />
+    <path android:pathData="M21,87 Q35,84 50,94 L50,97 Q34,88 19,92 Z" android:fillColor="#1B8EFF" />
+    <path android:pathData="M87,87 Q73,84 58,94 L58,97 Q74,88 89,92 Z" android:fillColor="#1677FF" />
+    <path android:pathData="M54,85 L54,97" android:strokeColor="#BDF8FF" android:strokeWidth="1.4" android:strokeLineCap="round" />
+</vector>

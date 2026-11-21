@@ -1,0 +1,48 @@
+package iq.ruven.app.data.repository
+
+import iq.ruven.app.data.model.Homework
+import iq.ruven.app.data.model.Lesson
+import iq.ruven.app.data.model.SchoolAnnouncement
+import iq.ruven.app.data.model.SchoolModelValidation
+
+/**
+ * Decorator that prevents malformed API records from crossing into presentation code.
+ * It does not replace server-side validation, authentication, or authorization.
+ */
+class ValidatedSchoolContentRepository(
+    private val delegate: SchoolContentRepository
+) : SchoolContentRepository {
+    override suspend fun getLessons(weekday: Int): Result<List<Lesson>> {
+        if (weekday !in 1..7) {
+            return Result.failure(IllegalArgumentException("weekday must be in 1..7"))
+        }
+        return delegate.getLessons(weekday).mapCatching { lessons ->
+            validateRecords(lessons, SchoolModelValidation::validate)
+        }
+    }
+
+    override suspend fun getHomework(): Result<List<Homework>> =
+        delegate.getHomework().mapCatching { homework ->
+            validateRecords(homework, SchoolModelValidation::validate)
+        }
+
+    override suspend fun getAnnouncements(): Result<List<SchoolAnnouncement>> =
+        delegate.getAnnouncements().mapCatching { announcements ->
+            validateRecords(announcements, SchoolModelValidation::validate)
+        }
+
+    private fun <T> validateRecords(
+        records: List<T>,
+        validate: (T) -> List<String>
+    ): List<T> {
+        val errors = records.flatMapIndexed { index, record ->
+            validate(record).map { "record[$index]: $it" }
+        }
+        if (errors.isNotEmpty()) throw InvalidSchoolContentException(errors)
+        return records
+    }
+}
+
+class InvalidSchoolContentException(
+    val validationErrors: List<String>
+) : IllegalStateException("School content failed validation")
