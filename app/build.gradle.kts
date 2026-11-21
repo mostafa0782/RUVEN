@@ -63,6 +63,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("com.google.zxing:core:3.5.3")
     // Compose-native GLB/glTF renderer compatible with this project toolchain.
     implementation("io.github.sceneview:sceneview:2.3.0")
     implementation("androidx.compose.ui:ui")
