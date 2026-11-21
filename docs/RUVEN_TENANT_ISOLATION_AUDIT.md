@@ -68,8 +68,9 @@ Do not add a default school UUID or fabricate a school record. Before backfill:
 ### 6. Operational checks
 
 - Enable Supabase Auth leaked-password protection in the Auth dashboard; the current security advisor reports it disabled.
-- Add the missing index for `student_roster.created_by` after confirming its FK and existing indexes.
-- Review duplicate/permissive policies and ensure each UPDATE policy has both `USING` and `WITH CHECK`.
+- **Completed 2026-11-21:** added `student_roster(created_by)` index after confirming its FK.
+- **Completed 2026-11-21:** split owner roster write policies, consolidated roster SELECT authorization, and wrapped `auth.uid()` in a scalar subquery. The performance advisor no longer reports the roster FK as unindexed or the roster auth initplan issue.
+- Remaining: review duplicate/permissive policies on other tables and ensure each UPDATE policy has both `USING` and `WITH CHECK`.
 - Run Supabase security/performance advisors after each schema change.
 
 ## Rollout gates
