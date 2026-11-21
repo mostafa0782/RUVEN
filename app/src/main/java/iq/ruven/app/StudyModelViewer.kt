@@ -72,10 +72,14 @@ internal fun glbDeclaredLength(header: ByteArray): Long? {
 }
 
 @Composable
-fun StudyModelViewerDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
+fun StudyModelViewerDialog(
+    isEnglish: Boolean,
+    onDismiss: () -> Unit,
+    initialModelFile: File? = null
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var modelFile by remember { mutableStateOf<File?>(null) }
+    var modelFile by remember(initialModelFile) { mutableStateOf(initialModelFile) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var sceneGeneration by remember { mutableIntStateOf(0) }
