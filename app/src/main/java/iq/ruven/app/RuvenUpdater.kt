@@ -119,7 +119,11 @@ internal object RuvenUpdater {
         }
 
         val connection = (URL(apkUrl).openConnection() as HttpURLConnection)
-        val apk = File(activity.cacheDir, "RUVEN-update.apk")
+        val updateDir = File(activity.cacheDir, "updates")
+        if (!updateDir.exists() && !updateDir.mkdirs()) {
+            throw IllegalStateException("تعذر تجهيز مساحة التحديث.")
+        }
+        val apk = File(updateDir, "RUVEN-update.apk")
         var verified = false
         try {
             connection.connectTimeout = 15000
