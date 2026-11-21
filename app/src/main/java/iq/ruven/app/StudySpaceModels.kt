@@ -10,7 +10,6 @@ enum class StudyDuration(val minutes: Int) {
 enum class StudyInterval(val focusMinutes: Int, val breakMinutes: Int) {
     POMODORO_25_5(25, 5),
     LONG_50_10(50, 10),
-    FOCUS_10_50(50, 10),
     NO_BREAKS(0, 0)
 }
 
