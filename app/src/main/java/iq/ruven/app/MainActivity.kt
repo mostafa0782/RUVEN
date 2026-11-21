@@ -996,9 +996,8 @@ private fun RuvenAuthenticatedApp(
     }
 }
 
-private fun isSchoolAdminRole(role: SchoolRole): Boolean = role in setOf(
-    SchoolRole.OWNER, SchoolRole.PRINCIPAL, SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.EDUCATIONAL_COUNSELOR
-)
+private fun isSchoolAdminRole(role: SchoolRole): Boolean =
+    SchoolPermissions.canAccessSchoolAdminWorkspace(role)
 
 private fun localIsoDate(): String = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 
