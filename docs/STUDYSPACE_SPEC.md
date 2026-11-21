@@ -61,14 +61,14 @@ Delivered in the current Android branch:
 - Local persistence with visible cloud-sync outcomes for student-submitted study, lesson, homework, and exam-scope records.
 - Optional page tracking and an in-app PDF reader.
 - Private approved-PDF catalogue with administrator upload/review and class-eligible student download.
-- Admin study report with student-submitted activity clearly distinguished from verified learning.
+- Admin study report with student-submitted activity clearly distinguished from verified learning; client-side search across student/class/subject and a 7-day, 30-day, or all-loaded filter; filtered summary counts for distinct students, study minutes, completed lessons, and all four homework states; export applies the active filters. The endpoint currently returns at most the latest 500 records, and the UI discloses this cap.
 - On-demand local GLB viewer using SceneView. It accepts a selected GLB v2 file up to 25 MiB, validates its header/version/declared length, and supports touch orbit/zoom/pan. Temporary files and model nodes are disposed with the viewer.
 
 Still required before calling StudySpace complete:
 - Shared 3D resource catalogue, teacher/admin publication workflow, licence/attribution metadata, and accessible 2D fallback. The current GLB viewer is a local-file viewer, not a curriculum catalogue.
 - Teacher confirmation/correction with immutable audit events; current homework status is a student self-report.
 - Durable offline outbox with idempotency keys and retry; local fallback currently does not guarantee exactly-once synchronization.
-- Report date filters, class summaries, assigned-subject enforcement, and integration tests for role/row isolation.
+- Server-side pagination/date filtering beyond the latest 500 records, true class-level aggregation, assigned-subject enforcement, and integration tests for role/row isolation.
 - True multi-school tenant isolation. The current `profiles` schema has no `school_id`; class-name matching alone is not a safe tenant boundary. Do not onboard multiple schools into one shared database until school membership and RLS are implemented and verified across every school-owned table and Storage policy.
 
 ## Release gates
