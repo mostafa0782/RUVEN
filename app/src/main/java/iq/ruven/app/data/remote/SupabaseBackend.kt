@@ -549,6 +549,141 @@ class SupabaseBackend(
         val createdAt: String
     )
 
+    /**
+     * Uploads a PDF into the private bucket, then creates a pending catalogue row.
+     * If the database insert fails, the just-uploaded object is removed.
+     */
+    suspend fun uploadTextbook(
+        session: Session,
+        gradeName: String,
+        className: String?,
+        subjectName: String,
+        title: String,
+        editionLabel: String,
+        publicationYear: Int?,
+        publisher: String?,
+        sourceName: String?,
+        sourceUrl: String?,
+        pdfBytes: ByteArray
+    ): TextbookCatalogEntry = withContext(Dispatchers.IO) {
+        require(pdfBytes.size in 8..20_971_520) { "حجم ملف PDF يجب ألا يتجاوز 20 ميغابايت." }
+        require(pdfBytes.copyOfRange(0, 5).toString(Charsets.US_ASCII) == "%PDF-") {
+            "الملف المحدد ليس مستند PDF صالحاً."
+        }
+        require(gradeName.isNotBlank() && subjectName.isNotBlank() && title.isNotBlank() && editionLabel.isNotBlank()) {
+            "أكمل الصف والمادة والعنوان والطبعة."
+        }
+        val cleanSourceUrl = sourceUrl?.trim()?.takeIf { it.isNotBlank() }
+        require(cleanSourceUrl == null || cleanSourceUrl.startsWith("https://")) {
+            "رابط المصدر يجب أن يبدأ بـ HTTPS."
+        }
+        val storagePath = "textbooks/${UUID.randomUUID()}.pdf"
+        val encodedPath = storagePath.split("/").joinToString("/") { encode(it) }
+        storageRequest("/storage/v1/object/ruven-school-files/$encodedPath", "POST", session, pdfBytes, "application/pdf")
+        try {
+            val row = JSONObject().apply {
+                put("grade_name", gradeName.trim())
+                put("class_name", className?.trim()?.takeIf { it.isNotBlank() } ?: JSONObject.NULL)
+                put("subject_name", subjectName.trim())
+                put("title", title.trim())
+                put("edition_label", editionLabel.trim())
+                put("publication_year", publicationYear ?: JSONObject.NULL)
+                put("publisher", publisher?.trim()?.takeIf { it.isNotBlank() } ?: JSONObject.NULL)
+                put("source_name", sourceName?.trim()?.takeIf { it.isNotBlank() } ?: JSONObject.NULL)
+                put("source_url", cleanSourceUrl ?: JSONObject.NULL)
+                put("storage_path", storagePath)
+                put("mime_type", "application/pdf")
+                put("file_size_bytes", pdfBytes.size)
+                put("uploaded_by", session.userId)
+                put("status", "pending")
+            }
+            val response = requestRaw("/rest/v1/textbook_catalog", "POST", row, session, preferRepresentation = true)
+            val rows = JSONArray(response)
+            require(rows.length() == 1) { "تم رفع الملف لكن تعذر تأكيد سجل الكتاب." }
+            rows.getJSONObject(0).let(::parseTextbookCatalogEntry)
+        } catch (error: Exception) {
+            runCatching { storageRequest("/storage/v1/object/ruven-school-files/$encodedPath", "DELETE", session, null, null) }
+            throw error
+        }
+    }
+
+    suspend fun reviewTextbook(
+        session: Session,
+        textbookId: String,
+        approve: Boolean
+    ) = withContext(Dispatchers.IO) {
+        require(textbookId.isNotBlank())
+        val body = JSONObject().apply {
+            put("status", if (approve) "approved" else "rejected")
+            put("reviewed_by", session.userId)
+            put("reviewed_at", java.time.Instant.now().toString())
+        }
+        requestRaw("/rest/v1/textbook_catalog?id=eq.${encode(textbookId)}", "PATCH", body, session)
+        Unit
+    }
+
+    /** Fetches an approved PDF through authenticated Storage; RLS checks its catalogue state. */
+    suspend fun downloadApprovedTextbook(session: Session, storagePath: String): ByteArray = withContext(Dispatchers.IO) {
+        require(storagePath.startsWith("textbooks/") && !storagePath.contains("..")) {
+            "مسار الكتاب غير صالح."
+        }
+        val encodedPath = storagePath.split("/").joinToString("/") { encode(it) }
+        storageRequest("/storage/v1/object/authenticated/ruven-school-files/$encodedPath", "GET", session, null, null)
+    }
+
+    private fun storageRequest(
+        path: String,
+        method: String,
+        session: Session,
+        body: ByteArray?,
+        contentType: String?
+    ): ByteArray {
+        var connection: HttpURLConnection? = null
+        try {
+            connection = (URL(baseUrl + path).openConnection() as HttpURLConnection).apply {
+                requestMethod = method
+                connectTimeout = 20_000
+                readTimeout = 45_000
+                setRequestProperty("apikey", publishableKey)
+                setRequestProperty("Authorization", "Bearer ${session.accessToken}")
+                if (contentType != null) setRequestProperty("Content-Type", contentType)
+                if (body != null) {
+                    doOutput = true
+                    outputStream.use { it.write(body) }
+                }
+            }
+            val status = connection.responseCode
+            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val response = stream?.use { it.readBytes() } ?: ByteArray(0)
+            if (status !in 200..299) {
+                val raw = response.toString(Charsets.UTF_8)
+                val message = runCatching {
+                    JSONObject(raw).optString("message").ifBlank { JSONObject(raw).optString("error") }
+                }.getOrDefault("")
+                throw IOException(message.ifBlank { "تعذر التعامل مع ملف الكتاب (HTTP $status)." })
+            }
+            return response
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    private fun parseTextbookCatalogEntry(row: JSONObject) = TextbookCatalogEntry(
+        id = row.getString("id"),
+        gradeName = row.getString("grade_name"),
+        className = row.optString("class_name").takeIf { it.isNotBlank() && it != "null" },
+        subjectName = row.getString("subject_name"),
+        title = row.getString("title"),
+        editionLabel = row.getString("edition_label"),
+        publicationYear = if (row.isNull("publication_year")) null else row.optInt("publication_year"),
+        publisher = row.optString("publisher").takeIf { it.isNotBlank() && it != "null" },
+        sourceName = row.optString("source_name").takeIf { it.isNotBlank() && it != "null" },
+        sourceUrl = row.optString("source_url").takeIf { it.startsWith("https://") },
+        fileSizeBytes = row.optLong("file_size_bytes"),
+        status = row.optString("status", "pending"),
+        createdAt = row.optString("created_at")
+    )
+
     /** Published catalogue entries are filtered by RLS to the student's class. */
     suspend fun loadTextbookCatalog(
         session: Session,
