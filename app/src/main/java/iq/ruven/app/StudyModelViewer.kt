@@ -251,6 +251,9 @@ private fun StudyModelScene(file: File, isEnglish: Boolean, onError: (String) ->
     val modelNode = remember(modelInstance) {
         modelInstance?.let { ModelNode(modelInstance = it, scaleToUnits = 1.2f) }
     }
+    DisposableEffect(modelNode) {
+        onDispose { modelNode?.destroy() }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scene(
