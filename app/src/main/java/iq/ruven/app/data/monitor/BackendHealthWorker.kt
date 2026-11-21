@@ -2,6 +2,7 @@ package iq.ruven.app.data.monitor
 
 import android.content.Context
 import iq.ruven.app.RuvenNotifications
+import iq.ruven.app.StudyRecordOutbox
 import iq.ruven.app.data.remote.SupabaseBackend
 import android.util.Log
 import androidx.work.CoroutineWorker
@@ -28,8 +29,9 @@ class BackendHealthWorker(
 
         // Refresh the signed-in session and sync workflow alerts in the background.
         // A workflow sync failure must not prevent the independent health check.
-        runCatching { syncWorkflowNotifications() }
-            .onFailure { Log.d(TAG, "Workflow notification sync skipped: ${it.message}") }
+        val workflowSyncComplete = runCatching { syncWorkflowNotifications() }
+            .onFailure { Log.d(TAG, "Workflow/study sync will retry: ${it.message}") }
+            .getOrDefault(false)
 
         var connection: HttpURLConnection? = null
         try {
@@ -45,7 +47,10 @@ class BackendHealthWorker(
             when {
                 status in 200..299 -> {
                     Log.d(TAG, "Backend health check succeeded (HTTP $status)")
-                    Result.success()
+                    if (workflowSyncComplete) Result.success() else {
+                        Log.d(TAG, "Study outbox still has pending records; scheduling retry")
+                        Result.retry()
+                    }
                 }
                 status >= 500 || status == 429 -> {
                     Log.w(TAG, "Backend temporarily unavailable (HTTP $status)")
@@ -65,15 +70,22 @@ class BackendHealthWorker(
         }
     }
 
-    private suspend fun syncWorkflowNotifications() {
+    private suspend fun syncWorkflowNotifications(): Boolean {
         val prefs = applicationContext.getSharedPreferences("ruven_auth", Context.MODE_PRIVATE)
-        val refreshToken = prefs.getString("refresh_token", null)?.takeIf { it.isNotBlank() } ?: return
+        val refreshToken = prefs.getString("refresh_token", null)?.takeIf { it.isNotBlank() } ?: return true
         val backend = SupabaseBackend()
         val session = backend.refreshSession(refreshToken)
         prefs.edit().putString("refresh_token", session.refreshToken).apply()
         val profile = backend.loadMyProfile(session)
         val items = backend.loadUserNotifications(session)
         RuvenNotifications.processWorkflowSync(applicationContext, profile.id, items)
+
+        val studySync = StudyRecordOutbox.syncPending(applicationContext, backend, session)
+        if (studySync.pendingCount > 0) {
+            Log.d(TAG, "Study outbox pending records: ${studySync.pendingCount}")
+            return false
+        }
+        return true
     }
 
     companion object {
