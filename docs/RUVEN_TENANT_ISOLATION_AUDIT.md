@@ -24,7 +24,7 @@ Consequently, the current design must be treated as one school per Supabase proj
 - RLS is enabled on the inspected application tables.
 - The bucket `ruven-school-files` is private; it stores approved PDF textbooks and pending/approved GLB study models with server-side approval checks.
 - Textbook and 3D-resource uploads are admin-gated; student downloads require approved catalogue metadata.
-- The 3D catalogue records subject/chapter, licence, attribution, source, required 2D fallback, bounded GLB size, uploader, reviewer, and approval state.
+- The 3D catalogue records subject/chapter, licence, attribution, source, required 2D fallback, bounded GLB size, uploader, reviewer, and approval state. A database trigger now derives uploader/reviewer identity from `auth.uid()`, forces new uploads to `pending`, and makes uploader identity immutable.
 - Study records are student-owned for student reads/inserts; admin reporting is role-gated.
 - The client uses a publishable key; the service-role key must remain server-side.
 - The latest branch-head CI run completed successfully, including unit tests, release APK assembly, and APK signature verification.
@@ -73,6 +73,7 @@ Do not add a default school UUID or fabricate a school record. Before backfill:
 - **Completed 2026-11-21:** added indexes for `study_3d_resources(uploaded_by)` and `study_3d_resources(reviewed_by)`; verified both indexes exist and the unindexed-FK advisor finding cleared.
 - **Completed 2026-11-21:** split owner roster write policies, consolidated roster SELECT authorization, and wrapped `auth.uid()` in a scalar subquery. The performance advisor no longer reports the roster FK as unindexed or the roster auth initplan issue.
 - Remaining: review duplicate/permissive policies on other tables and ensure each UPDATE policy has both `USING` and `WITH CHECK`. The advisor still reports multiple permissive policies on several existing tables; these need table-by-table semantic review before consolidation.
+- **Still requires dashboard action:** enable Supabase Auth leaked-password protection. The security advisor continues to report this setting as disabled; it is not changed by the database migration.
 - Run Supabase security/performance advisors after each schema change.
 
 ## Rollout gates
