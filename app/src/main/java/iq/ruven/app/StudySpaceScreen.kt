@@ -437,8 +437,21 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                             val finishedLesson = lessonCompleted
                             sessions += 1
                             if (finishedLesson) completedLessons += 1
+                            val weeklySessions = runCatching { JSONArray(prefs.getString("weekly_sessions", "[]") ?: "[]") }.getOrDefault(JSONArray())
+                            weeklySessions.put(JSONObject()
+                                .put("at", System.currentTimeMillis())
+                                .put("subject", subject)
+                                .put("lesson", lesson)
+                                .put("seconds", finishedSeconds)
+                                .put("completed", finishedLesson))
+                            val boundedWeeklySessions = JSONArray()
+                            val firstWeeklyIndex = (weeklySessions.length() - 180).coerceAtLeast(0)
+                            for (recordIndex in firstWeeklyIndex until weeklySessions.length()) {
+                                boundedWeeklySessions.put(weeklySessions.getJSONObject(recordIndex))
+                            }
                             prefs.edit().putString("last_subject", subject).putInt("sessions", sessions).putInt("completed_lessons", completedLessons)
-                                .putLong("study_seconds", prefs.getLong("study_seconds", 0L) + finishedSeconds).apply()
+                                .putLong("study_seconds", prefs.getLong("study_seconds", 0L) + finishedSeconds)
+                                .putString("weekly_sessions", boundedWeeklySessions.toString()).apply()
                             cloudBusy = true
                             scope.launch {
                                 val drafts = buildList {
