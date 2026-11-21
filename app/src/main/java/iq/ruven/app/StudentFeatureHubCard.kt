@@ -150,6 +150,7 @@ private val ruvenStudentTools = listOf(
     RuvenStudentTool(17, "استراحة ذكية", "Break planner", "اكتب مدة الاستراحة بالدقائق", "Enter break duration in minutes"),
     RuvenStudentTool(18, "خطة الصباح", "Morning plan", "اكتب أهم شي لازم تنجزه قبل المدرسة", "Enter what you need to do before school"),
     RuvenStudentTool(20, "تحضير باچر", "Prepare for tomorrow", "اكتب جدول باچر أو واجباته", "Enter tomorrow's timetable or homework"),
+    RuvenStudentTool(21, "تذكير المغادرة", "Departure reminder", "بعد كم دقيقة تريد تنبيه الاستعداد للمغادرة؟", "How many minutes until you want a departure reminder?"),
     RuvenStudentTool(31, "تسجيل المزاج", "Mood check-in", "سجّل شعورك بكلمات بسيطة (خاص على جهازك)", "Describe your mood briefly (private on this device)"),
     RuvenStudentTool(32, "دقيقة هدوء", "Quiet minute", "اكتب شنو تريد تتركه مؤقتًا حتى ترتاح", "Write what you want to pause and set aside"),
     RuvenStudentTool(36, "رسالة شكر", "Thank-you helper", "اكتب شنو الشخص ساعدك بيه", "Describe how the person helped you")
@@ -336,6 +337,13 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                             minutes == null || minutes !in 1..180 -> if (isEnglish) "Enter a break between 1 and 180 minutes." else "حدد استراحة من دقيقة واحدة إلى 180 دقيقة."
                             scheduleStudentBreak(context, minutes) -> if (isEnglish) "Break reminder set for $minutes minutes. It will notify you even if RUVEN is closed." else "تم ضبط مؤقت الاستراحة لـ $minutes دقيقة، ويوصلك تنبيه حتى إذا أغلقت RUVEN."
                             else -> if (isEnglish) "Allow RUVEN notifications in Android settings, then set the break again." else "فعّل إشعارات RUVEN من إعدادات أندرويد، وبعدها اضبط الاستراحة من جديد."
+                        }
+                    } else if (tool.id == 21) {
+                        val minutes = input.trim().toIntOrNull()
+                        when {
+                            minutes == null || minutes !in 1..720 -> if (isEnglish) "Enter a reminder between 1 and 720 minutes." else "حدد التذكير من دقيقة واحدة إلى 12 ساعة."
+                            scheduleDepartureReminder(context, minutes) -> if (isEnglish) "Departure reminder scheduled in $minutes minutes. No location is tracked." else "تم ضبط تذكير المغادرة بعد $minutes دقيقة، بدون تتبع موقعك."
+                            else -> if (isEnglish) "Enable RUVEN notifications in Android settings, then try again." else "فعّل إشعارات RUVEN من إعدادات أندرويد ثم أعد المحاولة."
                         }
                     } else if (tool.id == 13 && input.isNotBlank()) {
                         val next = (savedContent + RuvenSavedContent(System.currentTimeMillis(), input.trim())).takeLast(100)
