@@ -13,6 +13,29 @@ enum class StudyInterval(val focusMinutes: Int, val breakMinutes: Int) {
     NO_BREAKS(0, 0)
 }
 
+enum class StudyPhase { FOCUS, BREAK, NO_BREAK }
+
+data class StudyCycleState(
+    val phase: StudyPhase,
+    val remainingSeconds: Long
+)
+
+/** Computes the current focus/rest phase from elapsed active session time. */
+fun studyCycleState(elapsedSeconds: Long, interval: StudyInterval): StudyCycleState {
+    require(elapsedSeconds >= 0L)
+    if (interval == StudyInterval.NO_BREAKS) {
+        return StudyCycleState(StudyPhase.NO_BREAK, 0L)
+    }
+    val focusSeconds = interval.focusMinutes * 60L
+    val cycleSeconds = (interval.focusMinutes + interval.breakMinutes) * 60L
+    val cyclePosition = elapsedSeconds % cycleSeconds
+    return if (cyclePosition < focusSeconds) {
+        StudyCycleState(StudyPhase.FOCUS, focusSeconds - cyclePosition)
+    } else {
+        StudyCycleState(StudyPhase.BREAK, cycleSeconds - cyclePosition)
+    }
+}
+
 data class StudySessionConfig(
     val subject: String,
     val chapter: String? = null,
