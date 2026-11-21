@@ -1,5 +1,6 @@
 package iq.ruven.app
 
+import android.app.ActivityManager
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -222,6 +223,22 @@ fun StudyModelViewerDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
 
 @Composable
 private fun StudyModelScene(file: File, isEnglish: Boolean, onError: (String) -> Unit) {
+    val context = LocalContext.current
+    val supportsGles3 = remember(context) {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        (activityManager?.deviceConfigurationInfo?.reqGlEsVersion ?: 0) >= 0x00030000
+    }
+    if (!supportsGles3) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                if (isEnglish) "This device does not report OpenGL ES 3.0 support. Use the PDF or 2D lesson resource instead."
+                else "الجهاز لا يعلن دعماً لـ OpenGL ES 3.0. استخدم الكتاب PDF أو المورد التعليمي ثنائي الأبعاد بدلاً منه.",
+                modifier = Modifier.padding(20.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val cameraNode = rememberCameraNode(engine) {
