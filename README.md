@@ -8,7 +8,7 @@ RUVEN is an Android-first school services app for Al-Mutafawiqeen Secondary Scho
 - Arabic-first interface with RTL support.
 - Animated launch screen with RUVEN branding and a temporary, illustrative school emblem.
 - Supabase email/password authentication, refresh-token session restoration, and profile loading.
-- Server-backed loading of published school items, with class-aware filtering expected to be enforced by database policies.
+- Server-backed loading of published school items, with class-aware filtering enforced by database policies for the current single-school deployment.
 - Owner-only management flows call server-side functions/RPCs for account creation and profile-role changes.
 - Local device persistence for selected school content and UI workflows; not every screen is server-synchronized.
 - Local notification processing for newly synchronized published items.
@@ -43,9 +43,9 @@ The CI workflow runs unit tests, builds a signed release APK, and uploads it as 
 
 ## Versioning and publishing
 
-The build workflow uses `0.1.<GitHub Actions run number>` as the version name and the run number as Android `versionCode`. For the current `0.1.x` series, publish a matching numeric tag such as `v0.1.132` only after reviewing and testing that source. The tag workflow creates a GitHub Release with `RUVEN.apk` and its `RUVEN.apk.sha256` checksum. The updater rejects missing checksums and downloads from unexpected hosts.
+The Android build workflow uses `0.1.<GitHub Actions run number>` as the version name and the run number as Android `versionCode`. For a `0.1.x` release, the tag patch number must be greater than the latest Android build run number for the exact tagged commit. The release workflow checks this and refuses a downgrade/equal versionCode. It creates a GitHub Release with `RUVEN.apk` and `RUVEN.apk.sha256`; the updater validates the repository release URL, download host, size limit, and checksum.
 
-## Security and release checklist
+## Security status\n\n- RLS is enabled on all 15 public application tables; the database is still single-school only.\n- Refresh tokens are stored encrypted with Android Keystore; backup and cleartext traffic are disabled.\n- Supabase Auth leaked-password protection remains an administrator action.\n- Multi-school isolation, privacy-policy approval, and physical-device testing remain release blockers.\n\n## Security and release checklist
 
 1. Confirm all required Actions secrets are configured.
 2. Verify Supabase RLS and privileged server-side functions independently of the Android UI.
