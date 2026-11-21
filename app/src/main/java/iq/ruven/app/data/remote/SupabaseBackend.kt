@@ -934,7 +934,13 @@ class SupabaseBackend(
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val response = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (status !in 200..299) {
-                val message = runCatching { JSONObject(response).optString("message").ifBlank { JSONObject(response).optString("msg") } }.getOrDefault("")
+                val message = runCatching {
+                    val error = JSONObject(response)
+                    error.optString("error")
+                        .ifBlank { error.optString("message") }
+                        .ifBlank { error.optString("msg") }
+                        .ifBlank { error.optString("error_description") }
+                }.getOrDefault("")
                 throw IOException(message.ifBlank { "تعذر الاتصال بالخادم (HTTP $status)." })
             }
             return response
