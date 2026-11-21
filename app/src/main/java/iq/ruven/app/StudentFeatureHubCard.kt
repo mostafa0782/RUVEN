@@ -216,9 +216,11 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                                     if (tool.id == 13) savedContent = readRuvenSavedContent(prefs)
                                     input = prefs.getString("input_${tool.id}", "") ?: ""
                                     output = prefs.getString("result_${tool.id}", "") ?: ""
-                                    if (tool.id == 1) {
-                                        bagItems = input.split(',', '،', '\n').map { it.trim() }.filter { it.isNotEmpty() }
-                                        checkedBagItems = prefs.getString("bag_checked", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() }.toSet()
+                                    if (tool.id == 1 || tool.id == 18) {
+                                        val itemsKey = if (tool.id == 1) "bag_items" else "morning_items"
+                                        val checkedKey = if (tool.id == 1) "bag_checked" else "morning_checked"
+                                        bagItems = prefs.getString(itemsKey, "").orEmpty().split('|').map { it.trim() }.filter { it.isNotEmpty() }
+                                        checkedBagItems = prefs.getString(checkedKey, "").orEmpty().split(',').mapNotNull { it.toIntOrNull() }.toSet()
                                     }
                                     val recentEditor = prefs.edit()
                                     .putString("recent_${System.currentTimeMillis()}", tool.ar)
@@ -292,13 +294,13 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                                 Text(if (isEnglish) "Share sheet" else "مشاركة الورقة")
                             }
                         }
-                        if (tool.id == 1 && bagItems.isNotEmpty()) {
-                            Text(if (isEnglish) "Bag checklist" else "قائمة الجنطة", fontWeight = FontWeight.SemiBold)
+                        if ((tool.id == 1 || tool.id == 18) && bagItems.isNotEmpty()) {
+                            Text(if (tool.id == 18) { if (isEnglish) "Morning checklist" else "قائمة الصباح" } else { if (isEnglish) "Bag checklist" else "قائمة الجنطة" }, fontWeight = FontWeight.SemiBold)
                             bagItems.forEachIndexed { index, item ->
                                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                     androidx.compose.material3.Checkbox(checked = index in checkedBagItems, onCheckedChange = { checked ->
                                         checkedBagItems = if (checked) checkedBagItems + index else checkedBagItems - index
-                                        prefs.edit().putString("bag_checked", checkedBagItems.sorted().joinToString(",")).apply()
+                                        prefs.edit().putString(if (tool.id == 18) "morning_checked" else "bag_checked", checkedBagItems.sorted().joinToString(",")).apply()
                                     })
                                     Text(item, style = MaterialTheme.typography.bodyMedium)
                                 }
@@ -340,10 +342,13 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                     } else buildToolResult(tool.id, input.trim(), isEnglish)
                     output = result
                     if (tool.id == 5 && input.isNotBlank()) { hintTopic = input.trim(); hintLevel = 0; output = if (isEnglish) "Choose Hint 1 first. Each level gives a little more guidance without immediately giving the answer." else "ابدأ بالتلميح الأول؛ كل مستوى يوضح أكثر من السابق بدون ما يكشف الجواب مباشرة." }
-                    if (tool.id == 1) {
-                        bagItems = input.split(',', '،', '\n').map { it.trim() }.filter { it.isNotEmpty() }
+                    if (tool.id == 1 || tool.id == 18) {
+                        bagItems = input.split(',', '،', '\n', '|').map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(40)
                         checkedBagItems = emptySet()
-                        prefs.edit().putString("bag_checked", "").apply()
+                        val itemsKey = if (tool.id == 1) "bag_items" else "morning_items"
+                        val checkedKey = if (tool.id == 1) "bag_checked" else "morning_checked"
+                        prefs.edit().putString(itemsKey, bagItems.joinToString("|")).putString(checkedKey, "").apply()
+                        output = if (isEnglish) "Checklist saved. Tick each item as you complete it." else "انحفظت القائمة. علّم على كل مهمة بعد ما تنجزها."
                     }
                     if (tool.id == 3 && input.isNotBlank()) {
                         val allowed = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
