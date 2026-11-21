@@ -60,10 +60,11 @@ jobs:
           fi
 
           RUNS_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/android-build.yml/runs?head_sha=${TAG_SHA}&per_page=100")"
-          LATEST_ANDROID_BUILD="$(printf '%s' "$RUNS_JSON" | jq '[.workflow_runs[].run_number] | max // 0')"
-          SUCCESSFUL_BUILDS="$(printf '%s' "$RUNS_JSON" | jq '[.workflow_runs[] | select(.conclusion == "success")] | length')"
-          if [ "$SUCCESSFUL_BUILDS" -eq 0 ] || [ "$LATEST_ANDROID_BUILD" -eq 0 ]; then
-            echo "No successful Android CI run exists for this exact tagged commit."
+          MAIN_PUSH_RUNS="$(printf '%s' "$RUNS_JSON" | jq '[.workflow_runs[] | select(.event == "push" and .head_branch == "main")]')"
+          LATEST_ANDROID_BUILD="$(printf '%s' "$MAIN_PUSH_RUNS" | jq '[.[].run_number] | max // 0')"
+          SUCCESSFUL_MAIN_BUILD="$(printf '%s' "$MAIN_PUSH_RUNS" | jq --arg sha "$TAG_SHA" '[.[] | select(.head_sha == $sha and .conclusion == "success")] | length')"
+          if [ "$SUCCESSFUL_MAIN_BUILD" -eq 0 ] || [ "$LATEST_ANDROID_BUILD" -eq 0 ]; then
+            echo "No successful Android CI push run from main exists for this exact tagged commit."
             exit 1
           fi
           if [ "$VERSION_CODE" -le "$LATEST_ANDROID_BUILD" ]; then
