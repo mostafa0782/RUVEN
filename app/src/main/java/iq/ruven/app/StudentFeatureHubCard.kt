@@ -310,7 +310,16 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val result = if (tool.id == 15) {\n                        buildWeeklyStudentRecap(context, isEnglish)\n                    } else if (tool.id == 13 && input.isNotBlank()) {
+                    val result = if (tool.id == 15) {
+                        buildWeeklyStudentRecap(context, isEnglish)
+                    } else if (tool.id == 17) {
+                        val minutes = input.trim().toIntOrNull()
+                        when {
+                            minutes == null || minutes !in 1..180 -> if (isEnglish) "Enter a break between 1 and 180 minutes." else "حدد استراحة من دقيقة واحدة إلى 180 دقيقة."
+                            scheduleStudentBreak(context, minutes) -> if (isEnglish) "Break reminder set for $minutes minutes. It will notify you even if RUVEN is closed." else "تم ضبط مؤقت الاستراحة لـ $minutes دقيقة، ويوصلك تنبيه حتى إذا أغلقت RUVEN."
+                            else -> if (isEnglish) "Allow RUVEN notifications in Android settings, then set the break again." else "فعّل إشعارات RUVEN من إعدادات أندرويد، وبعدها اضبط الاستراحة من جديد."
+                        }
+                    } else if (tool.id == 13 && input.isNotBlank()) {
                         val next = (savedContent + RuvenSavedContent(System.currentTimeMillis(), input.trim())).takeLast(100)
                         savedContent = next
                         writeRuvenSavedContent(prefs, next)
