@@ -1,6 +1,6 @@
 # RUVEN StudySpace — Product and delivery specification
 
-Status: **Phase 1 domain foundation**. This document describes the intended product; a feature is not released until UI, persistence, authorization, tests, and a pilot are complete.
+Status: **Phase 2 implementation in progress**. This document separates delivered behavior from remaining release requirements; a feature is not complete until UI, persistence, authorization, tests, and a pilot are complete.
 
 ## Product promise
 A single study flow: choose a subject → optionally choose a chapter/lesson → choose a session duration and focus/break pattern → study from the approved textbook → view lesson resources → record progress → see personal and school-authorized reports.
@@ -8,7 +8,7 @@ A single study flow: choose a subject → optionally choose a chapter/lesson →
 ## Session setup
 - Match the visual reference supplied by the product owner: RTL bottom sheet, calm teal/green surfaces, large subject selector, clear duration tiles, focus/break segmented control, and one primary start action.
 - Durations: 30 minutes, 1, 2, 3, or 4 hours, plus unlimited.
-- Focus patterns: 25/5, 50/10, 10/50 (configurable label in UI), and no breaks. The student can pause/resume and end at any time.
+- Focus patterns: 25/5, 50/10, and no breaks. The active phase and remaining phase time are derived from elapsed session time. The student can pause/resume and end at any time.
 - Subject is required. Chapter and lesson are optional at session start and can be selected later.
 - Do not force a timer or page tracking on students.
 
@@ -52,6 +52,24 @@ Admin view: individual student and class/section summaries, time range filters, 
 5. PDF reader integration and edition-aware bookmarks.
 6. 3D resource catalogue with licence/attribution and on-demand cache.
 7. Admin report UI, export controls, accessibility, offline behavior, and pilot.
+
+## Implementation snapshot
+
+Delivered in the current Android branch:
+- Compose StudySpace with subject, optional chapter/lesson, 30-minute through 4-hour and unlimited sessions.
+- Pause/resume and active 25/5 or 50/10 focus/rest phase display; no-break mode.
+- Local persistence with visible cloud-sync outcomes for student-submitted study, lesson, homework, and exam-scope records.
+- Optional page tracking and an in-app PDF reader.
+- Private approved-PDF catalogue with administrator upload/review and class-eligible student download.
+- Admin study report with student-submitted activity clearly distinguished from verified learning.
+- On-demand local GLB viewer using SceneView. It accepts a selected GLB v2 file up to 25 MiB, validates its header/version/declared length, and supports touch orbit/zoom/pan. Temporary files and model nodes are disposed with the viewer.
+
+Still required before calling StudySpace complete:
+- Shared 3D resource catalogue, teacher/admin publication workflow, licence/attribution metadata, and accessible 2D fallback. The current GLB viewer is a local-file viewer, not a curriculum catalogue.
+- Teacher confirmation/correction with immutable audit events; current homework status is a student self-report.
+- Durable offline outbox with idempotency keys and retry; local fallback currently does not guarantee exactly-once synchronization.
+- Report date filters, class summaries, assigned-subject enforcement, and integration tests for role/row isolation.
+- True multi-school tenant isolation. The current `profiles` schema has no `school_id`; class-name matching alone is not a safe tenant boundary. Do not onboard multiple schools into one shared database until school membership and RLS are implemented and verified across every school-owned table and Storage policy.
 
 ## Release gates
 - No fabricated textbook edition/source or unlicensed 3D model.
