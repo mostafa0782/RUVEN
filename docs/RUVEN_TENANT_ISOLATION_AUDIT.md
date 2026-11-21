@@ -22,6 +22,7 @@ Consequently, the current design must be treated as one school per Supabase proj
 ## Verified safeguards already present
 
 - RLS is enabled on the inspected application tables.
+- **Completed 2026-11-21:** revoked `TRUNCATE`, `TRIGGER`, `REFERENCES`, and `MAINTAIN` table privileges from `anon` and `authenticated` on all existing public tables. Verified both client roles have zero truncatable public tables and zero trigger-privileged public tables.
 - The bucket `ruven-school-files` is private; it stores approved PDF textbooks and pending/approved GLB study models with server-side approval checks.
 - Textbook and 3D-resource uploads are admin-gated; student downloads require approved catalogue metadata.
 - The 3D catalogue records subject/chapter, licence, attribution, source, required 2D fallback, bounded GLB size, uploader, reviewer, and approval state. A database trigger now derives uploader/reviewer identity from `auth.uid()`, forces new uploads to `pending`, and makes uploader identity immutable.
@@ -74,6 +75,9 @@ Do not add a default school UUID or fabricate a school record. Before backfill:
 - **Completed 2026-11-21:** split owner roster write policies, consolidated roster SELECT authorization, and wrapped `auth.uid()` in a scalar subquery. The performance advisor no longer reports the roster FK as unindexed or the roster auth initplan issue.
 - **Completed 2026-11-21:** consolidated the remaining 23 advisor-reported overlapping permissive-policy cases across `class_sections`, `daily_class_reports`, `leave_requests`, `profiles`, `report_updates`, `school_decisions`, `school_items`, `student_study_records`, and `teacher_subjects`. The new policies preserve the prior `USING` / `WITH CHECK` access predicates while reducing each affected table/action to one policy; a post-migration query confirmed no duplicate policy groups remain across those tables.
 - **Still requires dashboard action:** enable Supabase Auth leaked-password protection. The security advisor continues to report this setting as disabled; it is not changed by the database migration.
+- **Completed 2026-11-21:** consolidated 23 overlapping permissive-policy findings; a follow-up query returned no duplicate table/action policy groups among the affected tables.
+- **Completed 2026-11-21:** revoked client-role table DDL/maintenance privileges from existing public tables and from default privileges for objects created by the `postgres` migration role. Verification showed zero public tables with `TRUNCATE` or `TRIGGER` privileges for either client role.
+- **Platform-owner follow-up:** the database role available to project migrations cannot change the separate `supabase_admin` default ACL (that role is superuser and is not granted to `postgres`). If future application tables are ever created as `supabase_admin`, the platform owner must remove client-role DDL grants from that role's default privileges. Continue creating application migrations as `postgres`, whose defaults are now hardened.
 - Run Supabase security/performance advisors after each schema change.
 
 ## Rollout gates
