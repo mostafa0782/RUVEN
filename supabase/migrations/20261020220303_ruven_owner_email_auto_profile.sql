@@ -1,53 +1,41 @@
--- RUVEN: create a profile for every new Auth user.
--- Only the exact configured owner email receives owner privileges.
-create or replace function public.handle_new_auth_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  is_configured_owner boolean := lower(coalesce(new.email, '')) = 'mostafaminecraft472@gmail.com';
-begin
-  insert into public.profiles (id, full_name, role, class_name, is_owner)
-  values (
-    new.id,
-    case
-      when is_configured_owner then 'mostafapython'
-      else coalesce(nullif(new.raw_user_meta_data ->> 'full_name', ''), split_part(coalesce(new.email, ''), '@', 1), 'Student')
-    end,
-    case when is_configured_owner then 'owner'::public.school_role else 'student'::public.school_role end,
-    null,
-    is_configured_owner
-  )
-  on conflict (id) do update
-    set full_name = 'mostafapython',
-        role = 'owner'::public.school_role,
-        class_name = null,
-        is_owner = true
-    where is_configured_owner;
+-- Historical profile bootstrap migration.
+-- Never grant owner privileges based on a public or user-supplied email address.
+-- Every new Auth account starts with the least-privileged student role.
+-- The initial owner is provisioned manually by a trusted project administrator
+-- after verifying the account UUID; see supabase/README.md.
 
-  return new;
-end;
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, role, class_name, is_owner)
+  VALUES (
+    new.id,
+    new.email,
+    coalesce(
+      nullif(new.raw_user_meta_data ->> 'full_name', ''),
+      nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
+      'Student'
+    ),
+    'student'::public.school_role,
+    NULL,
+    false
+  )
+  ON CONFLICT (id) DO UPDATE
+    SET email = EXCLUDED.email;
+
+  RETURN new;
+END;
 $$;
 
--- The function is trigger-only; do not expose it as an RPC to clients.
-revoke all on function public.handle_new_auth_user() from public;
-revoke all on function public.handle_new_auth_user() from anon;
-revoke all on function public.handle_new_auth_user() from authenticated;
+-- Trigger-only function; never expose it as an RPC.
+REVOKE ALL ON FUNCTION public.handle_new_auth_user() FROM PUBLIC, anon, authenticated;
 
-drop trigger if exists on_auth_user_created_ruven_profile on auth.users;
-create trigger on_auth_user_created_ruven_profile
-after insert on auth.users
-for each row execute function public.handle_new_auth_user();
-
--- Also promote the account if it already exists when this migration is applied.
-insert into public.profiles (id, full_name, role, class_name, is_owner)
-select u.id, 'mostafapython', 'owner'::public.school_role, null, true
-from auth.users u
-where lower(coalesce(u.email, '')) = 'mostafaminecraft472@gmail.com'
-on conflict (id) do update
-set full_name = excluded.full_name,
-    role = 'owner'::public.school_role,
-    class_name = null,
-    is_owner = true;
+DROP TRIGGER IF EXISTS on_auth_user_created_ruven_profile ON auth.users;
+CREATE TRIGGER on_auth_user_created_ruven_profile
+AFTER INSERT ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION public.handle_new_auth_user();
