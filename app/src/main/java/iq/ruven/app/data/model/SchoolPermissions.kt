@@ -22,6 +22,9 @@ enum class SchoolContentType {
 }
 
 object SchoolPermissions {
+    fun canAccessSchoolAdminWorkspace(role: SchoolRole): Boolean =
+        role == SchoolRole.OWNER || role == SchoolRole.PRINCIPAL || role == SchoolRole.ASSISTANT_PRINCIPAL
+
     fun canCreateHomework(role: SchoolRole, assignedSubject: Boolean = false): Boolean =
         when (role) {
             SchoolRole.TEACHER -> assignedSubject
