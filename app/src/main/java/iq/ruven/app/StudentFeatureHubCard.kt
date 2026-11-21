@@ -421,6 +421,14 @@ fun StudentFeatureHubCard(isEnglish: Boolean, publishedItems: List<iq.ruven.app.
                         }
                     }
                     if (output.isNotBlank()) {
+                        if (tool.id == 31) {
+                            Text(if (isEnglish) "Private on this device only. No teacher or school account can see this note." else "هذه الملاحظة خاصة بهذا الجهاز فقط، ولا تظهر للمدرس أو حساب المدرسة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = {
+                                prefs.edit().remove("input_31").remove("result_31").remove("updated_31").apply()
+                                input = ""
+                                output = ""
+                            }) { Text(if (isEnglish) "Delete private note" else "حذف الملاحظة الخاصة") }
+                        }
                         if (tool.id == 3 && input.isNotBlank()) {
                             TextButton(onClick = {
                                 cancelSpacedReviewReminders(context, input)
