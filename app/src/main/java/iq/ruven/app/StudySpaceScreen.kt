@@ -122,6 +122,16 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
             prefs.edit().putString("pdf_uri", pdfUri).apply()
         }
     }
+    LaunchedEffect(session.userId) {
+        val pendingSync = StudyRecordOutbox.syncPending(context, backend, session)
+        if (pendingSync.syncedCount > 0 || pendingSync.pendingCount > 0) {
+            cloudStatus = if (pendingSync.pendingCount == 0) {
+                if (isEnglish) "Pending study records synced" else "تمت مزامنة السجلات الدراسية المعلّقة"
+            } else {
+                (if (isEnglish) "Offline queue: " else "سجلات بانتظار المزامنة: ") + pendingSync.pendingCount
+            }
+        }
+    }
     LaunchedEffect(running) {
         while (running) {
             delay(1000)
@@ -302,9 +312,18 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                 saveStudyHomework(context, homework)
                                 cloudBusy = true
                                 scope.launch {
-                                    runCatching { backend.createStudentStudyRecord(session, "homework_status", subject, chapter, lesson, homeworkTitle = savedTitle, homeworkStatus = newStatus) }
-                                        .onSuccess { cloudStatus = if (isEnglish) "Homework synced to school account" else "تمت مزامنة الواجب مع حساب المدرسة" }
-                                        .onFailure { cloudStatus = (if (isEnglish) "Saved locally; sync failed: " else "حُفظ محلياً؛ فشلت المزامنة: ") + (it.message ?: "network error") }
+                                    runCatching {
+                                        StudyRecordOutbox.enqueueAndSync(
+                                            context, backend, session,
+                                            StudyRecordDraft("homework_status", subject, chapter, lesson, homeworkTitle = savedTitle, homeworkStatus = newStatus)
+                                        )
+                                    }.onSuccess { result ->
+                                        cloudStatus = if (result.pendingCount == 0) {
+                                            if (isEnglish) "Homework synced to school account" else "تمت مزامنة الواجب مع حساب المدرسة"
+                                        } else {
+                                            (if (isEnglish) "Saved offline · pending: " else "حُفظ محلياً · بانتظار المزامنة: ") + result.pendingCount
+                                        }
+                                    }.onFailure { cloudStatus = (if (isEnglish) "Could not queue record: " else "تعذر حفظ سجل المزامنة: ") + (it.message ?: "error") }
                                     cloudBusy = false
                                 }
                                 newHomework = ""
@@ -323,9 +342,18 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                 homework = homework.toMutableList().also { it[index] = item.first to next }
                                 saveStudyHomework(context, homework)
                                 scope.launch {
-                                    runCatching { backend.createStudentStudyRecord(session, "homework_status", subject, chapter, lesson, homeworkTitle = item.first, homeworkStatus = next) }
-                                        .onSuccess { cloudStatus = if (isEnglish) "Homework status synced" else "تمت مزامنة حالة الواجب" }
-                                        .onFailure { cloudStatus = (if (isEnglish) "Saved locally; sync failed: " else "حُفظ محلياً؛ فشلت المزامنة: ") + (it.message ?: "network error") }
+                                    runCatching {
+                                    StudyRecordOutbox.enqueueAndSync(
+                                        context, backend, session,
+                                        StudyRecordDraft("homework_status", subject, chapter, lesson, homeworkTitle = item.first, homeworkStatus = next)
+                                    )
+                                }.onSuccess { result ->
+                                    cloudStatus = if (result.pendingCount == 0) {
+                                        if (isEnglish) "Homework status synced" else "تمت مزامنة حالة الواجب"
+                                    } else {
+                                        (if (isEnglish) "Saved offline · pending: " else "حُفظ محلياً · بانتظار المزامنة: ") + result.pendingCount
+                                    }
+                                }.onFailure { cloudStatus = (if (isEnglish) "Could not queue record: " else "تعذر حفظ سجل المزامنة: ") + (it.message ?: "error") }
                                 }
                             }) { Text(if (isEnglish) "Change" else "تغيير") }
                         }
@@ -348,9 +376,18 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                         examMarkers = examMarkers + (examKind + " · " + subject + " · " + marker)
                         saveExamMarkers(context, examMarkers)
                         scope.launch {
-                            runCatching { backend.createStudentStudyRecord(session, "exam_scope", subject, chapterName = marker, lessonName = lesson.takeIf { it.isNotBlank() }, examKind = examKind) }
-                                .onSuccess { cloudStatus = if (isEnglish) "Exam scope synced" else "تمت مزامنة نطاق الامتحان" }
-                                .onFailure { cloudStatus = (if (isEnglish) "Saved locally; sync failed: " else "حُفظ محلياً؛ فشلت المزامنة: ") + (it.message ?: "network error") }
+                            runCatching {
+                                StudyRecordOutbox.enqueueAndSync(
+                                    context, backend, session,
+                                    StudyRecordDraft("exam_scope", subject, chapterName = marker, lessonName = lesson.takeIf { it.isNotBlank() }, examKind = examKind)
+                                )
+                            }.onSuccess { result ->
+                                cloudStatus = if (result.pendingCount == 0) {
+                                    if (isEnglish) "Exam scope synced" else "تمت مزامنة نطاق الامتحان"
+                                } else {
+                                    (if (isEnglish) "Saved offline · pending: " else "حُفظ محلياً · بانتظار المزامنة: ") + result.pendingCount
+                                }
+                            }.onFailure { cloudStatus = (if (isEnglish) "Could not queue record: " else "تعذر حفظ سجل المزامنة: ") + (it.message ?: "error") }
                         }
                         newExamMarker = ""
                     } }, modifier = Modifier.fillMaxWidth()) { Text(if (isEnglish) "Save exam scope" else "حفظ نطاق الامتحان") }
@@ -386,18 +423,36 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                 .putLong("study_seconds", prefs.getLong("study_seconds", 0L) + finishedSeconds).apply()
                             cloudBusy = true
                             scope.launch {
-                                val syncResults = mutableListOf<Result<Unit>>()
-                                if (finishedSeconds > 0L) syncResults += runCatching {
-                                    backend.createStudentStudyRecord(session, "study_session", subject, chapter, lesson, durationSeconds = finishedSeconds, pageNumber = if (pageTracking) page.toIntOrNull() else null)
+                                val drafts = buildList {
+                                    if (finishedSeconds > 0L) add(
+                                        StudyRecordDraft(
+                                            "study_session", subject, chapter, lesson,
+                                            durationSeconds = finishedSeconds,
+                                            pageNumber = if (pageTracking) page.toIntOrNull() else null
+                                        )
+                                    )
+                                    if (finishedLesson) add(
+                                        StudyRecordDraft(
+                                            "lesson_progress", subject, chapter, lesson,
+                                            lessonCompleted = true,
+                                            pageNumber = if (pageTracking) page.toIntOrNull() else null
+                                        )
+                                    )
                                 }
-                                if (finishedLesson) syncResults += runCatching {
-                                    backend.createStudentStudyRecord(session, "lesson_progress", subject, chapter, lesson, lessonCompleted = true, pageNumber = if (pageTracking) page.toIntOrNull() else null)
+                                var pending = 0
+                                var failureMessage: String? = null
+                                for (draft in drafts) {
+                                    val result = runCatching { StudyRecordOutbox.enqueueAndSync(context, backend, session, draft) }
+                                    if (result.isSuccess) pending = result.getOrThrow().pendingCount
+                                    else {
+                                        failureMessage = result.exceptionOrNull()?.message ?: "error"
+                                        break
+                                    }
                                 }
-                                val failed = syncResults.firstOrNull { it.isFailure }
-                                cloudStatus = if (failed == null) {
-                                    if (isEnglish) "Study progress synced to school account" else "تمت مزامنة تقدمك الدراسي مع حساب المدرسة"
-                                } else {
-                                    (if (isEnglish) "Saved locally; sync failed: " else "حُفظ محلياً؛ فشلت المزامنة: ") + (failed.exceptionOrNull()?.message ?: "network error")
+                                cloudStatus = when {
+                                    failureMessage != null -> (if (isEnglish) "Queue save failed: " else "فشل حفظ قائمة المزامنة: ") + failureMessage
+                                    pending > 0 -> (if (isEnglish) "Saved offline · pending: " else "حُفظ محلياً · بانتظار المزامنة: ") + pending
+                                    else -> if (isEnglish) "Study progress synced to school account" else "تمت مزامنة تقدمك الدراسي مع حساب المدرسة"
                                 }
                                 cloudBusy = false
                             }
