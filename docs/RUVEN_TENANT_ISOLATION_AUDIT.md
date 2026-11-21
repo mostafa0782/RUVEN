@@ -32,7 +32,7 @@ Consequently, the current design must be treated as one school per Supabase proj
 - Study records are student-owned for student reads/inserts; admin reporting is role-gated.
 - **Completed 2026-11-21:** database triggers now derive daily-report creators and publish timestamps, preserve report class identity, stamp leave-review and attendance actors, prevent class monitors from altering review metadata, and stamp school-decision execution identity. Authenticated-role RLS probes passed end-to-end for student report/leave submission, owner leave review and decision creation, and assigned-monitor attendance/decision execution; every probe row was rolled back.
 - The client uses a publishable key; the service-role key must remain server-side. **Completed 2026-11-21:** profile provisioning grants `service_role` table-wide SELECT but UPDATE only on `email`, `full_name`, `role`, `class_name`, and `is_owner`; verification confirmed it cannot update `id` or `created_at`.
-- The latest branch-head CI run completed successfully, including unit tests, release APK assembly, and APK signature verification.
+- The previous branch-head CI passed unit tests, release APK assembly, and APK signature verification. Additional Android hardening commits are now awaiting a fresh CI run on the latest branch head.
 
 These controls are useful, but they do not substitute for tenant isolation.
 
@@ -99,3 +99,28 @@ Do not add a default school UUID or fabricate a school record. Before backfill:
 ## Current decision
 
 **Do not implement a partial `school_id` column migration yet.** Doing so without a confirmed school identity, full table inventory, parent-child constraints, and coordinated RLS/Storage updates would create a false sense of isolation and could expose existing school data. This audit records the verified blocker and the safe implementation sequence.
+
+
+## Follow-up security audit — 2026-11-21
+
+### Additional live verification
+
+- All 15 public application tables have RLS enabled; the live count query returned 15 enabled and 0 disabled.
+- No `anon` table grants were found on public application tables.
+- The live `service_role` privilege audit found unnecessary `TRUNCATE`, `TRIGGER`, `REFERENCES`, and `MAINTAIN` privileges on all 15 tables. Migration `20261121163200_revoke_service_role_ddl_privileges.sql` was applied and verified: all four privilege counts are now zero for `service_role`.
+- Existing service-role provisioning still works at the privilege level it requires: SELECT on `profiles`, and UPDATE on `email`, `full_name`, `role`, `class_name`, and `is_owner`. UPDATE on `id` and `created_at` remains denied.
+- Both active Edge Functions are `owner-create-account` and `owner-set-profile-role`; both require JWT verification and perform a server-side owner check.
+- Security Advisor continues to report only the Auth leaked-password-protection warning.
+- The Android client hardening now encrypts refresh tokens with Android Keystore AES-GCM, disables cleartext traffic and backup, narrows FileProvider to the updater directory, and limits update downloads to trusted HTTPS release assets with a 100 MiB cap and SHA-256 validation. These changes are pending CI verification.
+- The release workflow now refuses a 0.1.x release tag whose Android versionCode is not greater than the latest Android CI run number for that exact commit.
+
+### Remaining release and security gates
+
+1. Enable leaked-password protection in Supabase Auth settings and rerun the Security Advisor.
+2. Do not onboard another school until the tenant model and cross-school RLS/Storage tests are implemented. The current database remains single-school only.
+3. The available migration role cannot change the separate `supabase_admin` default ACL. Future public tables created by that role may inherit broad client-role defaults; keep application migrations under `postgres` until platform-level remediation is completed.
+4. Add database-backed rate limiting for owner provisioning endpoints before wider deployment.
+5. Approve the privacy policy and define retention, deletion, and guardian-notice procedures before public deployment.
+6. Add UI smoke tests, dependency scanning, and immutable SHA pinning for GitHub Actions before treating release automation as fully hardened.
+
+The audit does not establish legal/ministry approval, production readiness, or multi-school isolation.
