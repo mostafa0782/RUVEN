@@ -19,6 +19,14 @@ import java.util.concurrent.TimeUnit
 
 private const val REVIEW_CHANNEL_ID = "ruven_spaced_review"
 
+internal fun cancelSpacedReviewReminders(context: Context, lesson: String) {
+    val cleanLesson = lesson.trim().take(160)
+    if (cleanLesson.isBlank()) return
+    listOf(1L, 3L, 7L).forEach { day ->
+        WorkManager.getInstance(context).cancelUniqueWork("ruven_review_${cleanLesson.hashCode()}_$day")
+    }
+}
+
 internal fun scheduleSpacedReviewReminders(context: Context, lesson: String) {
     val cleanLesson = lesson.trim().take(160)
     if (cleanLesson.isBlank()) return
