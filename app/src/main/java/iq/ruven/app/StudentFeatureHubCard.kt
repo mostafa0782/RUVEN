@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.json.JSONArray
+import org.json.JSONObject
 
 private data class RuvenStudentTool(
     val id: Int,
@@ -49,6 +51,27 @@ private data class RuvenStudentTool(
     val hintAr: String = "",
     val hintEn: String = ""
 )
+
+private data class RuvenSavedContent(val id: Long, val text: String)
+
+private fun readRuvenSavedContent(prefs: android.content.SharedPreferences): List<RuvenSavedContent> =
+    runCatching {
+        val array = JSONArray(prefs.getString("saved_content_v1", "[]") ?: "[]")
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val id = item.optLong("id")
+            val text = item.optString("text").trim().take(4000)
+            if (id <= 0L || text.isBlank()) null else RuvenSavedContent(id, text)
+        }.takeLast(100)
+    }.getOrDefault(emptyList())
+
+private fun writeRuvenSavedContent(prefs: android.content.SharedPreferences, items: List<RuvenSavedContent>) {
+    val array = JSONArray()
+    items.takeLast(100).forEach { item ->
+        array.put(JSONObject().put("id", item.id).put("text", item.text))
+    }
+    prefs.edit().putString("saved_content_v1", array.toString()).apply()
+}
 
 private val ruvenStudentTools = listOf(
     RuvenStudentTool(1, "قائمة الجنطة", "Bag checklist", "اكتب الكتب والأغراض المطلوبة", "Enter books and items", "مثال: رياضيات، دفتر عربي", "Example: math book, Arabic notebook"),
@@ -80,6 +103,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
     var selected by remember { mutableStateOf<RuvenStudentTool?>(null) }
     var input by remember { mutableStateOf("") }
     var output by remember { mutableStateOf("") }
+    var savedContent by remember { mutableStateOf(readRuvenSavedContent(prefs)) }
     val revisionExportLauncher = rememberLauncherForActivityResult(CreateDocument("text/plain")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(output) }
@@ -145,6 +169,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                                 onClick = {
                                     selected = tool
                                     if (tool.id == 5) { hintLevel = 0; hintTopic = "" }
+                                    if (tool.id == 13) savedContent = readRuvenSavedContent(prefs)
                                     input = prefs.getString("input_${tool.id}", "") ?: ""
                                     output = prefs.getString("result_${tool.id}", "") ?: ""
                                     if (tool.id == 1) {
@@ -196,6 +221,24 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         }
                         if (hintLevel > 0) Text(buildProgressiveHint(hintTopic, hintLevel, isEnglish), style = MaterialTheme.typography.bodyMedium)
                     }
+                    if (tool.id == 13) {
+                        Text(if (isEnglish) "Saved on this device · ${savedContent.size}/100" else "محفوظة على هذا الجهاز · ${savedContent.size}/100", style = MaterialTheme.typography.labelMedium)
+                        if (savedContent.isEmpty()) {
+                            Text(if (isEnglish) "No saved content yet." else "ماكو محتوى محفوظ بعد.", style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            savedContent.asReversed().forEach { item ->
+                                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                                    Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                        Text(item.text, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                                        TextButton(onClick = {
+                                            savedContent = savedContent.filterNot { it.id == item.id }
+                                            writeRuvenSavedContent(prefs, savedContent)
+                                        }) { Text(if (isEnglish) "Delete" else "حذف") }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     if (output.isNotBlank()) {
                         if (tool.id == 7) {
                             TextButton(onClick = { revisionExportLauncher.launch("RUVEN-revision-sheet.txt") }) {
@@ -223,7 +266,14 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val result = if (tool.id == 14 && input.isBlank()) {
+                    val result = if (tool.id == 13 && input.isNotBlank()) {
+                        val next = (savedContent + RuvenSavedContent(System.currentTimeMillis(), input.trim())).takeLast(100)
+                        savedContent = next
+                        writeRuvenSavedContent(prefs, next)
+                        if (isEnglish) "Content saved on this device." else "انحفظ المحتوى على هذا الجهاز."
+                    } else if (tool.id == 13 && input.isBlank()) {
+                        if (isEnglish) "Review or delete your saved items below." else "راجع المحفوظات أو احذف العناصر من القائمة أدناه."
+                    } else if (tool.id == 14 && input.isBlank()) {
                         val recent = prefs.all.entries
                             .filter { it.key.startsWith("recent_") }
                             .sortedByDescending { it.key.removePrefix("recent_").toLongOrNull() ?: 0L }
