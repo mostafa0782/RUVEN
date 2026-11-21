@@ -72,7 +72,7 @@ Do not add a default school UUID or fabricate a school record. Before backfill:
 - **Completed 2026-11-21:** added `student_roster(created_by)` index after confirming its FK.
 - **Completed 2026-11-21:** added indexes for `study_3d_resources(uploaded_by)` and `study_3d_resources(reviewed_by)`; verified both indexes exist and the unindexed-FK advisor finding cleared.
 - **Completed 2026-11-21:** split owner roster write policies, consolidated roster SELECT authorization, and wrapped `auth.uid()` in a scalar subquery. The performance advisor no longer reports the roster FK as unindexed or the roster auth initplan issue.
-- Remaining: review duplicate/permissive policies on other tables and ensure each UPDATE policy has both `USING` and `WITH CHECK`. The advisor still reports multiple permissive policies on several existing tables; these need table-by-table semantic review before consolidation.
+- **Completed 2026-11-21:** consolidated the remaining 23 advisor-reported overlapping permissive-policy cases across `class_sections`, `daily_class_reports`, `leave_requests`, `profiles`, `report_updates`, `school_decisions`, `school_items`, `student_study_records`, and `teacher_subjects`. The new policies preserve the prior `USING` / `WITH CHECK` access predicates while reducing each affected table/action to one policy; a post-migration query confirmed no duplicate policy groups remain across those tables.
 - **Still requires dashboard action:** enable Supabase Auth leaked-password protection. The security advisor continues to report this setting as disabled; it is not changed by the database migration.
 - Run Supabase security/performance advisors after each schema change.
 
