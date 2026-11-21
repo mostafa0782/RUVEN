@@ -7,6 +7,16 @@ import org.junit.Test
 import java.time.Instant
 
 class StudySpaceModelsTest {
+    @Test fun glbHeaderAcceptsBinaryGlTfMagic() {
+        assertTrue(isGlbBinaryHeader(byteArrayOf(0x67, 0x6c, 0x54, 0x46)))
+    }
+
+    @Test fun glbHeaderRejectsJsonGlTfAndTruncatedFiles() {
+        assertFalse(isGlbBinaryHeader(byteArrayOf(0x7b, 0x22, 0x61, 0x22)))
+        assertFalse(isGlbBinaryHeader(byteArrayOf(0x67, 0x6c, 0x54)))
+        assertFalse(isGlbBinaryHeader(byteArrayOf()))
+    }
+
     @Test fun supportsFourHourAndUnlimitedSessions() {
         assertEquals(240, StudyDuration.HOURS_4.minutes)
         assertEquals(0, StudyDuration.UNLIMITED.minutes)
