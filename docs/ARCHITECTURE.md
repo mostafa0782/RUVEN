@@ -17,7 +17,7 @@ RUVEN is a native Android school-services application built with Kotlin, Jetpack
 
 ## Data and authorization model
 
-The current database is a **single-school deployment**. RLS derives the caller's role and class from the authenticated profile. Class names are not tenant identifiers. No second school may be onboarded to the same Supabase project until a school membership model and tenant-scoped policies are deployed and tested.
+The current database is a **single-school deployment**. Broad school-admin permissions are limited to owner, principal, and assistant principal; educational counselors do not inherit admin access and require separately scoped policies. RLS derives the caller's role and class from the authenticated profile. Class names are not tenant identifiers. No second school may be onboarded to the same Supabase project until a school membership model and tenant-scoped policies are deployed and tested.
 
 The 15 public application tables cover profiles, class sections, teacher assignments, school content, reports, leave requests, decisions, seals, roster, notifications, study records, textbook catalogue, 3D resources, and user settings. RLS is enabled on all 15.
 
