@@ -654,17 +654,16 @@ private fun RuvenApp() {
     var checkingUpdate by remember { mutableStateOf(false) }
     val backend = remember { SupabaseBackend() }
     val scope = rememberCoroutineScope()
-    val authPrefs = remember(context) { context.getSharedPreferences("ruven_auth", Context.MODE_PRIVATE) }
 
     LaunchedEffect(Unit) {
-        val savedRefreshToken = authPrefs.getString("refresh_token", null)
+        val savedRefreshToken = SecureSessionStore.read(context)
         if (!savedRefreshToken.isNullOrBlank()) {
             try {
                 val restored = backend.refreshSession(savedRefreshToken)
                 val restoredProfile = backend.loadMyProfile(restored)
                 session = restored
                 profile = restoredProfile
-                authPrefs.edit().putString("refresh_token", restored.refreshToken).apply()
+                SecureSessionStore.save(context, restored.refreshToken)
                 try {
                     val loaded = backend.loadPublishedItems(restored, restoredProfile.className)
                     remoteItems = loaded
@@ -674,7 +673,7 @@ private fun RuvenApp() {
                     feedError = e.message ?: "تعذر تحميل محتوى المدرسة."
                 }
             } catch (_: Exception) {
-                authPrefs.edit().remove("refresh_token").apply()
+                SecureSessionStore.clear(context)
             }
         }
         restoringSession = false
@@ -691,7 +690,7 @@ private fun RuvenApp() {
         val loginEnglish = context.getSharedPreferences("ruven_local_data", Context.MODE_PRIVATE).getString("settings_language", "ar") == "en"
         CompositionLocalProvider(LocalEnglish provides loginEnglish, LocalLayoutDirection provides (if (loginEnglish) LayoutDirection.Ltr else LayoutDirection.Rtl)) {
         SupabaseLoginScreen { newSession, newProfile ->
-            authPrefs.edit().putString("refresh_token", newSession.refreshToken).apply()
+            SecureSessionStore.save(context, newSession.refreshToken)
             session = newSession
             profile = newProfile
             feedError = null
@@ -767,13 +766,12 @@ private fun RuvenApp() {
                 }
             },
             onSignOut = {
-                scope.launch { runCatching { backend.signOut(activeSession) } }
-                authPrefs.edit().remove("refresh_token").apply()
+                SecureSessionStore.clear(context)
                 session = null
                 profile = null
                 remoteItems = emptyList()
                 feedError = null
-                scope.launch { backend.signOut(activeSession) }
+                scope.launch { runCatching { backend.signOut(activeSession) } }
             }
         )
     }
