@@ -12,7 +12,7 @@ The current database has no tenant identifier on any public application table. T
 - `school_items`, `report_updates`, `daily_class_reports`
 - `leave_requests`, `school_decisions`, `school_seals`
 - `student_roster`, `user_notifications`
-- `student_study_records`, `textbook_catalog`
+- `student_study_records`, `textbook_catalog`, `study_3d_resources`
 - `app_user_settings`
 
 Current authorization helpers such as `private.is_school_admin()`, `private.is_school_owner()`, `private.current_school_role()`, and `private.current_school_class()` derive authorization from the caller's profile, but they do not establish a school boundary. Class-name equality is not a tenant boundary: two schools can both have a class named "الثالث متوسط".
@@ -22,8 +22,9 @@ Consequently, the current design must be treated as one school per Supabase proj
 ## Verified safeguards already present
 
 - RLS is enabled on the inspected application tables.
-- The textbook bucket `ruven-school-files` is private, has a 20 MiB limit, and allows PDF MIME types.
-- Textbook uploads are admin-gated and approved catalogue entries are checked before student downloads.
+- The bucket `ruven-school-files` is private; it stores approved PDF textbooks and pending/approved GLB study models with server-side approval checks.
+- Textbook and 3D-resource uploads are admin-gated; student downloads require approved catalogue metadata.
+- The 3D catalogue records subject/chapter, licence, attribution, source, required 2D fallback, bounded GLB size, uploader, reviewer, and approval state.
 - Study records are student-owned for student reads/inserts; admin reporting is role-gated.
 - The client uses a publishable key; the service-role key must remain server-side.
 - The latest branch-head CI run completed successfully, including unit tests, release APK assembly, and APK signature verification.
@@ -69,8 +70,9 @@ Do not add a default school UUID or fabricate a school record. Before backfill:
 
 - Enable Supabase Auth leaked-password protection in the Auth dashboard; the current security advisor reports it disabled.
 - **Completed 2026-11-21:** added `student_roster(created_by)` index after confirming its FK.
+- **Completed 2026-11-21:** added indexes for `study_3d_resources(uploaded_by)` and `study_3d_resources(reviewed_by)`; verified both indexes exist and the unindexed-FK advisor finding cleared.
 - **Completed 2026-11-21:** split owner roster write policies, consolidated roster SELECT authorization, and wrapped `auth.uid()` in a scalar subquery. The performance advisor no longer reports the roster FK as unindexed or the roster auth initplan issue.
-- Remaining: review duplicate/permissive policies on other tables and ensure each UPDATE policy has both `USING` and `WITH CHECK`.
+- Remaining: review duplicate/permissive policies on other tables and ensure each UPDATE policy has both `USING` and `WITH CHECK`. The advisor still reports multiple permissive policies on several existing tables; these need table-by-table semantic review before consolidation.
 - Run Supabase security/performance advisors after each schema change.
 
 ## Rollout gates
