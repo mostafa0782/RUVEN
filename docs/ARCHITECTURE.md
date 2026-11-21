@@ -1,53 +1,41 @@
-# RUVEN Architecture — Foundation and UI Prototype
+# RUVEN Architecture
 
-## Current client
+## Product and client
 
-The Android client is a native Kotlin application built with Jetpack Compose and Material 3. It has Arabic-first RTL screens for home, timetable, homework, preparations, and announcements. Content creation is currently a local UI preview, not a connected service. Principals and assistant principals can create/delete local announcement entries; this does not publish to other devices. Homework, timetable descriptions and selected document URIs, preparations, and reports are persisted on-device through SharedPreferences.
+RUVEN is a native Android school-services application built with Kotlin, Jetpack Compose, and Material 3. It is Arabic-first with RTL support and an English localization path. The application includes authenticated school workflows, a student toolkit, a personal study space, PDF reading, a GLB study-model viewer, notifications, and appearance customization.
 
-## Source boundaries
+## Runtime boundaries
 
-- `iq.ruven.app`: Android entry point and Compose UI.
-- `iq.ruven.app.data.model`: typed lesson, homework, announcement, preparation, and school-role models.
-- `SchoolModelValidation`: input-quality validation for untrusted school records.
-- `SchoolPermissions`: pure role-policy helpers for unit tests; these helpers are not authorization.
-- `iq.ruven.app.data.repository`: `SchoolContentRepository` contract and `ValidatedSchoolContentRepository` decorator.
+- **Android UI:** Compose screens and role-aware navigation. UI role checks improve usability only; they are not an authorization boundary.
+- **Backend client:** `iq.ruven.app.data.remote.SupabaseBackend` sends HTTPS requests to Supabase Auth, PostgREST, Storage, and Edge Functions. The client contains only the publishable key.
+- **Authentication:** Supabase email/password sessions. The refresh token is encrypted at rest with Android Keystore AES-GCM; access tokens remain in memory. The app disables Android backup.
+- **Database:** PostgreSQL tables with RLS and database constraints. Authorization helpers live in the non-exposed `private` schema.
+- **Privileged account management:** `owner-create-account` and `owner-set-profile-role` Edge Functions verify the caller's JWT and owner flag server-side. The service-role key is server-only and has narrowly scoped profile update grants.
+- **Storage:** private `ruven-school-files` bucket. Textbooks and 3D resources require admin upload and approval metadata; ordinary class attachments follow role/publication-aware policies.
+- **Local persistence:** selected study records, study-space state, appearance settings, and personal toolkit data are stored locally. Not every feature is cloud-synchronized.
+- **Release updates:** the app reads the latest GitHub Release, requires an APK and SHA-256 asset, validates repository release URLs and download size, verifies the digest, then opens Android's package installer.
 
-## Intended school-content permissions
+## Data and authorization model
 
-- Teachers create homework and preparations only for subjects assigned to their authenticated account.
-- Class monitors can submit homework and timetable content and report content that requires administrative review; they cannot delete or edit homework directly.
-- The principal and assistant principals can manage timetable content and moderate homework.
-- The timetable UI supports text entry and selecting PDF/image files.
-- The current role dropdown is a prototype-only way to preview screens. It does not authenticate users. Selected PDF/image URIs can be reopened locally where Android grants persistent URI access; files are not uploaded.
+The current database is a **single-school deployment**. RLS derives the caller's role and class from the authenticated profile. Class names are not tenant identifiers. No second school may be onboarded to the same Supabase project until a school membership model and tenant-scoped policies are deployed and tested.
 
-The future backend must check the authenticated principal, assigned subjects, school/class membership, and action-specific permission for every read/write. Never accept a client-provided role or subject name as proof of permission.
+The 15 public application tables cover profiles, class sections, teacher assignments, school content, reports, leave requests, decisions, seals, roster, notifications, study records, textbook catalogue, 3D resources, and user settings. RLS is enabled on all 15.
 
-## Data and authorization
+## Security invariants
 
-The current UI has no backend and contains no real student data. Every protected operation must be authorized server-side and scoped to the authenticated user's school and class. The client repository API does not accept arbitrary student or school IDs for content queries; the future data source must derive identity from the authenticated session.
+1. Never trust a role, owner flag, or school ID supplied by the Android client.
+2. Keep service-role and other privileged secrets on the server only.
+3. Derive actor identities and review timestamps in database triggers for sensitive workflows.
+4. Keep the Storage bucket private and require catalogue approval before student access to textbooks or 3D models.
+5. Treat all client-side role checks as presentation logic only.
+6. Do not enable multi-school onboarding until every school-owned table, parent reference, and Storage path is tenant-scoped and cross-tenant negative tests pass.
 
-## Planned feature boundaries
+## Current limitations
 
-As the app grows, move UI state and data access into feature modules/packages:
-- feature/auth
-- feature/home
-- feature/timetable
-- feature/homework
-- feature/preparations
-- feature/announcements
-- feature/messages
-- feature/profile
-- feature/settings
-- core/designsystem
-- core/network
-- core/database
+- Multi-school tenant isolation is not yet implemented.
+- Supabase Auth leaked-password protection remains disabled and requires dashboard configuration.
+- The privacy policy remains a draft pending school approval and confirmed retention/guardian processes.
+- Some student tools are local helpers rather than integrated timetable/homework workflows.
+- CI currently covers unit tests, release assembly, and APK signature verification; UI smoke tests and dependency scanning remain future work.
 
-Replace the prototype SharedPreferences store with Room for structured offline content, add ViewModels, and introduce a network client when the authenticated backend is available.
-
-## Messaging policy
-
-Student-to-student messaging is out of scope for version 1. Messaging, when implemented, must be limited to explicitly authorized student-to-teacher or student-to-administration conversations. The server must enforce participant permissions on every read and write.
-
-## Multi-school readiness
-
-School-scoped data must be enforced by the backend. Never trust a school identifier supplied by a client without checking membership and permissions on the server.
+See `docs/DATABASE.md`, `docs/RUVEN_TENANT_ISOLATION_AUDIT.md`, and `docs/FEATURES_90_IMPLEMENTATION_PLAN.md` for details.
