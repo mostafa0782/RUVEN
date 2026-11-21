@@ -9,11 +9,38 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
+import java.net.URI
 import java.security.MessageDigest
 import java.net.HttpURLConnection
 import java.net.URL
 
 internal object RuvenUpdater {
+    internal const val MAX_APK_BYTES = 100L * 1024L * 1024L
+    private const val MIN_APK_BYTES = 1_000_000L
+    private val trustedAssetHosts = setOf(
+        "github.com",
+        "release-assets.githubusercontent.com",
+        "objects.githubusercontent.com"
+    )
+
+    internal fun isTrustedReleaseAssetUrl(raw: String): Boolean {
+        val uri = runCatching { URI(raw) }.getOrNull() ?: return false
+        return uri.scheme.equals("https", ignoreCase = true) &&
+            uri.host?.equals("github.com", ignoreCase = true) == true &&
+            uri.userInfo == null &&
+            (uri.port == -1 || uri.port == 443) &&
+            uri.query == null &&
+            uri.fragment == null &&
+            uri.path.startsWith("/mostafa0782/RUVEN/releases/download/") &&
+            uri.path.length > "/mostafa0782/RUVEN/releases/download/".length
+    }
+
+    private fun isTrustedDownloadTarget(url: URL): Boolean =
+        url.protocol.equals("https", ignoreCase = true) &&
+            url.host.lowercase() in trustedAssetHosts &&
+            url.userInfo == null &&
+            (url.port == -1 || url.port == 443)
+
     data class Release(val versionName: String, val apkUrl: String, val sha256: String)
 
     suspend fun latestRelease(): Release = withContext(Dispatchers.IO) {
@@ -39,9 +66,9 @@ internal object RuvenUpdater {
                 val asset = assets.optJSONObject(i) ?: continue
                 when (asset.optString("name")) {
                     "RUVEN.apk" -> apkUrl = asset.optString("browser_download_url")
-                        .takeIf { it.startsWith("https://github.com/mostafa0782/RUVEN/releases/download/") }
+                        .takeIf(::isTrustedReleaseAssetUrl)
                     "RUVEN.apk.sha256" -> checksumUrl = asset.optString("browser_download_url")
-                        .takeIf { it.startsWith("https://github.com/mostafa0782/RUVEN/releases/download/") }
+                        .takeIf(::isTrustedReleaseAssetUrl)
                 }
             }
             val verifiedApkUrl = apkUrl ?: throw IllegalStateException("ملف RUVEN.apk غير موجود بالإصدار الرسمي.")
@@ -51,10 +78,12 @@ internal object RuvenUpdater {
                 checksumConnection.connectTimeout = 12000
                 checksumConnection.readTimeout = 12000
                 checksumConnection.setRequestProperty("User-Agent", "RUVEN-Android")
-                if (checksumConnection.responseCode !in 200..299) {
+                if (checksumConnection.responseCode !in 200..299 ||
+                    !isTrustedDownloadTarget(checksumConnection.url)
+                ) {
                     throw IllegalStateException("تعذر التحقق من بصمة ملف التحديث.")
                 }
-                checksumConnection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }.trim()
+                checksumConnection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readLine().orEmpty().trim() }
             } finally {
                 checksumConnection.disconnect()
             }
@@ -82,21 +111,48 @@ internal object RuvenUpdater {
     }
 
     suspend fun downloadAndInstall(activity: Activity, apkUrl: String, expectedSha256: String) = withContext(Dispatchers.IO) {
+        if (!isTrustedReleaseAssetUrl(apkUrl)) {
+            throw IllegalArgumentException("رابط التحديث غير موثوق.")
+        }
+        if (!expectedSha256.matches(Regex("[0-9a-fA-F]{64}"))) {
+            throw IllegalArgumentException("بصمة التحديث غير صالحة.")
+        }
+
         val connection = (URL(apkUrl).openConnection() as HttpURLConnection)
         val apk = File(activity.cacheDir, "RUVEN-update.apk")
+        var verified = false
         try {
             connection.connectTimeout = 15000
             connection.readTimeout = 30000
             connection.setRequestProperty("User-Agent", "RUVEN-Android")
             val status = connection.responseCode
-            if (status !in 200..299) throw IllegalStateException("تعذر تنزيل التحديث (HTTP $status).")
-            connection.inputStream.use { input ->
-                apk.outputStream().use { output -> input.copyTo(output) }
+            if (status !in 200..299 || !isTrustedDownloadTarget(connection.url)) {
+                throw IllegalStateException("تعذر تنزيل التحديث من مصدر موثوق (HTTP $status).")
             }
-            if (apk.length() < 1_000_000) {
-                apk.delete()
+            val declaredLength = connection.contentLengthLong
+            if (declaredLength > MAX_APK_BYTES) {
+                throw IllegalStateException("حجم ملف التحديث يتجاوز الحد الآمن.")
+            }
+
+            var downloadedBytes = 0L
+            connection.inputStream.use { input ->
+                apk.outputStream().use { output ->
+                    val buffer = ByteArray(16 * 1024)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        downloadedBytes += count
+                        if (downloadedBytes > MAX_APK_BYTES) {
+                            throw IllegalStateException("حجم ملف التحديث يتجاوز الحد الآمن.")
+                        }
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
+            if (downloadedBytes < MIN_APK_BYTES) {
                 throw IllegalStateException("ملف التحديث غير مكتمل أو غير صالح.")
             }
+
             val actualSha256 = apk.inputStream().use { input ->
                 val digest = MessageDigest.getInstance("SHA-256")
                 val buffer = ByteArray(8192)
@@ -112,11 +168,12 @@ internal object RuvenUpdater {
                     expectedSha256.lowercase().toByteArray(Charsets.US_ASCII)
                 )
             ) {
-                apk.delete()
                 throw IllegalStateException("فشل التحقق من سلامة ملف التحديث؛ لم يتم تثبيته.")
             }
+            verified = true
         } finally {
             connection.disconnect()
+            if (!verified) apk.delete()
         }
 
         withContext(Dispatchers.Main) {
