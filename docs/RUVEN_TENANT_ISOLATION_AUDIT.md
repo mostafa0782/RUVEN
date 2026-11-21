@@ -27,6 +27,7 @@ Consequently, the current design must be treated as one school per Supabase proj
 - The bucket `ruven-school-files` is private; it stores approved PDF textbooks and pending/approved GLB study models with server-side approval checks.
 - **Completed 2026-11-21:** added restrictive Storage INSERT policies for `textbooks/` and `study-models/`. A rolled-back role simulation verified a class monitor passes the broad upload policy but fails both restrictive checks, while the owner passes both. This closes the permissive-OR gap in the prior upload policy set.
 - Textbook and 3D-resource uploads are admin-gated; student downloads require approved catalogue metadata.
+- **Completed 2026-11-21:** textbook catalogue trigger now forces new entries to `pending`, derives uploader/reviewer from `auth.uid()`, preserves review timestamps, and prevents changing uploader or file identity metadata. A rolled-back test verified spoofed insert/review identities are overwritten and uploader changes are rejected.
 - The 3D catalogue records subject/chapter, licence, attribution, source, required 2D fallback, bounded GLB size, uploader, reviewer, and approval state. A database trigger now derives uploader/reviewer identity from `auth.uid()`, forces new uploads to `pending`, and makes uploader identity immutable.
 - Study records are student-owned for student reads/inserts; admin reporting is role-gated.
 - The client uses a publishable key; the service-role key must remain server-side.
