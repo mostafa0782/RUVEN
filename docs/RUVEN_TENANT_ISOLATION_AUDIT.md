@@ -124,3 +124,16 @@ Do not add a default school UUID or fabricate a school record. Before backfill:
 6. Add UI smoke tests, dependency scanning, and immutable SHA pinning for GitHub Actions before treating release automation as fully hardened.
 
 The audit does not establish legal/ministry approval, production readiness, or multi-school isolation.
+
+
+## Additional RLS and role-scope findings — 2026-11-21
+
+A second pass over the live policy catalog found and corrected two class-boundary issues and one over-broad role mapping:
+
+- Class-monitor SELECT on `leave_requests` now requires the leave row's class to equal the monitor's own class and the student's current profile class.
+- Class-monitor writes to `school_items` are limited to unpublished reports/timetable items in the monitor's own class. A monitor can add/read report updates only for a report they created in their own class.
+- `school_decisions.assigned_monitor` must reference a profile with role `class_monitor`; the assigned-monitor SELECT branch also checks the caller's current role.
+- `educational_counselor` was removed from the broad admin helper and the Android admin-workspace helper. Only owner, principal, and assistant principal inherit school-wide admin workflows. Counselor access remains intentionally narrow until dedicated student-support policies are designed.
+- The affected workflow tables (`leave_requests`, `school_decisions`, `report_updates`, and `school_items` rows of type `report`) had zero records at the time of the migration, so the policy correction did not hide or rewrite existing workflow records.
+
+The live policy catalog was queried after migration. A dedicated authenticated negative/positive test matrix with separate monitor accounts remains a release gate; do not infer it passed merely from successful migration application.
