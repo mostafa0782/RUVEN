@@ -35,6 +35,23 @@ class StudySpaceModelsTest {
         )))
     }
 
+    @Test fun focusAndBreakCycleTransitionsAreCalculated() {
+        assertEquals(StudyCycleState(StudyPhase.FOCUS, 60L), studyCycleState(24 * 60L, StudyInterval.POMODORO_25_5))
+        assertEquals(StudyCycleState(StudyPhase.BREAK, 5 * 60L), studyCycleState(25 * 60L, StudyInterval.POMODORO_25_5))
+        assertEquals(StudyCycleState(StudyPhase.BREAK, 2 * 60L), studyCycleState(28 * 60L, StudyInterval.POMODORO_25_5))
+        assertEquals(StudyCycleState(StudyPhase.FOCUS, 25 * 60L), studyCycleState(30 * 60L, StudyInterval.POMODORO_25_5))
+    }
+
+    @Test fun longFocusCycleAndNoBreakModeWork() {
+        assertEquals(StudyCycleState(StudyPhase.BREAK, 10 * 60L), studyCycleState(50 * 60L, StudyInterval.LONG_50_10))
+        assertEquals(StudyCycleState(StudyPhase.NO_BREAK, 0L), studyCycleState(3600L, StudyInterval.NO_BREAKS))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun focusCycleRejectsNegativeElapsedTime() {
+        studyCycleState(-1L, StudyInterval.POMODORO_25_5)
+    }
+
     @Test fun supportsFourHourAndUnlimitedSessions() {
         assertEquals(240, StudyDuration.HOURS_4.minutes)
         assertEquals(0, StudyDuration.UNLIMITED.minutes)
