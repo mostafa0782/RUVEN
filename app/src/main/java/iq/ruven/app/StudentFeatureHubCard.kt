@@ -151,7 +151,13 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                                         bagItems = input.split(',', '،', '\n').map { it.trim() }.filter { it.isNotEmpty() }
                                         checkedBagItems = prefs.getString("bag_checked", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() }.toSet()
                                     }
-                                    prefs.edit().putString("recent_${System.currentTimeMillis()}", tool.ar).apply()
+                                    val recentEditor = prefs.edit()
+                                    .putString("recent_${System.currentTimeMillis()}", tool.ar)
+                                val recentKeys = prefs.all.keys
+                                    .filter { it.startsWith("recent_") }
+                                    .sortedByDescending { it.removePrefix("recent_").toLongOrNull() ?: 0L }
+                                recentKeys.drop(7).forEach(recentEditor::remove)
+                                recentEditor.apply()
                                 },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(13.dp)
@@ -267,7 +273,17 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                 }) { Text(if (isEnglish) "Generate / Save" else "إنشاء / حفظ") }
             },
             dismissButton = {
-                TextButton(onClick = { selected = null }) { Text(if (isEnglish) "Close" else "إغلاق") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (tool.id == 14) {
+                        TextButton(onClick = {
+                            prefs.edit().also { editor -> prefs.all.keys.filter { it.startsWith("recent_") }.forEach(editor::remove) }.apply()
+                            output = if (isEnglish) "Recently viewed history cleared." else "تم مسح سجل آخر الأدوات."
+                        }) {
+                            Text(if (isEnglish) "Clear history" else "مسح السجل")
+                        }
+                    }
+                    TextButton(onClick = { selected = null }) { Text(if (isEnglish) "Close" else "إغلاق") }
+                }
             }
         )
     }
