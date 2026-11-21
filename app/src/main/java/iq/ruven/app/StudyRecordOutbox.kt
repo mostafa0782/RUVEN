@@ -174,7 +174,7 @@ object StudyRecordOutbox {
                 break
             }
         }
-        StudyOutboxSyncResult(
+        return StudyOutboxSyncResult(
             syncedCount = synced,
             pendingCount = pendingForUser(context, session.userId).size,
             errorMessage = error
