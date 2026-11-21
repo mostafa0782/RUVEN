@@ -1,31 +1,30 @@
 package iq.ruven.app
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
+import java.util.UUID
 
 class StudyRecordOutboxTest {
-    @Test fun draftRoundTripsAllOptionalAndRequiredFields() {
-        val draft = StudyRecordDraft(
-            recordType = "homework_status",
-            subjectName = "الرياضيات",
-            chapterName = "الفصل الأول",
-            lessonName = "المعادلات",
-            homeworkTitle = "حل التمارين",
-            homeworkStatus = "شبه منجز",
-            pageNumber = 12
-        )
-        val restored = StudyRecordDraft.fromJson(draft.toJson("student-1"))
-        assertEquals(draft, restored)
-        assertEquals("student-1", draft.toJson("student-1").getString("user_id"))
+    @Test fun draftCreatesAValidUniqueClientRecordId() {
+        val first = StudyRecordDraft(recordType = "study_session", subjectName = "العلوم")
+        val second = StudyRecordDraft(recordType = "study_session", subjectName = "العلوم")
+        assertEquals(first.clientRecordId, UUID.fromString(first.clientRecordId).toString())
+        assertNotEquals(first.clientRecordId, second.clientRecordId)
     }
 
-    @Test fun draftKeepsNullsAsJsonNullRatherThanTheStringNull() {
-        val draft = StudyRecordDraft(recordType = "study_session", subjectName = "العلوم")
-        val json = draft.toJson("student-1")
-        assertTrue(json.isNull("chapter_name"))
-        assertTrue(json.isNull("lesson_name"))
-        assertTrue(json.isNull("page_number"))
+    @Test fun suppliedClientRecordIdRemainsStableForRetries() {
+        val id = UUID.randomUUID().toString()
+        val firstAttempt = StudyRecordDraft(
+            recordType = "homework_status",
+            subjectName = "الرياضيات",
+            homeworkTitle = "حل التمارين",
+            homeworkStatus = "شبه منجز",
+            clientRecordId = id
+        )
+        val retry = firstAttempt.copy()
+        assertEquals(id, firstAttempt.clientRecordId)
+        assertEquals(firstAttempt.clientRecordId, retry.clientRecordId)
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -36,5 +35,10 @@ class StudyRecordOutboxTest {
     @Test(expected = IllegalArgumentException::class)
     fun draftRejectsInvalidClientRecordId() {
         StudyRecordDraft(recordType = "study_session", subjectName = "العلوم", clientRecordId = "not-a-uuid")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun draftRejectsInvalidDuration() {
+        StudyRecordDraft(recordType = "study_session", subjectName = "العلوم", durationSeconds = 86401)
     }
 }
