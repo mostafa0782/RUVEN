@@ -25,6 +25,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -50,12 +52,23 @@ import java.io.File
 
 private const val MAX_STUDY_GLB_BYTES = 25L * 1024L * 1024L
 
-internal fun isGlbBinaryHeader(header: ByteArray): Boolean =
-    header.size >= 4 &&
-        header[0] == 0x67.toByte() &&
-        header[1] == 0x6c.toByte() &&
-        header[2] == 0x54.toByte() &&
-        header[3] == 0x46.toByte()
+internal fun glbDeclaredLength(header: ByteArray): Long? {
+    if (header.size < 12 ||
+        header[0] != 0x67.toByte() ||
+        header[1] != 0x6c.toByte() ||
+        header[2] != 0x54.toByte() ||
+        header[3] != 0x46.toByte()
+    ) return null
+
+    fun uint32LittleEndian(offset: Int): Long =
+        (header[offset].toLong() and 0xffL) or
+            ((header[offset + 1].toLong() and 0xffL) shl 8) or
+            ((header[offset + 2].toLong() and 0xffL) shl 16) or
+            ((header[offset + 3].toLong() and 0xffL) shl 24)
+
+    if (uint32LittleEndian(4) != 2L) return null
+    return uint32LittleEndian(8).takeIf { it in 12L..MAX_STUDY_GLB_BYTES }
+}
 
 @Composable
 fun StudyModelViewerDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
@@ -64,6 +77,7 @@ fun StudyModelViewerDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
     var modelFile by remember { mutableStateOf<File?>(null) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
+    var sceneGeneration by remember { mutableIntStateOf(0) }
 
     DisposableEffect(modelFile) {
         val previousFile = modelFile
@@ -139,11 +153,18 @@ fun StudyModelViewerDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                         ) {
                             Text(if (isEnglish) "Remove" else "إزالة")
                         }
+                        OutlinedButton(
+                            onClick = { sceneGeneration += 1; error = "" },
+                            enabled = !busy
+                        ) {
+                            Text(if (isEnglish) "Reset view" else "إعادة ضبط العرض")
+                        }
                     }
                 }
 
                 Text(
-                    modelFile?.name ?: if (isEnglish) "No model selected" else "لم يتم اختيار مجسم بعد",
+                    modelFile?.let { "${it.name} · ${(it.length() / 1024).coerceAtLeast(1)} KB" }
+                        ?: if (isEnglish) "No model selected" else "لم يتم اختيار مجسم بعد",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -161,11 +182,13 @@ fun StudyModelViewerDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
-                        StudyModelScene(
-                            file = selectedFile,
-                            isEnglish = isEnglish,
-                            onError = { error = it }
-                        )
+                        key(sceneGeneration) {
+                            StudyModelScene(
+                                file = selectedFile,
+                                isEnglish = isEnglish,
+                                onError = { error = it }
+                            )
+                        }
                     }
                     if (busy) {
                         CircularProgressIndicator(Modifier.size(38.dp))
@@ -254,18 +277,17 @@ private suspend fun copyValidatedGlb(context: Context, uri: Uri): File = withCon
             ?: throw IllegalArgumentException("تعذر قراءة الملف المحدد.")
         input.use { source ->
             destination.outputStream().buffered().use { output ->
-                val header = ByteArray(4)
+                val header = ByteArray(12)
                 var headerRead = 0
                 while (headerRead < header.size) {
                     val count = source.read(header, headerRead, header.size - headerRead)
                     if (count < 0) break
                     headerRead += count
                 }
-                require(headerRead == 4 && isGlbBinaryHeader(header)) {
-                    "هذا ليس ملف GLB صالحاً. اختر ملفاً يبدأ بترويسة glTF."
-                }
+                val declaredLength = glbDeclaredLength(header)
+                    ?: throw IllegalArgumentException("ملف GLB غير صالح أو لا يستخدم glTF 2.0.")
                 output.write(header)
-                var total = 4L
+                var total = 12L
                 val buffer = ByteArray(16 * 1024)
                 while (true) {
                     val count = source.read(buffer)
@@ -275,6 +297,9 @@ private suspend fun copyValidatedGlb(context: Context, uri: Uri): File = withCon
                         "حجم المجسم يتجاوز الحد المسموح (25 MB)."
                     }
                     output.write(buffer, 0, count)
+                }
+                require(total == declaredLength) {
+                    "طول ملف GLB لا يطابق الطول المسجل في ترويسته."
                 }
             }
         }
