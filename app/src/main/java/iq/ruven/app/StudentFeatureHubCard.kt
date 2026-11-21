@@ -76,15 +76,15 @@ private val ruvenStudentTools = listOf(
 @Composable
 fun StudentFeatureHubCard(isEnglish: Boolean) {
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("ruven_student_tools", Context.MODE_PRIVATE) }
+    var selected by remember { mutableStateOf<RuvenStudentTool?>(null) }
+    var input by remember { mutableStateOf("") }
+    var output by remember { mutableStateOf("") }
     val revisionExportLauncher = rememberLauncherForActivityResult(CreateDocument("text/plain")) { uri: Uri? ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(output) }
         }
     }
-    val prefs = remember { context.getSharedPreferences("ruven_student_tools", Context.MODE_PRIVATE) }
-    var selected by remember { mutableStateOf<RuvenStudentTool?>(null) }
-    var input by remember { mutableStateOf("") }
-    var output by remember { mutableStateOf("") }
     var focusEnabled by remember { mutableStateOf(false) }
     var focusTask by remember { mutableStateOf("") }
     var bagItems by remember { mutableStateOf(listOf<String>()) }
