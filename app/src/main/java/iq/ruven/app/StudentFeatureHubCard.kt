@@ -52,6 +52,20 @@ private data class RuvenStudentTool(
     val hintEn: String = ""
 )
 
+private fun suggestWakeTime(input: String, isEnglish: Boolean): String {
+    val parts = input.split(',', '،').map { it.trim() }
+    if (parts.size != 3) return if (isEnglish) "Enter: departure time, preparation minutes, travel minutes. Example: 07:30,25,20" else "اكتب: وقت الخروج، دقائق الاستعداد، دقائق الطريق. مثال: 07:30،25،20"
+    val departure = runCatching { java.time.LocalTime.parse(parts[0]) }.getOrNull()
+        ?: return if (isEnglish) "Use a 24-hour time such as 07:30." else "اكتب الوقت بصيغة 24 ساعة مثل 07:30."
+    val preparation = parts[1].toIntOrNull()
+    val travel = parts[2].toIntOrNull()
+    if (preparation == null || travel == null || preparation !in 0..240 || travel !in 0..360) {
+        return if (isEnglish) "Preparation must be 0–240 minutes and travel 0–360 minutes." else "مدة الاستعداد من 0 إلى 240 دقيقة، والطريق من 0 إلى 360 دقيقة."
+    }
+    val wake = departure.minusMinutes((preparation + travel).toLong())
+    return if (isEnglish) "Suggested wake-up time: ${wake.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}. This is only a calculation; no alarm was created." else "وقت الاستيقاظ المقترح: ${wake.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))}. هذا حساب إرشادي فقط ولم يتم إنشاء منبّه."
+}
+
 private fun buildTomorrowPreparationItems(context: Context, extra: String): List<String> {
     val studyPrefs = context.getSharedPreferences("ruven_study_space_v1", Context.MODE_PRIVATE)
     val homeworkItems = runCatching {
@@ -151,6 +165,7 @@ private val ruvenStudentTools = listOf(
     RuvenStudentTool(18, "خطة الصباح", "Morning plan", "اكتب أهم شي لازم تنجزه قبل المدرسة", "Enter what you need to do before school"),
     RuvenStudentTool(20, "تحضير باچر", "Prepare for tomorrow", "اكتب جدول باچر أو واجباته", "Enter tomorrow's timetable or homework"),
     RuvenStudentTool(21, "تذكير المغادرة", "Departure reminder", "بعد كم دقيقة تريد تنبيه الاستعداد للمغادرة؟", "How many minutes until you want a departure reminder?"),
+    RuvenStudentTool(22, "اقتراح وقت الاستيقاظ", "Wake-up suggestion", "اكتب وقت الخروج ودقائق الاستعداد والطريق", "Enter departure time, preparation minutes, and travel minutes", "مثال: 07:30،25،20", "Example: 07:30,25,20"),
     RuvenStudentTool(31, "تسجيل المزاج", "Mood check-in", "سجّل شعورك بكلمات بسيطة (خاص على جهازك)", "Describe your mood briefly (private on this device)"),
     RuvenStudentTool(32, "دقيقة هدوء", "Quiet minute", "اكتب شنو تريد تتركه مؤقتًا حتى ترتاح", "Write what you want to pause and set aside"),
     RuvenStudentTool(36, "رسالة شكر", "Thank-you helper", "اكتب شنو الشخص ساعدك بيه", "Describe how the person helped you")
@@ -338,6 +353,8 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                             scheduleStudentBreak(context, minutes) -> if (isEnglish) "Break reminder set for $minutes minutes. It will notify you even if RUVEN is closed." else "تم ضبط مؤقت الاستراحة لـ $minutes دقيقة، ويوصلك تنبيه حتى إذا أغلقت RUVEN."
                             else -> if (isEnglish) "Allow RUVEN notifications in Android settings, then set the break again." else "فعّل إشعارات RUVEN من إعدادات أندرويد، وبعدها اضبط الاستراحة من جديد."
                         }
+                    } else if (tool.id == 22) {
+                        suggestWakeTime(input.trim(), isEnglish)
                     } else if (tool.id == 21) {
                         val minutes = input.trim().toIntOrNull()
                         when {
