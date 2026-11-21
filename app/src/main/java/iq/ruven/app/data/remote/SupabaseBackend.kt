@@ -483,6 +483,80 @@ class SupabaseBackend(
         Unit
     }
 
+    /** Append-only study event. RLS verifies the authenticated student owns the row. */
+    suspend fun createStudentStudyRecord(
+        session: Session,
+        recordType: String,
+        subjectName: String,
+        chapterName: String? = null,
+        lessonName: String? = null,
+        durationSeconds: Long = 0L,
+        lessonCompleted: Boolean = false,
+        homeworkTitle: String? = null,
+        homeworkStatus: String? = null,
+        examKind: String? = null,
+        pageNumber: Int? = null
+    ) = withContext(Dispatchers.IO) {
+        require(recordType in setOf("study_session", "lesson_progress", "homework_status", "exam_scope")) { "نوع سجل الدراسة غير صالح." }
+        require(subjectName.isNotBlank() && subjectName.length <= 80) { "اسم المادة غير صالح." }
+        require(durationSeconds in 0L..86400L) { "مدة الجلسة غير صالحة." }
+        require(pageNumber == null || pageNumber >= 1) { "رقم الصفحة غير صالح." }
+        val payload = JSONObject()
+            .put("student_id", session.userId)
+            .put("record_type", recordType)
+            .put("subject_name", subjectName.trim())
+            .put("duration_seconds", durationSeconds.toInt())
+            .put("lesson_completed", lessonCompleted)
+        chapterName?.trim()?.takeIf { it.isNotBlank() }?.let { payload.put("chapter_name", it.take(160)) }
+        lessonName?.trim()?.takeIf { it.isNotBlank() }?.let { payload.put("lesson_name", it.take(200)) }
+        homeworkTitle?.trim()?.takeIf { it.isNotBlank() }?.let { payload.put("homework_title", it.take(200)) }
+        homeworkStatus?.takeIf { it in setOf("كُتب", "اكتمل", "شبه منجز", "لم ينجز") }?.let { payload.put("homework_status", it) }
+        examKind?.takeIf { it in setOf("شهري", "نصف السنة", "نهائي", "تجريبي", "أخرى") }?.let { payload.put("exam_kind", it) }
+        pageNumber?.let { payload.put("page_number", it) }
+        requestRaw("/rest/v1/student_study_records", "POST", payload, session)
+        Unit
+    }
+
+    data class StudentStudyRecord(
+        val id: String,
+        val studentId: String,
+        val recordType: String,
+        val subjectName: String,
+        val chapterName: String?,
+        val lessonName: String?,
+        val durationSeconds: Int,
+        val lessonCompleted: Boolean,
+        val homeworkTitle: String?,
+        val homeworkStatus: String?,
+        val examKind: String?,
+        val pageNumber: Int?,
+        val recordedAt: String
+    )
+
+    /** Admins can see all records through RLS; students can only retrieve their own. */
+    suspend fun loadStudentStudyRecords(session: Session, studentId: String? = null): List<StudentStudyRecord> = withContext(Dispatchers.IO) {
+        val filter = studentId?.takeIf { it.isNotBlank() }?.let { "&student_id=eq.${encode(it)}" }.orEmpty()
+        val rows = requestArray("/rest/v1/student_study_records?select=id,student_id,record_type,subject_name,chapter_name,lesson_name,duration_seconds,lesson_completed,homework_title,homework_status,exam_kind,page_number,recorded_at&order=recorded_at.desc&limit=500$filter", session)
+        (0 until rows.length()).map { i ->
+            val row = rows.getJSONObject(i)
+            StudentStudyRecord(
+                id = row.getString("id"),
+                studentId = row.getString("student_id"),
+                recordType = row.getString("record_type"),
+                subjectName = row.getString("subject_name"),
+                chapterName = row.optString("chapter_name").takeIf { it.isNotBlank() && it != "null" },
+                lessonName = row.optString("lesson_name").takeIf { it.isNotBlank() && it != "null" },
+                durationSeconds = row.optInt("duration_seconds"),
+                lessonCompleted = row.optBoolean("lesson_completed"),
+                homeworkTitle = row.optString("homework_title").takeIf { it.isNotBlank() && it != "null" },
+                homeworkStatus = row.optString("homework_status").takeIf { it.isNotBlank() && it != "null" },
+                examKind = row.optString("exam_kind").takeIf { it.isNotBlank() && it != "null" },
+                pageNumber = if (row.isNull("page_number")) null else row.optInt("page_number"),
+                recordedAt = row.optString("recorded_at")
+            )
+        }
+    }
+
     suspend fun signOut(session: Session) = withContext(Dispatchers.IO) {
         if (baseUrl.isBlank() || publishableKey.isBlank()) return@withContext
         runCatching {
