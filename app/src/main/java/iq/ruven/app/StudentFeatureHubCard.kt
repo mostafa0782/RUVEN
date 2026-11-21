@@ -52,6 +52,50 @@ private data class RuvenStudentTool(
     val hintEn: String = ""
 )
 
+private fun buildWeeklyStudentRecap(context: Context, isEnglish: Boolean): String {
+    val prefs = context.getSharedPreferences("ruven_study_space_v1", Context.MODE_PRIVATE)
+    val cutoff = System.currentTimeMillis() - 7L * 24L * 60L * 60L * 1000L
+    val sessions = runCatching {
+        val array = JSONArray(prefs.getString("weekly_sessions", "[]") ?: "[]")
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val at = item.optLong("at", 0L)
+            if (at < cutoff || at > System.currentTimeMillis()) null else item
+        }
+    }.getOrDefault(emptyList())
+    val totalSeconds = sessions.sumOf { it.optLong("seconds", 0L).coerceAtLeast(0L) }
+    val completed = sessions.count { it.optBoolean("completed", false) }
+    val subjects = sessions.map { it.optString("subject").trim() }.filter(String::isNotBlank).distinct()
+    val homework = runCatching {
+        val array = JSONArray(prefs.getString("homework", "[]") ?: "[]")
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            item.optString("status").takeIf(String::isNotBlank)
+        }
+    }.getOrDefault(emptyList())
+    val completedHomework = homework.count { it == "اكتمل" || it.equals("completed", true) }
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    if (sessions.isEmpty() && homework.isEmpty()) {
+        return if (isEnglish) "No study records yet. Finish a StudySpace session to start your weekly recap." else "ماكو سجلات دراسة بعد. أكمل جلسة من مساحة الدراسة حتى يبدأ ملخص أسبوعك."
+    }
+    return if (isEnglish) buildString {
+        appendLine("Your private 7-day recap")
+        appendLine("Study sessions: ${sessions.size}")
+        appendLine("Study time: ${hours}h ${minutes}m")
+        appendLine("Completed lessons: $completed")
+        appendLine("Subjects: ${subjects.joinToString().ifBlank { "—" }}")
+        append("Homework marked completed: $completedHomework / ${homework.size}")
+    } else buildString {
+        appendLine("ملخصك الخاص لآخر 7 أيام")
+        appendLine("جلسات الدراسة: ${sessions.size}")
+        appendLine("وقت الدراسة: ${hours} ساعة و${minutes} دقيقة")
+        appendLine("الدروس المكتملة: $completed")
+        appendLine("المواد: ${subjects.joinToString().ifBlank { "—" }}")
+        append("الواجبات المكتملة حسب تسجيلك: $completedHomework من ${homework.size}")
+    }
+}
+
 private data class RuvenSavedContent(val id: Long, val text: String)
 
 private fun readRuvenSavedContent(prefs: android.content.SharedPreferences): List<RuvenSavedContent> =
@@ -266,7 +310,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val result = if (tool.id == 13 && input.isNotBlank()) {
+                    val result = if (tool.id == 15) {\n                        buildWeeklyStudentRecap(context, isEnglish)\n                    } else if (tool.id == 13 && input.isNotBlank()) {
                         val next = (savedContent + RuvenSavedContent(System.currentTimeMillis(), input.trim())).takeLast(100)
                         savedContent = next
                         writeRuvenSavedContent(prefs, next)
