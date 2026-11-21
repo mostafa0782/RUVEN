@@ -1949,6 +1949,9 @@ private fun HomeScreen(
             item { StudentQuickPlannerCard(isEnglish = isEnglish) }
             item { StudentFeatureHubCard(isEnglish = isEnglish) }
         }
+        if (isSchoolAdminRole(role)) {
+            item { StudyReportsCard(session = session, backend = backend, isEnglish = isEnglish) }
+        }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SectionHeading(ruvenText(translated("اختصارات سريعة"), "Quick shortcuts", isEnglish), ruvenText(translated("اختَر شنو تحتاج هسه"), "Choose what you need", isEnglish))
