@@ -390,6 +390,13 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         }
                     }
                     if (output.isNotBlank()) {
+                        if (tool.id == 3 && input.isNotBlank()) {
+                            TextButton(onClick = {
+                                cancelSpacedReviewReminders(context, input)
+                                output = if (isEnglish) "Review reminders cancelled for this lesson." else "تم إلغاء تذكيرات مراجعة هذا الدرس."
+                                prefs.edit().putString("result_3", output).apply()
+                            }) { Text(if (isEnglish) "Cancel review reminders" else "إلغاء تذكيرات المراجعة") }
+                        }
                         if (tool.id == 7) {
                             TextButton(onClick = { revisionExportLauncher.launch("RUVEN-revision-sheet.txt") }) {
                                 Text(if (isEnglish) "Export printable sheet" else "تصدير ورقة قابلة للطباعة")
