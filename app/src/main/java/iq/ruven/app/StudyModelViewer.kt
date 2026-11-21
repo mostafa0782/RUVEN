@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -49,6 +50,13 @@ import java.io.File
 
 private const val MAX_STUDY_GLB_BYTES = 25L * 1024L * 1024L
 
+internal fun isGlbBinaryHeader(header: ByteArray): Boolean =
+    header.size >= 4 &&
+        header[0] == 0x67.toByte() &&
+        header[1] == 0x6c.toByte() &&
+        header[2] == 0x54.toByte() &&
+        header[3] == 0x46.toByte()
+
 @Composable
 fun StudyModelViewerDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -56,6 +64,11 @@ fun StudyModelViewerDialog(isEnglish: Boolean, onDismiss: () -> Unit) {
     var modelFile by remember { mutableStateOf<File?>(null) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
+
+    DisposableEffect(modelFile) {
+        val previousFile = modelFile
+        onDispose { previousFile?.delete() }
+    }
 
     val modelPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
@@ -192,17 +205,23 @@ private fun StudyModelScene(file: File, isEnglish: Boolean, onError: (String) ->
         position = Position(z = 4.0f)
     }
 
+    var loading by remember(file.absolutePath) { mutableStateOf(true) }
     val modelInstance by produceState<io.github.sceneview.model.ModelInstance?>(
         initialValue = null,
         key1 = file.absolutePath
     ) {
-        value = try {
-            modelLoader.loadModelInstance(Uri.fromFile(file).path ?: file.absolutePath)
+        try {
+            value = modelLoader.loadModelInstance(Uri.fromFile(file).path ?: file.absolutePath)
+            if (value == null) {
+                onError(if (isEnglish) "The model file could not be decoded." else "تعذر فك ترميز ملف المجسم.")
+            }
         } catch (failure: Exception) {
             onError(
                 failure.message ?: if (isEnglish) "The model could not be rendered." else "تعذر عرض المجسم."
             )
-            null
+            value = null
+        } finally {
+            loading = false
         }
     }
 
@@ -222,7 +241,7 @@ private fun StudyModelScene(file: File, isEnglish: Boolean, onError: (String) ->
             ),
             childNodes = listOfNotNull(modelNode)
         )
-        if (modelInstance == null) {
+        if (loading) {
             CircularProgressIndicator(Modifier.align(Alignment.Center))
         }
     }
@@ -242,13 +261,7 @@ private suspend fun copyValidatedGlb(context: Context, uri: Uri): File = withCon
                     if (count < 0) break
                     headerRead += count
                 }
-                require(
-                    headerRead == 4 &&
-                        header[0] == 0x67.toByte() &&
-                        header[1] == 0x6c.toByte() &&
-                        header[2] == 0x54.toByte() &&
-                        header[3] == 0x46.toByte()
-                ) {
+                require(headerRead == 4 && isGlbBinaryHeader(header)) {
                     "هذا ليس ملف GLB صالحاً. اختر ملفاً يبدأ بترويسة glTF."
                 }
                 output.write(header)
