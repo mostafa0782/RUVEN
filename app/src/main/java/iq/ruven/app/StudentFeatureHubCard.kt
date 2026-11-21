@@ -254,7 +254,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(if (isEnglish) "Student toolkit · 20 tools" else "صندوق أدوات الطالب · 20 ميزة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(if (isEnglish) "Student toolkit · ${ruvenStudentTools.size} tools" else "صندوق أدوات الطالب · ${ruvenStudentTools.size} ميزة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
                 if (isEnglish) "Personal tools are saved locally on this device." else "الأدوات الشخصية تُحفظ محليًا على هذا الجهاز.",
                 style = MaterialTheme.typography.bodySmall,
@@ -421,8 +421,13 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                         writeHomeworkPlan(prefs, homeworkPlan)
                         if (isEnglish) "Editable homework plan created. Change each step and its 5/10/15-minute estimate below." else "انعملت خطة واجب قابلة للتعديل. غيّر كل خطوة ووقتها 5 أو 10 أو 15 دقيقة من القائمة أدناه."
                     } else if (tool.id == 23) {
-                        lostItemQrToken = createLostItemClaimToken()
-                        if (isEnglish) "Random claim token created for: ${input.trim().take(100)}" else "تم إنشاء رمز مطالبة عشوائي للغرض: ${input.trim().take(100)}"
+                        if (input.isBlank()) {
+                            lostItemQrToken = ""
+                            if (isEnglish) "Enter an item description first." else "اكتب وصف الغرض أولًا."
+                        } else {
+                            lostItemQrToken = createLostItemClaimToken()
+                            if (isEnglish) "Random claim token created for: ${input.trim().take(100)}" else "تم إنشاء رمز مطالبة عشوائي للغرض: ${input.trim().take(100)}"
+                        }
                     } else if (tool.id == 15) {
                         buildWeeklyStudentRecap(context, isEnglish)
                     } else if (tool.id == 17) {
