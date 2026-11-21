@@ -1945,6 +1945,7 @@ private fun HomeScreen(
             }
         }
         if (role == SchoolRole.STUDENT) {
+            item { StudySpaceCard(isEnglish = isEnglish) }
             item { StudentQuickPlannerCard(isEnglish = isEnglish) }
             item { StudentFeatureHubCard(isEnglish = isEnglish) }
         }
