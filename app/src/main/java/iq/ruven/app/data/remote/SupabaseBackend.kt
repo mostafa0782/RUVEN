@@ -495,14 +495,17 @@ class SupabaseBackend(
         homeworkTitle: String? = null,
         homeworkStatus: String? = null,
         examKind: String? = null,
-        pageNumber: Int? = null
+        pageNumber: Int? = null,
+        clientRecordId: String = UUID.randomUUID().toString()
     ) = withContext(Dispatchers.IO) {
         require(recordType in setOf("study_session", "lesson_progress", "homework_status", "exam_scope")) { "نوع سجل الدراسة غير صالح." }
         require(subjectName.isNotBlank() && subjectName.length <= 80) { "اسم المادة غير صالح." }
         require(durationSeconds in 0L..86400L) { "مدة الجلسة غير صالحة." }
         require(pageNumber == null || pageNumber >= 1) { "رقم الصفحة غير صالح." }
+        require(runCatching { UUID.fromString(clientRecordId) }.isSuccess) { "معرّف السجل غير صالح." }
         val payload = JSONObject()
             .put("student_id", session.userId)
+            .put("client_record_id", clientRecordId)
             .put("record_type", recordType)
             .put("subject_name", subjectName.trim())
             .put("duration_seconds", durationSeconds.toInt())
@@ -513,7 +516,10 @@ class SupabaseBackend(
         homeworkStatus?.takeIf { it in setOf("كُتب", "اكتمل", "شبه منجز", "لم ينجز") }?.let { payload.put("homework_status", it) }
         examKind?.takeIf { it in setOf("شهري", "نصف السنة", "نهائي", "تجريبي", "أخرى") }?.let { payload.put("exam_kind", it) }
         pageNumber?.let { payload.put("page_number", it) }
-        requestRaw("/rest/v1/student_study_records", "POST", payload, session)
+        requestRaw(
+            "/rest/v1/student_study_records?on_conflict=student_id,client_record_id",
+            "POST", payload, session, ignoreDuplicates = true
+        )
         Unit
     }
 
@@ -775,7 +781,8 @@ class SupabaseBackend(
         body: JSONObject?,
         session: Session?,
         preferRepresentation: Boolean = false,
-        upsert: Boolean = false
+        upsert: Boolean = false,
+        ignoreDuplicates: Boolean = false
     ): String {
         requireConfigured()
         var connection: HttpURLConnection? = null
@@ -787,7 +794,8 @@ class SupabaseBackend(
                 setRequestProperty("apikey", publishableKey)
                 setRequestProperty("Accept", "application/json")
                 setRequestProperty("Content-Type", "application/json")
-                if (upsert) setRequestProperty("Prefer", "resolution=merge-duplicates,return=representation")
+                if (ignoreDuplicates) setRequestProperty("Prefer", "resolution=ignore-duplicates,return=minimal")
+                else if (upsert) setRequestProperty("Prefer", "resolution=merge-duplicates,return=representation")
                 else if (preferRepresentation) setRequestProperty("Prefer", "return=representation")
                 if (session != null) setRequestProperty("Authorization", "Bearer ${session.accessToken}")
                 if (body != null) {
