@@ -1,7 +1,7 @@
 package iq.ruven.app
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -10,7 +10,7 @@ class StudySpaceModelsTest {
     @Test fun supportsFourHourAndUnlimitedSessions() {
         assertEquals(240, StudyDuration.HOURS_4.minutes)
         assertEquals(0, StudyDuration.UNLIMITED.minutes)
-        assertFalse(StudySessionConfig("رياضيات").hasTimerLimit.not())
+        assertTrue(StudySessionConfig("رياضيات").hasTimerLimit)
         assertFalse(StudySessionConfig("رياضيات", duration = StudyDuration.UNLIMITED).hasTimerLimit)
     }
 
