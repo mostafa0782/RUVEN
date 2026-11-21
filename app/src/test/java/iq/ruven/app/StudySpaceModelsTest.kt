@@ -7,14 +7,32 @@ import org.junit.Test
 import java.time.Instant
 
 class StudySpaceModelsTest {
-    @Test fun glbHeaderAcceptsBinaryGlTfMagic() {
-        assertTrue(isGlbBinaryHeader(byteArrayOf(0x67, 0x6c, 0x54, 0x46)))
+    @Test fun glbHeaderAcceptsVersionTwoAndReturnsDeclaredLength() {
+        val header = byteArrayOf(
+            0x67, 0x6c, 0x54, 0x46,
+            0x02, 0x00, 0x00, 0x00,
+            0x18, 0x00, 0x00, 0x00
+        )
+        assertEquals(24L, glbDeclaredLength(header))
     }
 
-    @Test fun glbHeaderRejectsJsonGlTfAndTruncatedFiles() {
-        assertFalse(isGlbBinaryHeader(byteArrayOf(0x7b, 0x22, 0x61, 0x22)))
-        assertFalse(isGlbBinaryHeader(byteArrayOf(0x67, 0x6c, 0x54)))
-        assertFalse(isGlbBinaryHeader(byteArrayOf()))
+    @Test fun glbHeaderRejectsWrongMagicVersionAndTruncatedHeader() {
+        assertEquals(null, glbDeclaredLength(byteArrayOf(0x7b, 0x22, 0x61, 0x22)))
+        assertEquals(null, glbDeclaredLength(byteArrayOf(0x67, 0x6c, 0x54)))
+        assertEquals(null, glbDeclaredLength(byteArrayOf()))
+        assertEquals(null, glbDeclaredLength(byteArrayOf(
+            0x67, 0x6c, 0x54, 0x46,
+            0x01, 0x00, 0x00, 0x00,
+            0x18, 0x00, 0x00, 0x00
+        )))
+    }
+
+    @Test fun glbHeaderRejectsDeclaredLengthOverLimit() {
+        assertEquals(null, glbDeclaredLength(byteArrayOf(
+            0x67, 0x6c, 0x54, 0x46,
+            0x02, 0x00, 0x00, 0x00,
+            0x01, 0x00, 0x00, 0x02
+        )))
     }
 
     @Test fun supportsFourHourAndUnlimitedSessions() {
