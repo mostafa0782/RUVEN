@@ -67,7 +67,7 @@ Delivered in the current Android branch:
 Still required before calling StudySpace complete:
 - Shared 3D resource catalogue, teacher/admin publication workflow, licence/attribution metadata, and accessible 2D fallback. The current GLB viewer is a local-file viewer, not a curriculum catalogue.
 - Teacher confirmation/correction with immutable audit events; current homework status is a student self-report.
-- Test the background outbox retry path with a real signed-in device session, network loss/recovery, and token rotation. Database uniqueness makes network retries idempotent.
+- Test the background outbox retry path and approved 3D model download/render flow on a real signed-in device, including network loss/recovery and a device without GLES 3.0. Database uniqueness makes network retries idempotent.
 - Server-side pagination/date filtering beyond the latest 500 records, true class-level aggregation, assigned-subject enforcement, and integration tests for role/row isolation.
 - True multi-school tenant isolation. The current `profiles` schema has no `school_id`; class-name matching alone is not a safe tenant boundary. Do not onboard multiple schools into one shared database until school membership and RLS are implemented and verified across every school-owned table and Storage policy.
 
