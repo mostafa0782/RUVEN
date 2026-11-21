@@ -158,7 +158,7 @@ private fun TextbookAdminDialog(
                                     } ?: throw IllegalStateException("تعذر قراءة ملف PDF.")
                                 }
                                 val yearValue = year.toIntOrNull()
-                                require(year.isBlank() || yearValue in 2000..2100) { "سنة النشر غير صالحة." }
+                                require(year.isBlank() || (yearValue != null && yearValue in 2000..2100)) { "سنة النشر غير صالحة." }
                                 backend.uploadTextbook(
                                     session, grade, className, subject, title, edition, yearValue,
                                     publisher, source, sourceUrl, bytes
