@@ -205,6 +205,7 @@ private val ruvenStudentTools = listOf(
     RuvenStudentTool(21, "تذكير المغادرة", "Departure reminder", "بعد كم دقيقة تريد تنبيه الاستعداد للمغادرة؟", "How many minutes until you want a departure reminder?"),
     RuvenStudentTool(22, "اقتراح وقت الاستيقاظ", "Wake-up suggestion", "اكتب وقت الخروج ودقائق الاستعداد والطريق", "Enter departure time, preparation minutes, and travel minutes", "مثال: 07:30،25،20", "Example: 07:30,25,20"),
     RuvenStudentTool(23, "ملصق QR للمفقودات", "Lost-item QR label", "اكتب وصفًا مختصرًا للغرض لإنشاء رمز مطالبة عشوائي", "Enter a short item description to create a random claim token"),
+    RuvenStudentTool(33, "استراحة العين", "Eye-break reminder", "حدد التذكير كل كم دقيقة (15–180)، أو اكتب إيقاف", "Set a reminder interval in minutes (15–180), or type off"),
     RuvenStudentTool(31, "تسجيل المزاج", "Mood check-in", "سجّل شعورك بكلمات بسيطة (خاص على جهازك)", "Describe your mood briefly (private on this device)"),
     RuvenStudentTool(32, "دقيقة هدوء", "Quiet minute", "اكتب شنو تريد تتركه مؤقتًا حتى ترتاح", "Write what you want to pause and set aside"),
     RuvenStudentTool(36, "رسالة شكر", "Thank-you helper", "اكتب شنو الشخص ساعدك بيه", "Describe how the person helped you")
@@ -430,6 +431,18 @@ fun StudentFeatureHubCard(isEnglish: Boolean) {
                             minutes == null || minutes !in 1..180 -> if (isEnglish) "Enter a break between 1 and 180 minutes." else "حدد استراحة من دقيقة واحدة إلى 180 دقيقة."
                             scheduleStudentBreak(context, minutes) -> if (isEnglish) "Break reminder set for $minutes minutes. It will notify you even if RUVEN is closed." else "تم ضبط مؤقت الاستراحة لـ $minutes دقيقة، ويوصلك تنبيه حتى إذا أغلقت RUVEN."
                             else -> if (isEnglish) "Allow RUVEN notifications in Android settings, then set the break again." else "فعّل إشعارات RUVEN من إعدادات أندرويد، وبعدها اضبط الاستراحة من جديد."
+                        }
+                    } else if (tool.id == 33) {
+                        if (input.trim().equals("إيقاف", true) || input.trim().equals("off", true)) {
+                            cancelEyeBreakReminder(context)
+                            if (isEnglish) "Eye-break reminders disabled." else "تم إيقاف تذكيرات استراحة العين."
+                        } else {
+                            val minutes = input.trim().toIntOrNull()
+                            when {
+                                minutes == null || minutes !in 15..180 -> if (isEnglish) "Enter 15–180 minutes, or type off." else "اكتب مدة من 15 إلى 180 دقيقة، أو اكتب إيقاف."
+                                scheduleEyeBreakReminder(context, minutes) -> if (isEnglish) "A quiet eye-break reminder is scheduled every $minutes minutes. Type off to disable it." else "تمت جدولة تذكير هادئ كل $minutes دقيقة. اكتب إيقاف لتعطيله."
+                                else -> if (isEnglish) "Enable RUVEN notifications in Android settings, then try again." else "فعّل إشعارات RUVEN من إعدادات أندرويد ثم أعد المحاولة."
+                            }
                         }
                     } else if (tool.id == 22) {
                         suggestWakeTime(input.trim(), isEnglish)
