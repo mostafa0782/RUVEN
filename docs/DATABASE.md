@@ -1,38 +1,47 @@
-# RUVEN database integration plan
+# RUVEN database and authorization
 
-## Database choice
+## Platform
 
-RUVEN uses Supabase (managed PostgreSQL + Auth + Row Level Security) for the shared school database. PostgreSQL gives structured relationships and constraints; Supabase provides hosted authentication and database APIs without requiring a self-managed server.
+RUVEN uses Supabase Auth, managed PostgreSQL, PostgREST, Edge Functions, and private Storage. The Android application uses the Supabase publishable key only. Never include a service-role key in the APK, client configuration, or repository.
 
-## Data model
+## Live application tables
 
-- `profiles`: one profile per `auth.users` account. Supported roles are `student`, `class_monitor`, `parliament_member`, `teacher`, `class_supervisor`, `assistant_principal`, `principal`, `educational_counselor`, `ministry_education_member`, and `owner`.
-- `teacher_subjects`: authorized subject/class assignments.
-- `school_items`: one normalized table for homework, preparations, timetable, announcements and reports, distinguished by `item_type`.
-- `report_updates`: administrative follow-up on reports.
+The current public schema contains 15 application tables:
 
-## Security requirements
+- Identity and settings: `profiles`, `app_user_settings`
+- Class structure: `class_sections`, `teacher_subjects`, `student_roster`
+- School content: `school_items`, `report_updates`, `daily_class_reports`
+- Workflows: `leave_requests`, `school_decisions`, `school_seals`, `user_notifications`
+- Learning: `student_study_records`, `textbook_catalog`, `study_3d_resources`
 
-- RLS is enabled on every public table.
-- Role claims must not be accepted from Android input; roles are assigned through a trusted administrative path.
-- Teachers can create homework/preparations only for their explicit subject and class assignment.
-- Students see published content for their class, not unpublished drafts for other classes.
-- Only the owner, principal, and assistant principal have broad administrative access. New role types do not automatically inherit administrative permissions; access must be explicitly granted through reviewed RLS policies.
-- `parliament_member` is assigned only after the student election result is verified. The role category is implemented; a full election/voting workflow is separate work.
-- `class_supervisor` should be scoped to their assigned class before class-level management permissions are granted.
-- `educational_counselor` and `ministry_education_member` are separate, non-administrative roles; access to sensitive student reports must be designed and restricted explicitly.
-- The Supabase service-role secret must never be included in the APK, source code or client configuration.
+RLS is enabled on all 15 public application tables. The role and class helpers are stored in the non-exposed `private` schema. The Auth trigger creates new profiles with the least-privileged `student` role; trusted provisioning is performed separately.
 
-## Implementation sequence
+## Privileged operations
 
-1. Apply `supabase/migrations/202610200001_initial_schema.sql` to a real Supabase project.
-2. Configure school account provisioning and role assignment securely.
-3. Add the Supabase Kotlin client and read URL/public anon key from untracked local configuration.
-4. Replace the local SharedPreferences repository with a repository backed by Supabase; preserve local drafts only as offline cache.
-5. Upload timetable attachments to a private Storage bucket and use RLS-based storage policies.
-6. Add integration tests for student, monitor, parliament member, teacher, class supervisor, counselor, ministry member, assistant, principal and owner access.
-7. Validate policies in a test project before deploying to the school's real accounts.
+The active Edge Functions are:
 
-## Status
+- `owner-create-account`: validates the caller's Supabase JWT and checks `profiles.is_owner` before using the Auth Admin API and configuring the new profile.
+- `owner-set-profile-role`: validates the caller and owner flag, protects the owner account, and updates the target role/class.
 
-The migration and docs are committed as source. No hosted project has been created or connected by this repository change, and the current Compose screens still use local storage. Do not represent this as a live cloud database until migration, credentials, authentication and Android integration are complete.
+The service-role key remains server-side. Database grants allow service-role profile SELECT and only the required profile update columns. Unnecessary `TRUNCATE`, `TRIGGER`, `REFERENCES`, and `MAINTAIN` privileges have been revoked from service_role, anon, and authenticated on existing public tables; postgres-created future tables inherit the restrictive defaults.
+
+## Storage
+
+The `ruven-school-files` bucket is private. Ordinary class attachments are controlled by authenticated role and published-content policies. Textbook and 3D catalogue upload paths have restrictive admin-only INSERT checks. Student reads require approved catalogue metadata.
+
+## Important tenant limitation
+
+The live schema does not yet contain `school_id`, `tenant_id`, or a school-membership relation. Role/class policies do not isolate two schools that happen to use the same class names. Operate as one school per Supabase project. Multi-school onboarding is blocked until tenant IDs, membership, composite parent-child constraints, tenant-aware RLS, tenant-scoped Storage paths, and cross-school negative tests are implemented.
+
+## Remaining administrator action
+
+Supabase Security Advisor reports leaked-password protection disabled. Enable it in the Supabase Auth dashboard, then rerun the Security Advisor. This setting is not controlled by a Postgres migration.
+
+## Testing and rollout
+
+- Run unit tests and release assembly in GitHub Actions.
+- Run authenticated-role RLS probes for allowed and denied operations.
+- Test Storage upload/download/delete paths for each role.
+- Test account creation and role changes through the Edge Functions.
+- Test session restoration, sign-out, and update installation on physical Android devices.
+- Do not use real student data in test accounts.
