@@ -17,6 +17,7 @@
 - Overlapping permissive RLS policies were consolidated while preserving their previous predicates. RLS probes and rollback-based workflow tests passed.
 - `anon` and `authenticated` have no `TRUNCATE`, `TRIGGER`, `REFERENCES`, or `MAINTAIN` privileges on public tables. The same defaults are revoked for tables created by the `postgres` migration role.
 - **Completed 2026-11-21:** the same unnecessary table DDL/maintenance privileges were revoked from `service_role` on all current public tables and from `postgres`-created future tables. Live verification returned zero such privileges across the 15 public tables.
+- Trusted-actor triggers now also derive and freeze actor identity for `school_items`, `report_updates`, and `student_roster`. A rollback-based live trigger test confirmed spoofed actor fields are overwritten and later actor mutation is rejected.
 - The two active Edge Functions verify the caller's JWT and the caller's `profiles.is_owner` flag before account provisioning or role changes. The service-role key remains server-side.
 - `service_role` can SELECT profiles and update only the provisioning columns `email`, `full_name`, `role`, `class_name`, and `is_owner`; it cannot update `id` or `created_at`.
 
@@ -42,9 +43,17 @@ The affected workflow tables were empty when the cross-class policies were corre
 3. **`supabase_admin` default ACL remains a platform-level caveat.** Its default ACL still grants client roles broad privileges on future objects it creates. The available migration role cannot alter this superuser-owned default. Continue creating app objects as `postgres`; platform-level remediation is needed before creating application tables as `supabase_admin`.
 4. **Provisioning rate limits are not implemented in the Edge Functions.** The endpoints are owner-only, but a database-backed per-owner rate limit and abuse audit should be added before wider deployment.
 5. **Privacy policy is still a draft.** School approval, official contact details, retention periods, deletion procedures, and guardian notices must be confirmed before public deployment.
-6. **CI coverage and supply-chain hardening are incomplete.** Feature/PR workflows no longer receive signing secrets; a separate workflow signs only the exact successful `main` commit, and manual release publishing checks that the tag is an ancestor of `main`. Configure the `release-signing` environment with main-only deployment and required reviewers. Automated UI smoke tests, dependency vulnerability scanning, and action pinning to immutable commit SHAs remain to be added.
+6. **CI coverage and supply-chain hardening are incomplete.** Feature/PR workflows no longer receive signing secrets; a separate workflow signs only the exact successful `main` commit, and manual release publishing checks that the tag is an ancestor of `main`. All workflow actions are pinned to immutable commit SHAs and Dependabot is configured for weekly GitHub Actions/Gradle updates. Configure the `release-signing` environment with main-only deployment and required reviewers. Automated UI smoke tests and dependency vulnerability scanning remain to be added.
 7. **Unused-index findings are informational.** The advisor reports 29 unused indexes while the database contains very little production data. Do not drop them without representative workload measurements.
 
 ## Verification boundary
 
 A passing CI build does not prove correct behavior on a physical device or complete production security. Before release, test login/session migration, sign-out, role boundaries, storage upload/download, updater installation, and notification behavior on supported Android devices. Never put a Supabase service-role key in the APK or repository.
+
+
+## Migration history and public-repository privacy
+
+- The local migration directory now contains 44 files whose 14-digit version prefixes match all 44 versions returned by the live Supabase migration history. This was a direct version-list comparison, not a `supabase migration list` CLI run.
+- Two historical entries absent from the local folder were restored as idempotent/replay-order placeholder migrations. A clean local `supabase db reset` has not yet been run; do not treat filename alignment as proof of replay correctness.
+- The repository still lacks `supabase/config.toml`. Follow `supabase/README.md` to initialize local CLI configuration and validate a clean replay before any production push.
+- A personal bootstrap identifier was removed from the current historical migration file. Earlier public Git commits still contain it; removing it from repository history requires a coordinated history rewrite/force push and is not performed automatically.
