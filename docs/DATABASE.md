@@ -14,7 +14,7 @@ The current public schema contains 15 application tables:
 - Workflows: `leave_requests`, `school_decisions`, `school_seals`, `user_notifications`
 - Learning: `student_study_records`, `textbook_catalog`, `study_3d_resources`
 
-RLS is enabled on all 15 public application tables. The role and class helpers are stored in the non-exposed `private` schema. The Auth trigger creates new profiles with the least-privileged `student` role; trusted provisioning is performed separately.
+RLS is enabled on all 15 public application tables. The role and class helpers are stored in the non-exposed `private` schema. The broad school-admin helper includes only owner, principal, and assistant principal; educational counselors are not administrators. The Auth trigger creates new profiles with the least-privileged `student` role; trusted provisioning is performed separately.
 
 ## Privileged operations
 
@@ -37,7 +37,7 @@ The live schema does not yet contain `school_id`, `tenant_id`, or a school-membe
 
 Supabase Security Advisor reports leaked-password protection disabled. Enable it in the Supabase Auth dashboard, then rerun the Security Advisor. This setting is not controlled by a Postgres migration.
 
-## Testing and rollout
+## Cross-class boundaries\n\nClass-monitor access to approved leave requests is scoped to the monitor's class. Monitor report creation/updates are scoped to their own class and report records. Decision assignment validates that the assigned account is a class monitor, and the assigned-monitor read path validates the caller's role. These policies were re-read from the live catalog after migration; a separate multi-account negative-test matrix remains required before launch.\n\n## Testing and rollout
 
 - Run unit tests and release assembly in GitHub Actions.
 - Run authenticated-role RLS probes for allowed and denied operations.
