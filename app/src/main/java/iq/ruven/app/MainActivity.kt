@@ -1943,7 +1943,7 @@ private fun HomeScreen(
         if (role == SchoolRole.STUDENT) {
             item { StudySpaceCard(isEnglish = isEnglish, session = session, backend = backend) }
             item { StudentQuickPlannerCard(isEnglish = isEnglish) }
-            item { StudentFeatureHubCard(isEnglish = isEnglish) }
+            item { StudentFeatureHubCard(isEnglish = isEnglish, publishedItems = remoteItems) }
         }
         item {
             if (isSchoolAdminRole(role)) {
