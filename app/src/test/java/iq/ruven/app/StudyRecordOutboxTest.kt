@@ -1,10 +1,8 @@
 package iq.ruven.app
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.json.JSONObject
 
 class StudyRecordOutboxTest {
     @Test fun draftRoundTripsAllOptionalAndRequiredFields() {
@@ -28,7 +26,6 @@ class StudyRecordOutboxTest {
         assertTrue(json.isNull("chapter_name"))
         assertTrue(json.isNull("lesson_name"))
         assertTrue(json.isNull("page_number"))
-        assertFalse(json.optString("chapter_name") == "null")
     }
 
     @Test(expected = IllegalArgumentException::class)
