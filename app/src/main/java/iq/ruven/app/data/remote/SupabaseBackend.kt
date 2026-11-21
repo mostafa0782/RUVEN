@@ -539,6 +539,23 @@ class SupabaseBackend(
         val recordedAt: String
     )
 
+    data class Study3DResource(
+        val id: String,
+        val subjectName: String,
+        val chapterName: String?,
+        val title: String,
+        val description: String?,
+        val licenseName: String,
+        val attribution: String,
+        val sourceUrl: String?,
+        val fallback2DDescription: String,
+        val fallback2DUrl: String?,
+        val storagePath: String,
+        val fileSizeBytes: Long,
+        val status: String,
+        val createdAt: String
+    )
+
     data class TextbookCatalogEntry(
         val id: String,
         val gradeName: String,
@@ -726,6 +743,116 @@ class SupabaseBackend(
             )
         }
     }
+
+    private fun parseStudy3DResource(row: JSONObject) = Study3DResource(
+        id = row.getString("id"),
+        subjectName = row.getString("subject_name"),
+        chapterName = row.optString("chapter_name").takeIf { it.isNotBlank() && it != "null" },
+        title = row.getString("title"),
+        description = row.optString("description").takeIf { it.isNotBlank() && it != "null" },
+        licenseName = row.getString("license_name"),
+        attribution = row.getString("attribution"),
+        sourceUrl = row.optString("source_url").takeIf { it.startsWith("https://") },
+        fallback2DDescription = row.getString("fallback_2d_description"),
+        fallback2DUrl = row.optString("fallback_2d_url").takeIf { it.startsWith("https://") },
+        storagePath = row.getString("storage_path"),
+        fileSizeBytes = row.optLong("file_size_bytes"),
+        status = row.optString("status", "pending"),
+        createdAt = row.optString("created_at")
+    )
+
+    suspend fun loadStudy3DResources(
+        session: Session,
+        subjectName: String? = null
+    ): List<Study3DResource> = withContext(Dispatchers.IO) {
+        val filter = subjectName?.trim()?.takeIf { it.isNotBlank() }
+            ?.let { "&subject_name=eq.${encode(it)}" }.orEmpty()
+        val rows = requestArray(
+            "/rest/v1/study_3d_resources?select=id,subject_name,chapter_name,title,description,license_name,attribution,source_url,fallback_2d_description,fallback_2d_url,storage_path,file_size_bytes,status,created_at&order=subject_name.asc,updated_at.desc&limit=100$filter",
+            session
+        )
+        (0 until rows.length()).map { parseStudy3DResource(rows.getJSONObject(it)) }
+    }
+
+    suspend fun uploadStudy3DResource(
+        session: Session,
+        subjectName: String,
+        chapterName: String?,
+        title: String,
+        description: String?,
+        licenseName: String,
+        attribution: String,
+        sourceUrl: String?,
+        fallback2DDescription: String,
+        fallback2DUrl: String?,
+        glbBytes: ByteArray
+    ): Study3DResource = withContext(Dispatchers.IO) {
+        require(glbBytes.size in 12..26_214_400) { "حجم ملف GLB يجب ألا يتجاوز 25 ميغابايت." }
+        val declaredLength = iq.ruven.app.glbDeclaredLength(glbBytes.copyOfRange(0, 12))
+            ?: throw IllegalArgumentException("ملف GLB غير صالح أو لا يستخدم glTF 2.0.")
+        require(declaredLength == glbBytes.size.toLong()) { "طول ملف GLB لا يطابق الترويسة." }
+        require(subjectName.isNotBlank() && title.isNotBlank() && licenseName.isNotBlank() &&
+            attribution.isNotBlank() && fallback2DDescription.isNotBlank()) {
+            "أكمل المادة والعنوان والترخيص ونسبة المصدر والبديل ثنائي الأبعاد."
+        }
+        val cleanSourceUrl = sourceUrl?.trim()?.takeIf { it.isNotBlank() }
+        val cleanFallbackUrl = fallback2DUrl?.trim()?.takeIf { it.isNotBlank() }
+        require(cleanSourceUrl == null || cleanSourceUrl.startsWith("https://")) { "رابط المصدر يجب أن يبدأ بـ HTTPS." }
+        require(cleanFallbackUrl == null || cleanFallbackUrl.startsWith("https://")) { "رابط البديل يجب أن يبدأ بـ HTTPS." }
+
+        val storagePath = "study-models/${UUID.randomUUID()}.glb"
+        val encodedPath = storagePath.split("/").joinToString("/") { encode(it) }
+        storageRequest("/storage/v1/object/ruven-school-files/$encodedPath", "POST", session, glbBytes, "model/gltf-binary")
+        try {
+            val row = JSONObject().apply {
+                put("subject_name", subjectName.trim())
+                put("chapter_name", chapterName?.trim()?.takeIf { it.isNotBlank() } ?: JSONObject.NULL)
+                put("title", title.trim())
+                put("description", description?.trim()?.takeIf { it.isNotBlank() } ?: JSONObject.NULL)
+                put("license_name", licenseName.trim())
+                put("attribution", attribution.trim())
+                put("source_url", cleanSourceUrl ?: JSONObject.NULL)
+                put("fallback_2d_description", fallback2DDescription.trim())
+                put("fallback_2d_url", cleanFallbackUrl ?: JSONObject.NULL)
+                put("storage_path", storagePath)
+                put("mime_type", "model/gltf-binary")
+                put("file_size_bytes", glbBytes.size)
+                put("uploaded_by", session.userId)
+                put("status", "pending")
+            }
+            val response = requestRaw("/rest/v1/study_3d_resources", "POST", row, session, preferRepresentation = true)
+            val rows = JSONArray(response)
+            require(rows.length() == 1) { "تم رفع المجسم لكن تعذر تأكيد سجل المورد." }
+            parseStudy3DResource(rows.getJSONObject(0))
+        } catch (failure: Exception) {
+            runCatching { storageRequest("/storage/v1/object/ruven-school-files/$encodedPath", "DELETE", session, null, null) }
+            throw failure
+        }
+    }
+
+    suspend fun reviewStudy3DResource(
+        session: Session,
+        resourceId: String,
+        approve: Boolean
+    ) = withContext(Dispatchers.IO) {
+        require(resourceId.isNotBlank())
+        val body = JSONObject().apply {
+            put("status", if (approve) "approved" else "rejected")
+            put("reviewed_by", session.userId)
+            put("reviewed_at", java.time.Instant.now().toString())
+        }
+        requestRaw("/rest/v1/study_3d_resources?id=eq.${encode(resourceId)}", "PATCH", body, session)
+        Unit
+    }
+
+    suspend fun downloadApprovedStudy3DResource(session: Session, storagePath: String): ByteArray =
+        withContext(Dispatchers.IO) {
+            require(storagePath.startsWith("study-models/") && !storagePath.contains("..")) {
+                "مسار المجسم غير صالح."
+            }
+            val encodedPath = storagePath.split("/").joinToString("/") { encode(it) }
+            storageRequest("/storage/v1/object/authenticated/ruven-school-files/$encodedPath", "GET", session, null, null)
+        }
 
     /** Admins can see all records through RLS; students can only retrieve their own. */
     suspend fun loadStudentStudyRecords(session: Session, studentId: String? = null): List<StudentStudyRecord> = withContext(Dispatchers.IO) {
