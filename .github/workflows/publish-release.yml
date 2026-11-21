@@ -37,7 +37,7 @@ jobs:
             exit 1
           fi
 
-          git fetch --force origin main --tags
+          git fetch --force --tags origin main:refs/remotes/origin/main
           TAG_SHA="$(git rev-parse --verify "${RELEASE_TAG}^{commit}")"
           git merge-base --is-ancestor "$TAG_SHA" origin/main || {
             echo "Release tag must point to a commit already contained in main."
