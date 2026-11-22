@@ -163,7 +163,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     LaunchedEffect(running) {
         while (running) {
             delay(1000)
-            elapsed = (System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 1000L
+            elapsed = (android.os.SystemClock.elapsedRealtime() - startAt).coerceAtLeast(0L) / 1000L
             prefs.edit().putLong("active_elapsed_${session.userId}", elapsed).putLong("active_start_at_${session.userId}", startAt).putBoolean("active_running_${session.userId}", true).apply()
             if (!unlimited && elapsed >= duration * 60L) {
                 running = false
@@ -472,7 +472,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(enabled = !running, onClick = {
-                            if (startAt == 0L) startAt = System.currentTimeMillis() - elapsed * 1000L
+                            if (startAt == 0L) startAt = android.os.SystemClock.elapsedRealtime() - elapsed * 1000L
                             running = true
                             prefs.edit().putBoolean("active_running_${session.userId}", true).putLong("active_start_at_${session.userId}", startAt).putLong("active_elapsed_${session.userId}", elapsed)
                                 .putString("last_subject", subject).putString("chapter", chapter).putString("lesson", lesson).putInt("duration", duration).putBoolean("unlimited", unlimited).putString("interval", interval).apply()
