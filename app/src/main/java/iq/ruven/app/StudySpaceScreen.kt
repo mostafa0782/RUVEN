@@ -226,9 +226,13 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                 StudyPhase.FOCUS, StudyPhase.BREAK -> cycleState.remainingSeconds
                 StudyPhase.NO_BREAK -> Long.MAX_VALUE
             }
-            val untilNext = minOf(goalRemaining, phaseRemaining)
+            val untilNext = when (cycleState.phase) {
+                StudyPhase.FOCUS -> minOf(goalRemaining, phaseRemaining)
+                StudyPhase.BREAK -> phaseRemaining
+                StudyPhase.NO_BREAK -> goalRemaining
+            }
             if (untilNext != Long.MAX_VALUE && untilNext > 0L) {
-                val goalEndsFirst = goalRemaining <= phaseRemaining
+                val goalEndsFirst = cycleState.phase != StudyPhase.BREAK && goalRemaining <= phaseRemaining
                 val title = when {
                     goalEndsFirst -> if (isEnglish) "Study goal completed" else "اكتملت جلسة الدراسة"
                     cycleState.phase == StudyPhase.FOCUS -> if (isEnglish) "Break time" else "حان وقت الاستراحة"
