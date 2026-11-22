@@ -117,7 +117,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var newStatus by remember { mutableStateOf("لم ينجز") }
     var addHomework by remember { mutableStateOf(false) }
     var lessonCompleted by remember { mutableStateOf(false) }
-    var sessions by remember { mutableIntStateOf(prefs.getInt("sessions", 0)) }
+    var sessions by remember { mutableIntStateOf(prefs.getInt("sessions_${session.userId}", 0)) }
     var completedLessons by remember { mutableIntStateOf(prefs.getInt("completed_lessons", 0)) }
     var examMarkers by remember { mutableStateOf(readExamMarkers(context)) }
     var newExamMarker by remember { mutableStateOf("") }
@@ -492,10 +492,10 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                             for (recordIndex in firstWeeklyIndex until weeklySessions.length()) boundedWeeklySessions.put(weeklySessions.getJSONObject(recordIndex))
                             prefs.edit()
                                 .putString("last_subject", subject)
-                                .putInt("sessions", sessions)
+                                .putInt("sessions_${session.userId}", sessions)
                                 .putInt("completed_lessons", completedLessons)
-                                .putLong("study_seconds", prefs.getLong("study_seconds", 0L) + finishedFocusSeconds)
-                                .putString("weekly_sessions", boundedWeeklySessions.toString())
+                                .putLong("study_seconds_${session.userId}", prefs.getLong("study_seconds_${session.userId}", 0L) + finishedFocusSeconds)
+                                .putString("weekly_sessions_${session.userId}", boundedWeeklySessions.toString())
                                 .putBoolean("active_running", false)
                                 .putLong("active_elapsed", 0L)
                                 .putLong("active_start_at", 0L)
@@ -552,7 +552,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     HorizontalDivider()
                     Text(if (isEnglish) "MY STUDY SUMMARY" else "ملخص إنجازي", fontWeight = FontWeight.Bold)
                     Text(if (isEnglish) "Completed lessons: " + completedLessons + " · Sessions: " + sessions else "الدروس المكتملة: " + completedLessons + " · الجلسات: " + sessions)
-                    Text("إجمالي وقت الدراسة الفعلي: " + (prefs.getLong("study_seconds", 0L) / 3600) + " ساعة و" + ((prefs.getLong("study_seconds", 0L) % 3600) / 60) + " دقيقة", style = MaterialTheme.typography.bodySmall)
+                    Text("إجمالي وقت الدراسة الفعلي: " + (prefs.getLong("study_seconds_${session.userId}", 0L) / 3600) + " ساعة و" + ((prefs.getLong("study_seconds_${session.userId}", 0L) % 3600) / 60) + " دقيقة", style = MaterialTheme.typography.bodySmall)
                     Text("الواجبات: " + homework.count { it.second == "كُتب" } + " كُتب · " + homework.count { it.second == "اكتمل" } + " مكتمل · " + homework.count { it.second == "شبه منجز" } + " شبه منجز · " + homework.count { it.second == "لم ينجز" } + " لم ينجز", style = MaterialTheme.typography.bodySmall)
                     OutlinedButton(onClick = {
                         val report = "RUVEN Study Report\nSubject: " + subject + "\nCompleted lessons: " + completedLessons + "\nSessions: " + sessions + "\nHomework: " + homework.joinToString { it.first + " — " + it.second } + "\nExam scope: " + examMarkers.joinToString(" | ")
