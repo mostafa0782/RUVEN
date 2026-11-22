@@ -56,6 +56,9 @@ object SchoolPermissions {
             role == SchoolRole.PARLIAMENT_MEMBER ||
             role == SchoolRole.EDUCATIONAL_COUNSELOR
 
+    fun canPublishSubjectNotice(role: SchoolRole, assignedSubject: Boolean): Boolean =
+        (role == SchoolRole.TEACHER && assignedSubject) || canPublishAnnouncements(role)
+
     fun canPublishAnnouncements(role: SchoolRole): Boolean =
         role == SchoolRole.PRINCIPAL || role == SchoolRole.ASSISTANT_PRINCIPAL || role == SchoolRole.OWNER
 }
