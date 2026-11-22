@@ -2393,8 +2393,23 @@ private fun ServerSchoolItemsScreen(
                                 if (needsSubject) OutlinedTextField(subject, { subject = it }, label = { Text(translated("المادة")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                                 if (needsClass) OutlinedTextField(targetClass, { targetClass = it.trim().uppercase() }, label = { Text(translated("الشعبة / الصف")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             }
-                            OutlinedTextField(entryTitle, { entryTitle = it }, label = { Text(translated("العنوان")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                            OutlinedTextField(body, { body = it }, label = { Text(translated("التفاصيل")) }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8)
+                            OutlinedTextField(
+                                entryTitle,
+                                { entryTitle = it },
+                                label = { Text(translated(if (teacherSubjectNotice) "عنوان التبليغ" else "العنوان")) },
+                                placeholder = { if (teacherSubjectNotice) Text("مثال: مادة امتحان الأحياء") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                body,
+                                { body = it },
+                                label = { Text(translated(if (teacherSubjectNotice) "تفاصيل التبليغ ونطاق المادة" else "التفاصيل")) },
+                                placeholder = { if (teacherSubjectNotice) Text("اكتب الدروس أو الصفحات المطلوبة وأي ملاحظات مؤكدة") },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 3,
+                                maxLines = 8
+                            )
                             OutlinedButton(onClick = { attachmentPicker.launch(arrayOf("application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Rounded.UploadFile, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
