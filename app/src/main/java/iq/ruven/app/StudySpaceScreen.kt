@@ -472,7 +472,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                             val sessionId = java.util.UUID.randomUUID().toString()
                             sessions += 1
                             if (finishedLesson) completedLessons += 1
-                            val weeklySessions = runCatching { JSONArray(prefs.getString("weekly_sessions", "[]") ?: "[]") }.getOrDefault(JSONArray())
+                            val weeklySessions = runCatching { JSONArray(prefs.getString("weekly_sessions_${session.userId}", "[]") ?: "[]") }.getOrDefault(JSONArray())
                             weeklySessions.put(JSONObject()
                                 .put("id", sessionId)
                                 .put("at", System.currentTimeMillis())
