@@ -496,6 +496,7 @@ class SupabaseBackend(
         homeworkStatus: String? = null,
         examKind: String? = null,
         pageNumber: Int? = null,
+        metadata: JSONObject = JSONObject(),
         clientRecordId: String = UUID.randomUUID().toString()
     ) = withContext(Dispatchers.IO) {
         require(recordType in setOf("study_session", "lesson_progress", "homework_status", "exam_scope")) { "نوع سجل الدراسة غير صالح." }
@@ -510,6 +511,7 @@ class SupabaseBackend(
             .put("subject_name", subjectName.trim())
             .put("duration_seconds", durationSeconds.toInt())
             .put("lesson_completed", lessonCompleted)
+            .put("metadata", metadata)
         chapterName?.trim()?.takeIf { it.isNotBlank() }?.let { payload.put("chapter_name", it.take(160)) }
         lessonName?.trim()?.takeIf { it.isNotBlank() }?.let { payload.put("lesson_name", it.take(200)) }
         homeworkTitle?.trim()?.takeIf { it.isNotBlank() }?.let { payload.put("homework_title", it.take(200)) }
@@ -536,6 +538,7 @@ class SupabaseBackend(
         val homeworkStatus: String?,
         val examKind: String?,
         val pageNumber: Int?,
+        val metadata: JSONObject,
         val recordedAt: String
     )
 
@@ -857,7 +860,7 @@ class SupabaseBackend(
     /** Admins can see all records through RLS; students can only retrieve their own. */
     suspend fun loadStudentStudyRecords(session: Session, studentId: String? = null): List<StudentStudyRecord> = withContext(Dispatchers.IO) {
         val filter = studentId?.takeIf { it.isNotBlank() }?.let { "&student_id=eq.${encode(it)}" }.orEmpty()
-        val rows = requestArray("/rest/v1/student_study_records?select=id,student_id,record_type,subject_name,chapter_name,lesson_name,duration_seconds,lesson_completed,homework_title,homework_status,exam_kind,page_number,recorded_at&order=recorded_at.desc&limit=500$filter", session)
+        val rows = requestArray("/rest/v1/student_study_records?select=id,student_id,record_type,subject_name,chapter_name,lesson_name,duration_seconds,lesson_completed,homework_title,homework_status,exam_kind,page_number,metadata,recorded_at&order=recorded_at.desc&limit=500$filter", session)
         (0 until rows.length()).map { i ->
             val row = rows.getJSONObject(i)
             StudentStudyRecord(
@@ -873,6 +876,7 @@ class SupabaseBackend(
                 homeworkStatus = row.optString("homework_status").takeIf { it.isNotBlank() && it != "null" },
                 examKind = row.optString("exam_kind").takeIf { it.isNotBlank() && it != "null" },
                 pageNumber = if (row.isNull("page_number")) null else row.optInt("page_number"),
+                metadata = row.optJSONObject("metadata") ?: JSONObject(),
                 recordedAt = row.optString("recorded_at")
             )
         }
