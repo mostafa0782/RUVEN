@@ -290,7 +290,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                     notice.subjectName?.let { subject = it }
                                     examScope = notice.body.take(500)
                                     teacherNotes = (notice.title + "\n" + notice.body).take(1000)
-                                    val dateMatch = Regex("""\\b(?:\\d{4}-\\d{2}-\\d{2}|\\d{1,2}/\\d{1,2}/\\d{4})\\b""").find(notice.title + " " + notice.body)
+                                    val dateMatch = Regex("""\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4})\b""").find(notice.title + " " + notice.body)
                                     if (dateMatch != null) examDate = dateMatch.value
                                     prefs.edit().putString("session_exam_date", examDate).putString("session_exam_scope", examScope).putString("session_teacher_notes", teacherNotes).apply()
                                 },
