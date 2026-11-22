@@ -2154,13 +2154,26 @@ private fun ServerSchoolItemsScreen(
     var composerOpen by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    val needsSubject = itemType == "homework" || itemType == "preparation"
+    var teacherAssignments by remember { mutableStateOf<List<SupabaseBackend.TeacherAssignment>>(emptyList()) }
+    LaunchedEffect(role, session.userId) {
+        if (role == SchoolRole.TEACHER) {
+            runCatching { backend.loadTeacherAssignments(session) }
+                .onSuccess { teacherAssignments = it }
+                .onFailure { message = it.message ?: "تعذر تحميل المواد المسندة." }
+        }
+    }
+    val teacherSubjectNotice = itemType == "announcement" && role == SchoolRole.TEACHER
+    val needsSubject = itemType == "homework" || itemType == "preparation" || teacherSubjectNotice
     val needsClass = needsSubject || itemType == "timetable"
+    val hasAssignedPair = teacherAssignments.any {
+        it.subjectName.equals(subject.trim(), ignoreCase = true) &&
+            it.className.equals(targetClass.trim(), ignoreCase = true)
+    }
     val canCreate = when (itemType) {
         "timetable" -> role in setOf(SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.PRINCIPAL, SchoolRole.OWNER)
-        "homework" -> SchoolPermissions.canCreateHomework(role, assignedSubject = subject.isNotBlank())
-        "preparation" -> role in setOf(SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.PRINCIPAL, SchoolRole.OWNER) || SchoolPermissions.canCreatePreparation(role, assignedSubject = subject.isNotBlank())
-        "announcement" -> SchoolPermissions.canPublishAnnouncements(role)
+        "homework" -> SchoolPermissions.canCreateHomework(role, assignedSubject = hasAssignedPair || role != SchoolRole.TEACHER && subject.isNotBlank())
+        "preparation" -> role in setOf(SchoolRole.ASSISTANT_PRINCIPAL, SchoolRole.PRINCIPAL, SchoolRole.OWNER) || SchoolPermissions.canCreatePreparation(role, assignedSubject = hasAssignedPair)
+        "announcement" -> SchoolPermissions.canPublishSubjectNotice(role, assignedSubject = hasAssignedPair)
         else -> false
     }
     val visibleItems = remoteItems.filter { it.itemType == itemType }.filter {
@@ -2192,8 +2205,31 @@ private fun ServerSchoolItemsScreen(
                     }
                     androidx.compose.animation.AnimatedVisibility(visible = composerOpen) {
                         Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                            if (needsSubject) OutlinedTextField(subject, { subject = it }, label = { Text(translated("المادة")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                            if (needsClass) OutlinedTextField(targetClass, { targetClass = it.trim().uppercase() }, label = { Text(translated("الشعبة / الصف")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            if (role == SchoolRole.TEACHER && needsSubject) {
+                                if (teacherAssignments.isNotEmpty()) {
+                                    Text(translated("اختر مادة وشعبة من تكليفاتك الرسمية"), color = Muted, fontSize = 12.sp)
+                                    Row(
+                                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        teacherAssignments.forEach { assignment ->
+                                            FilterChip(
+                                                selected = subject == assignment.subjectName && targetClass == assignment.className,
+                                                onClick = {
+                                                    subject = assignment.subjectName
+                                                    targetClass = assignment.className
+                                                },
+                                                label = { Text("${assignment.subjectName} • ${assignment.className}") }
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Text(translated("لا توجد مواد مسندة لهذا الحساب. اطلب من الإدارة ربط المادة والشعبة بحسابك."), color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                                }
+                            } else {
+                                if (needsSubject) OutlinedTextField(subject, { subject = it }, label = { Text(translated("المادة")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                                if (needsClass) OutlinedTextField(targetClass, { targetClass = it.trim().uppercase() }, label = { Text(translated("الشعبة / الصف")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            }
                             OutlinedTextField(entryTitle, { entryTitle = it }, label = { Text(translated("العنوان")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             OutlinedTextField(body, { body = it }, label = { Text(translated("التفاصيل")) }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8)
                             OutlinedButton(onClick = { attachmentPicker.launch(arrayOf("application/pdf", "image/jpeg", "image/png", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) }, modifier = Modifier.fillMaxWidth()) {
@@ -2203,7 +2239,8 @@ private fun ServerSchoolItemsScreen(
                             }
                             Button(
                                 enabled = !busy && canCreate && entryTitle.isNotBlank() && body.isNotBlank() &&
-                                    (!needsSubject || subject.isNotBlank()) && (!needsClass || targetClass.isNotBlank()),
+                                    (!needsSubject || subject.isNotBlank()) && (!needsClass || targetClass.isNotBlank()) &&
+                                    (role != SchoolRole.TEACHER || !needsSubject || hasAssignedPair),
                                 onClick = {
                                     scope.launch {
                                         busy = true
