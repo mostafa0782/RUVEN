@@ -54,6 +54,48 @@ class SupabaseBackend(
         val className: String
     )
 
+    data class ManagedTeacherAssignment(
+        val id: String,
+        val teacherId: String,
+        val teacherName: String,
+        val subjectName: String,
+        val className: String
+    )
+
+    suspend fun loadManagedTeacherAssignments(session: Session): List<ManagedTeacherAssignment> = withContext(Dispatchers.IO) {
+        val rows = requestArray("/rest/v1/teacher_subjects?select=id,teacher_id,subject_name,class_name&order=subject_name.asc,class_name.asc&limit=500", session = session)
+        val names = loadManagedProfiles(session).associate { it.id to it.fullName }
+        (0 until rows.length()).map { index ->
+            val row = rows.getJSONObject(index)
+            val teacherId = row.getString("teacher_id")
+            ManagedTeacherAssignment(
+                id = row.getString("id"),
+                teacherId = teacherId,
+                teacherName = names[teacherId] ?: "أستاذ غير معروف",
+                subjectName = row.getString("subject_name"),
+                className = row.getString("class_name")
+            )
+        }
+    }
+
+    suspend fun createTeacherAssignment(session: Session, teacherId: String, subjectName: String, className: String) = withContext(Dispatchers.IO) {
+        require(teacherId.isNotBlank()) { "اختر حساب الأستاذ." }
+        require(subjectName.trim().length in 1..80) { "اسم المادة مطلوب." }
+        require(className.trim().length in 1..80) { "اسم الشعبة مطلوب." }
+        val payload = JSONObject()
+            .put("teacher_id", teacherId)
+            .put("subject_name", subjectName.trim())
+            .put("class_name", className.trim().uppercase())
+        requestRaw("/rest/v1/teacher_subjects", "POST", payload, session)
+        Unit
+    }
+
+    suspend fun deleteTeacherAssignment(session: Session, assignmentId: String) = withContext(Dispatchers.IO) {
+        require(assignmentId.isNotBlank()) { "التكليف غير صالح." }
+        requestRaw("/rest/v1/teacher_subjects?id=eq.${encode(assignmentId)}", "DELETE", null, session)
+        Unit
+    }
+
     /** Load only the authenticated teacher's assigned subject/class pairs. */
     suspend fun loadTeacherAssignments(session: Session): List<TeacherAssignment> = withContext(Dispatchers.IO) {
         val query = "select=subject_name,class_name&teacher_id=eq.${encode(session.userId)}&order=subject_name.asc,class_name.asc&limit=100"
