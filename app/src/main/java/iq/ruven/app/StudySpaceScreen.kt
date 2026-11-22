@@ -94,6 +94,9 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var cloudStatus by remember { mutableStateOf(if (isEnglish) "Cloud sync ready" else "المزامنة السحابية جاهزة") }
     var cloudBusy by remember { mutableStateOf(false) }
     var pendingOutboxCount by remember { mutableIntStateOf(0) }
+    var cloudStudyRecords by remember { mutableStateOf<List<iq.ruven.app.data.remote.SupabaseBackend.StudentStudyRecord>>(emptyList()) }
+    var cloudReportBusy by remember { mutableStateOf(false) }
+    var cloudReportError by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf(prefs.getString("last_subject", studySubjects.first()) ?: studySubjects.first()) }
     var chapter by remember { mutableStateOf(prefs.getString("chapter", "") ?: "") }
     var lesson by remember { mutableStateOf(prefs.getString("lesson", "") ?: "") }
@@ -140,6 +143,15 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     LaunchedEffect(session.userId) {
         val pendingSync = StudyRecordOutbox.syncPending(context, backend, session)
         pendingOutboxCount = pendingSync.pendingCount
+        cloudReportBusy = true
+        try {
+            cloudStudyRecords = backend.loadStudentStudyRecords(session, studentId = session.userId)
+            cloudReportError = ""
+        } catch (failure: Exception) {
+            cloudReportError = failure.message ?: "تعذر تحميل سجلك الدراسي السحابي."
+        } finally {
+            cloudReportBusy = false
+        }
         if (pendingSync.syncedCount > 0 || pendingSync.pendingCount > 0) {
             cloudStatus = if (pendingSync.pendingCount == 0) {
                 if (isEnglish) "Pending study records synced" else "تمت مزامنة السجلات الدراسية المعلّقة"
@@ -563,6 +575,10 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     Text(if (isEnglish) "MY STUDY SUMMARY" else "ملخص إنجازي", fontWeight = FontWeight.Bold)
                     Text(if (isEnglish) "Completed lessons: " + completedLessons + " · Sessions: " + sessions else "الدروس المكتملة: " + completedLessons + " · الجلسات: " + sessions)
                     Text("إجمالي وقت الدراسة الفعلي: " + (prefs.getLong("study_seconds_${session.userId}", 0L) / 3600) + " ساعة و" + ((prefs.getLong("study_seconds_${session.userId}", 0L) % 3600) / 60) + " دقيقة", style = MaterialTheme.typography.bodySmall)
+                    Text(if (isEnglish) "Synced account report" else "سجل حسابك المتزامن", fontWeight = FontWeight.SemiBold)
+                    if (cloudReportBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    if (cloudReportError.isNotBlank()) Text(cloudReportError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(if (isEnglish) "${cloudStudyRecords.count { it.recordType == "study_session" }} synced sessions · ${cloudStudyRecords.filter { it.recordType == "study_session" }.sumOf { it.durationSeconds.toLong() } / 60} focused minutes" else "${cloudStudyRecords.count { it.recordType == "study_session" }} جلسة متزامنة · ${cloudStudyRecords.filter { it.recordType == "study_session" }.sumOf { it.durationSeconds.toLong() } / 60} دقيقة دراسة فعلية", style = MaterialTheme.typography.bodySmall)
                     Text(if (isEnglish) "Recent sessions" else "آخر جلسات الدراسة", fontWeight = FontWeight.SemiBold)
                     weeklyHistory.takeLast(5).asReversed().forEach { entry ->
                         val at = java.text.SimpleDateFormat("yyyy/MM/dd  HH:mm", java.util.Locale.getDefault()).format(java.util.Date(entry.optLong("at")))
@@ -572,6 +588,19 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     }
                     if (weeklyHistory.isEmpty()) Text(if (isEnglish) "No study sessions saved yet." else "ماكو جلسات دراسة مسجلة بعد.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("الواجبات: " + homework.count { it.second == "كُتب" } + " كُتب · " + homework.count { it.second == "اكتمل" } + " مكتمل · " + homework.count { it.second == "شبه منجز" } + " شبه منجز · " + homework.count { it.second == "لم ينجز" } + " لم ينجز", style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(enabled = !cloudReportBusy, onClick = {
+                        cloudReportBusy = true
+                        scope.launch {
+                            try {
+                                cloudStudyRecords = backend.loadStudentStudyRecords(session, studentId = session.userId)
+                                cloudReportError = ""
+                            } catch (failure: Exception) {
+                                cloudReportError = failure.message ?: "تعذر تحديث السجل."
+                            } finally {
+                                cloudReportBusy = false
+                            }
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text(if (isEnglish) "Refresh synced report" else "تحديث السجل المتزامن") }
                     OutlinedButton(onClick = {
                         val report = "RUVEN Study Report\nSubject: " + subject + "\nCompleted lessons: " + completedLessons + "\nSessions: " + sessions + "\nHomework: " + homework.joinToString { it.first + " — " + it.second } + "\nExam scope: " + examMarkers.joinToString(" | ")
                         val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, "Study progress report").putExtra(Intent.EXTRA_TEXT, report)
