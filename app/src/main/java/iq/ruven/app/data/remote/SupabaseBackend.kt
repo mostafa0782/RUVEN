@@ -49,6 +49,24 @@ class SupabaseBackend(
         val isOpen: Boolean
     )
 
+    data class TeacherAssignment(
+        val subjectName: String,
+        val className: String
+    )
+
+    /** Load only the authenticated teacher's assigned subject/class pairs. */
+    suspend fun loadTeacherAssignments(session: Session): List<TeacherAssignment> = withContext(Dispatchers.IO) {
+        val query = "select=subject_name,class_name&teacher_id=eq.${encode(session.userId)}&order=subject_name.asc,class_name.asc&limit=100"
+        val rows = requestArray("/rest/v1/teacher_subjects?$query", session = session)
+        (0 until rows.length()).map { index ->
+            val row = rows.getJSONObject(index)
+            TeacherAssignment(
+                subjectName = row.getString("subject_name"),
+                className = row.getString("class_name")
+            )
+        }
+    }
+
     data class SchoolItem(
         val id: String,
         val itemType: String,
