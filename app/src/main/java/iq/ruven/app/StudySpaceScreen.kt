@@ -170,13 +170,14 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
             delay(1000)
             elapsed = (android.os.SystemClock.elapsedRealtime() - startAt).coerceAtLeast(0L) / 1000L
             prefs.edit().putLong("active_elapsed_${session.userId}", elapsed).putLong("active_start_at_${session.userId}", startAt).putBoolean("active_running_${session.userId}", true).apply()
-            if (!unlimited && elapsed >= duration * 60L) {
+            if (!unlimited && studyFocusSeconds(elapsed, selectedInterval) >= duration * 60L) {
                 running = false
                 prefs.edit().putBoolean("active_running_${session.userId}", false).putLong("active_elapsed_${session.userId}", elapsed).apply()
             }
         }
     }
-    val seconds = if (unlimited) elapsed else (duration * 60L - elapsed).coerceAtLeast(0L)
+    val focusedElapsed = studyFocusSeconds(elapsed, selectedInterval)
+    val seconds = if (unlimited) elapsed else (duration * 60L - focusedElapsed).coerceAtLeast(0L)
     val timer = "%02d:%02d:%02d".format(seconds / 3600, (seconds % 3600) / 60, seconds % 60)
     val selectedInterval = when (interval) {
         "50/10" -> StudyInterval.LONG_50_10
@@ -467,10 +468,11 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     Text((if (isEnglish) "Purpose: " else "السبب: ") + purpose + " · " + (if (isEnglish) "Focus time: " else "وقت الدراسة الفعلي: ") + (studyFocusSeconds(elapsed, selectedInterval) / 60) + " " + (if (isEnglish) "min" else "دقيقة"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(timer, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     Text(
-                        when (cycleState.phase) {
-                            StudyPhase.FOCUS -> if (isEnglish) "Focus block · $phaseTime remaining" else "وقت التركيز · متبقٍ $phaseTime"
-                            StudyPhase.BREAK -> if (isEnglish) "Break time · $phaseTime remaining" else "وقت الاستراحة · متبقٍ $phaseTime"
-                            StudyPhase.NO_BREAK -> if (isEnglish) "Breaks disabled" else "الاستراحات معطّلة"
+                        when {
+                            !unlimited && focusedElapsed >= duration * 60L -> if (isEnglish) "Study goal completed" else "اكتملت مدة الدراسة المحددة"
+                            cycleState.phase == StudyPhase.FOCUS -> if (isEnglish) "Focus block · $phaseTime remaining" else "وقت التركيز · متبقٍ $phaseTime"
+                            cycleState.phase == StudyPhase.BREAK -> if (isEnglish) "Break time · $phaseTime remaining" else "وقت الاستراحة · متبقٍ $phaseTime"
+                            else -> if (isEnglish) "Breaks disabled" else "الاستراحات معطّلة"
                         },
                         color = if (cycleState.phase == StudyPhase.BREAK) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
