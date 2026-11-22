@@ -239,7 +239,8 @@ private val ruvenStudentTools = listOf(
     RuvenStudentTool(33, "استراحة العين", "Eye-break reminder", "حدد التذكير كل كم دقيقة (15–180)، أو اكتب إيقاف", "Set a reminder interval in minutes (15–180), or type off"),
     RuvenStudentTool(31, "تسجيل المزاج", "Mood check-in", "سجّل شعورك بكلمات بسيطة (خاص على جهازك)", "Describe your mood briefly (private on this device)"),
     RuvenStudentTool(32, "دقيقة هدوء", "Quiet minute", "اكتب شنو تريد تتركه مؤقتًا حتى ترتاح", "Write what you want to pause and set aside"),
-    RuvenStudentTool(36, "رسالة شكر", "Thank-you helper", "اكتب شنو الشخص ساعدك بيه", "Describe how the person helped you")
+    RuvenStudentTool(36, "رسالة شكر", "Thank-you helper", "اكتب شنو الشخص ساعدك بيه", "Describe how the person helped you"),
+    RuvenStudentTool(37, "صياغة اعتذار", "Apology helper", "اكتب باختصار شنو صار حتى تصيغ اعتذارًا محترمًا", "Briefly describe what happened to draft a respectful apology")
 )
 
 @Composable
@@ -699,6 +700,7 @@ private fun buildToolResult(id: Int, value: String, isEnglish: Boolean): String 
         31 -> if (isEnglish) "Private mood note saved on this device. You can replace it or clear app data in Android settings." else "انحفظت ملاحظة المزاج بشكل خاص على هذا الجهاز. تگدر تستبدلها أو تمسح بيانات التطبيق من إعدادات أندرويد."
         32 -> if (isEnglish) "Pause for a moment, relax your shoulders, and take a few comfortable breaths. This is a simple pause, not medical care." else "وقف لحظة، ريّح كتافك وخذ كم نفس مريح. هاي استراحة بسيطة وليست علاجًا طبيًا."
         36 -> if (isEnglish) "Thank-you message draft:\nThank you for helping me with $value. I appreciate your time and support." else "مسودة شكر:\nشكرًا لأنك ساعدتني بـ$value. أقدّر وقتك ومساعدتك."
+        37 -> if (isEnglish) "Apology draft (review before sending):\\nI’m sorry for $value. I understand that my words or actions may have affected you. I take responsibility for my part, and I’ll try to handle this better next time. If you’re comfortable, I’d like to hear what I can do to make things right." else "مسودة اعتذار (راجعها قبل الإرسال):\\nآسف على $value. أفهم أن كلامي أو تصرفي ممكن ضايقك. أتحمّل مسؤوليتي عن الجزء اللي صدر مني، وأحاول أتعامل ويا الموضوع بصورة أفضل بالمرة الجاية. وإذا يناسبك، أريد أسمع منك شنو أگدر أسوي حتى أصلّح الموقف."
         else -> value
     }
 }
