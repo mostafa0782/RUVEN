@@ -2130,6 +2130,162 @@ private fun localizeSchoolTitle(title: String, english: Boolean): String = if (!
 }
 
 @Composable
+private fun TeacherAssignmentsScreen(
+    session: SupabaseBackend.Session,
+    backend: SupabaseBackend
+) {
+    val scope = rememberCoroutineScope()
+    var teachers by remember { mutableStateOf<List<SupabaseBackend.ManagedProfile>>(emptyList()) }
+    var assignments by remember { mutableStateOf<List<SupabaseBackend.ManagedTeacherAssignment>>(emptyList()) }
+    var selectedTeacherId by remember { mutableStateOf("") }
+    var subject by remember { mutableStateOf("") }
+    var className by remember { mutableStateOf("") }
+    var teacherMenuOpen by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
+    var message by remember { mutableStateOf<String?>(null) }
+
+    fun refresh() {
+        scope.launch {
+            loading = true
+            try {
+                teachers = backend.loadManagedProfiles(session).filter { it.role == "teacher" }
+                assignments = backend.loadManagedTeacherAssignments(session)
+                if (teachers.none { it.id == selectedTeacherId }) {
+                    selectedTeacherId = teachers.firstOrNull()?.id.orEmpty()
+                }
+                message = null
+            } catch (e: Exception) {
+                message = e.message ?: "تعذر تحميل تكليفات المواد."
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) { refresh() }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item { PageHeader("إسناد المواد للأستاذ", "اربط كل أستاذ بالمادة والشعبة التي يدرّسها؛ النشر سيُتاح له ضمن هذه التكليفات فقط.") }
+        item {
+            OutlinedButton(onClick = { refresh() }, modifier = Modifier.fillMaxWidth(), enabled = !loading && !busy) {
+                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                Spacer(Modifier.width(7.dp))
+                Text("تحديث البيانات")
+            }
+        }
+        item {
+            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("إضافة تكليف جديد", color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    if (teachers.isEmpty()) {
+                        EmptyCard("لا توجد حسابات أستاذ", "أنشئ حساب الأستاذ أولاً من قسم الحسابات، ثم ارجع لإسناد مواده.")
+                    } else {
+                        Box {
+                            OutlinedButton(onClick = { teacherMenuOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text(teachers.firstOrNull { it.id == selectedTeacherId }?.fullName ?: "اختر الأستاذ")
+                            }
+                            DropdownMenu(expanded = teacherMenuOpen, onDismissRequest = { teacherMenuOpen = false }) {
+                                teachers.forEach { teacher ->
+                                    DropdownMenuItem(
+                                        text = { Text(teacher.fullName) },
+                                        onClick = {
+                                            selectedTeacherId = teacher.id
+                                            teacherMenuOpen = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        OutlinedTextField(
+                            value = subject,
+                            onValueChange = { subject = it },
+                            label = { Text("اسم المادة") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = className,
+                            onValueChange = { className = it.trim().uppercase() },
+                            label = { Text("الصف / الشعبة") },
+                            placeholder = { Text("مثال: الثالث متوسط A") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    busy = true
+                                    message = null
+                                    try {
+                                        backend.createTeacherAssignment(session, selectedTeacherId, subject, className)
+                                        subject = ""
+                                        className = ""
+                                        message = "تم إسناد المادة للأستاذ."
+                                        refresh()
+                                    } catch (e: Exception) {
+                                        message = e.message ?: "تعذر حفظ التكليف."
+                                    } finally {
+                                        busy = false
+                                    }
+                                }
+                            },
+                            enabled = !busy && selectedTeacherId.isNotBlank() && subject.isNotBlank() && className.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp)
+                            else Icon(Icons.Rounded.Add, contentDescription = null)
+                            Spacer(Modifier.width(7.dp))
+                            Text(if (busy) "جارٍ الحفظ…" else "حفظ التكليف")
+                        }
+                    }
+                }
+            }
+        }
+        if (message != null) item {
+            Text(message!!, color = if (message!!.startsWith("تم")) Color(0xFF16845B) else MaterialTheme.colorScheme.error, fontSize = 12.sp)
+        }
+        item {
+            Text("التكليفات الحالية (${assignments.size})", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        }
+        if (loading) item { Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
+        else if (assignments.isEmpty()) item {
+            EmptyCard("لا توجد تكليفات بعد", "أضف مادة وشعبة لكل أستاذ حتى تظهر له أدوات النشر في حسابه.")
+        } else items(assignments, key = { it.id }) { assignment ->
+            Card(shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(assignment.teacherName, color = Ink, fontWeight = FontWeight.Bold)
+                        Text("${assignment.subjectName} • ${assignment.className}", color = Blue, fontSize = 12.sp)
+                    }
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    backend.deleteTeacherAssignment(session, assignment.id)
+                                    assignments = assignments.filterNot { it.id == assignment.id }
+                                    message = "تم حذف التكليف."
+                                } catch (e: Exception) {
+                                    message = e.message ?: "تعذر حذف التكليف."
+                                }
+                            }
+                        }
+                    ) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ServerSchoolItemsScreen(
     session: SupabaseBackend.Session,
     backend: SupabaseBackend,
