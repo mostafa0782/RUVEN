@@ -2212,7 +2212,7 @@ private fun TeacherAssignmentsScreen(
                             value = className,
                             onValueChange = { className = it.trim().uppercase() },
                             label = { Text("الصف / الشعبة") },
-                            placeholder = { Text("مثال: الثالث متوسط A") },
+                            placeholder = { Text("مثال: C") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )
@@ -2225,8 +2225,8 @@ private fun TeacherAssignmentsScreen(
                                         backend.createTeacherAssignment(session, selectedTeacherId, subject, className)
                                         subject = ""
                                         className = ""
+                                        assignments = backend.loadManagedTeacherAssignments(session)
                                         message = "تم إسناد المادة للأستاذ."
-                                        refresh()
                                     } catch (e: Exception) {
                                         message = e.message ?: "تعذر حفظ التكليف."
                                     } finally {
