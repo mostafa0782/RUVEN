@@ -105,9 +105,9 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var examScope by remember { mutableStateOf(prefs.getString("session_exam_scope", "") ?: "") }
     var teacherNotes by remember { mutableStateOf(prefs.getString("session_teacher_notes", "") ?: "") }
     var taskTitle by remember { mutableStateOf(prefs.getString("session_task_title", "") ?: "") }
-    var running by remember { mutableStateOf(prefs.getBoolean("active_running", false)) }
-    var elapsed by remember { mutableLongStateOf(prefs.getLong("active_elapsed", 0L)) }
-    var startAt by remember { mutableLongStateOf(prefs.getLong("active_start_at", 0L)) }
+    var running by remember { mutableStateOf(prefs.getBoolean("active_running_${session.userId}", false)) }
+    var elapsed by remember { mutableLongStateOf(prefs.getLong("active_elapsed_${session.userId}", 0L)) }
+    var startAt by remember { mutableLongStateOf(prefs.getLong("active_start_at_${session.userId}", 0L)) }
     var pageTracking by remember { mutableStateOf(prefs.getBoolean("page_tracking", false)) }
     var page by remember { mutableStateOf(prefs.getString("last_page", "") ?: "") }
     var pdfUri by remember { mutableStateOf(prefs.getString("pdf_uri", "") ?: "") }
@@ -126,7 +126,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var lessonCompleted by remember { mutableStateOf(false) }
     var sessions by remember { mutableIntStateOf(prefs.getInt("sessions_${session.userId}", 0)) }
     var weeklyHistory by remember(session.userId) { mutableStateOf(readStudySessionHistory(context, session.userId)) }
-    var completedLessons by remember { mutableIntStateOf(prefs.getInt("completed_lessons", 0)) }
+    var completedLessons by remember { mutableIntStateOf(prefs.getInt("completed_lessons_${session.userId}", 0)) }
     var examMarkers by remember { mutableStateOf(readExamMarkers(context)) }
     var newExamMarker by remember { mutableStateOf("") }
     var examKind by remember { mutableStateOf("شهري") }
@@ -152,10 +152,10 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
         while (running) {
             delay(1000)
             elapsed = (System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 1000L
-            prefs.edit().putLong("active_elapsed", elapsed).putLong("active_start_at", startAt).putBoolean("active_running", true).apply()
+            prefs.edit().putLong("active_elapsed_${session.userId}", elapsed).putLong("active_start_at_${session.userId}", startAt).putBoolean("active_running_${session.userId}", true).apply()
             if (!unlimited && elapsed >= duration * 60L) {
                 running = false
-                prefs.edit().putBoolean("active_running", false).putLong("active_elapsed", elapsed).apply()
+                prefs.edit().putBoolean("active_running_${session.userId}", false).putLong("active_elapsed_${session.userId}", elapsed).apply()
             }
         }
     }
@@ -462,16 +462,17 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                         Button(enabled = !running, onClick = {
                             if (startAt == 0L) startAt = System.currentTimeMillis() - elapsed * 1000L
                             running = true
-                            prefs.edit().putBoolean("active_running", true).putLong("active_start_at", startAt).putLong("active_elapsed", elapsed)
+                            prefs.edit().putBoolean("active_running_${session.userId}", true).putLong("active_start_at_${session.userId}", startAt).putLong("active_elapsed_${session.userId}", elapsed)
                                 .putString("last_subject", subject).putString("chapter", chapter).putString("lesson", lesson).putInt("duration", duration).putBoolean("unlimited", unlimited).putString("interval", interval).apply()
                         }) { Icon(Icons.Rounded.PlayArrow, null); Text(if (isEnglish) "Start" else "بدء") }
                         OutlinedButton(onClick = {
                             if (running) elapsed = (System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 1000L
                             running = false
                             startAt = 0L
-                            prefs.edit().putBoolean("active_running", false).putLong("active_elapsed", elapsed).putLong("active_start_at", 0L).apply()
+                            prefs.edit().putBoolean("active_running_${session.userId}", false).putLong("active_elapsed_${session.userId}", elapsed).putLong("active_start_at_${session.userId}", 0L).apply()
                         }) { Text(if (isEnglish) "Pause" else "إيقاف مؤقت") }
                         TextButton(enabled = !cloudBusy, onClick = {
+                            if (running) elapsed = (System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 1000L
                             running = false
                             val totalElapsed = elapsed.coerceIn(0L, 86400L)
                             val finishedFocusSeconds = studyFocusSeconds(totalElapsed, selectedInterval).coerceIn(0L, 86400L)
@@ -502,12 +503,12 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                             prefs.edit()
                                 .putString("last_subject", subject)
                                 .putInt("sessions_${session.userId}", sessions)
-                                .putInt("completed_lessons", completedLessons)
+                                .putInt("completed_lessons_${session.userId}", completedLessons)
                                 .putLong("study_seconds_${session.userId}", prefs.getLong("study_seconds_${session.userId}", 0L) + finishedFocusSeconds)
                                 .putString("weekly_sessions_${session.userId}", boundedWeeklySessions.toString())
-                                .putBoolean("active_running", false)
-                                .putLong("active_elapsed", 0L)
-                                .putLong("active_start_at", 0L)
+                                .putBoolean("active_running_${session.userId}", false)
+                                .putLong("active_elapsed_${session.userId}", 0L)
+                                .putLong("active_start_at_${session.userId}", 0L)
                                 .apply()
                             cloudBusy = true
                             scope.launch {
