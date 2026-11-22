@@ -177,7 +177,10 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
             prefs.edit().putLong("active_elapsed_${session.userId}", elapsed).putLong("active_start_at_${session.userId}", startAt).putBoolean("active_running_${session.userId}", true).apply()
             if (!unlimited && studyFocusSeconds(elapsed, selectedInterval) >= duration * 60L) {
                 running = false
-                prefs.edit().putBoolean("active_running_${session.userId}", false).putLong("active_elapsed_${session.userId}", elapsed).apply()
+                startAt = 0L
+                prefs.edit().putBoolean("active_running_${session.userId}", false)
+                    .putLong("active_elapsed_${session.userId}", elapsed)
+                    .putLong("active_start_at_${session.userId}", 0L).apply()
             }
         }
     }
