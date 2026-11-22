@@ -1,10 +1,14 @@
 package iq.ruven.app
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -90,6 +94,15 @@ fun StudySpaceCard(isEnglish: Boolean, session: iq.ruven.app.data.remote.Supabas
 private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remote.SupabaseBackend.Session, backend: iq.ruven.app.data.remote.SupabaseBackend, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { studyPrefs(context) }
+    var notificationPermissionGranted by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        notificationPermissionGranted = it
+    }
     val scope = rememberCoroutineScope()
     var cloudStatus by remember { mutableStateOf(if (isEnglish) "Cloud sync ready" else "المزامنة السحابية جاهزة") }
     var cloudBusy by remember { mutableStateOf(false) }
@@ -189,6 +202,36 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     val timer = "%02d:%02d:%02d".format(seconds / 3600, (seconds % 3600) / 60, seconds % 60)
     val cycleState = studyCycleState(elapsed, selectedInterval)
     val phaseTime = "%02d:%02d".format(cycleState.remainingSeconds / 60, cycleState.remainingSeconds % 60)
+
+    LaunchedEffect(running, notificationPermissionGranted, startAt, cycleState.phase, duration, unlimited, interval, subject) {
+        if (!running || !notificationPermissionGranted) {
+            cancelStudySessionAlert(context, session.userId)
+        } else {
+            val goalRemaining = if (unlimited) Long.MAX_VALUE
+                else (duration * 60L - focusedElapsed).coerceAtLeast(0L)
+            val phaseRemaining = when (cycleState.phase) {
+                StudyPhase.FOCUS, StudyPhase.BREAK -> cycleState.remainingSeconds
+                StudyPhase.NO_BREAK -> Long.MAX_VALUE
+            }
+            val untilNext = minOf(goalRemaining, phaseRemaining)
+            if (untilNext != Long.MAX_VALUE && untilNext > 0L) {
+                val goalEndsFirst = goalRemaining <= phaseRemaining
+                val title = when {
+                    goalEndsFirst -> if (isEnglish) "Study goal completed" else "اكتملت جلسة الدراسة"
+                    cycleState.phase == StudyPhase.FOCUS -> if (isEnglish) "Break time" else "حان وقت الاستراحة"
+                    else -> if (isEnglish) "Back to focus" else "حان وقت العودة للدراسة"
+                }
+                val message = when {
+                    goalEndsFirst -> if (isEnglish) "You reached your planned focus time for $subject." else "أكملت وقت التركيز المحدد لمادة $subject."
+                    cycleState.phase == StudyPhase.FOCUS -> if (isEnglish) "Your focus block for $subject is complete. Take your planned break." else "انتهت فترة التركيز لمادة $subject. خذ استراحتك المحددة."
+                    else -> if (isEnglish) "Your break is over. Resume studying $subject." else "انتهت الاستراحة. ارجع لدراسة مادة $subject."
+                }
+                scheduleStudySessionAlert(context, session.userId, untilNext, title, message)
+            } else {
+                cancelStudySessionAlert(context, session.userId)
+            }
+        }
+    }
 
     AlertDialog(onDismissRequest = onDismiss, modifier = Modifier.fillMaxWidth(),
         title = {
@@ -482,20 +525,25 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(enabled = !running, onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationPermissionGranted) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
                             if (startAt == 0L) startAt = android.os.SystemClock.elapsedRealtime() - elapsed * 1000L
                             running = true
                             prefs.edit().putBoolean("active_running_${session.userId}", true).putLong("active_start_at_${session.userId}", startAt).putLong("active_elapsed_${session.userId}", elapsed)
                                 .putString("last_subject", subject).putString("chapter", chapter).putString("lesson", lesson).putInt("duration", duration).putBoolean("unlimited", unlimited).putString("interval", interval).apply()
                         }) { Icon(Icons.Rounded.PlayArrow, null); Text(if (isEnglish) "Start" else "بدء") }
                         OutlinedButton(onClick = {
-                            if (running) elapsed = (System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 1000L
+                            if (running) elapsed = (android.os.SystemClock.elapsedRealtime() - startAt).coerceAtLeast(0L) / 1000L
                             running = false
+                            cancelStudySessionAlert(context, session.userId)
                             startAt = 0L
                             prefs.edit().putBoolean("active_running_${session.userId}", false).putLong("active_elapsed_${session.userId}", elapsed).putLong("active_start_at_${session.userId}", 0L).apply()
                         }) { Text(if (isEnglish) "Pause" else "إيقاف مؤقت") }
                         TextButton(enabled = !cloudBusy, onClick = {
                             if (running) elapsed = (System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 1000L
                             running = false
+                            cancelStudySessionAlert(context, session.userId)
                             val totalElapsed = elapsed.coerceIn(0L, 86400L)
                             val finishedFocusSeconds = studyFocusSeconds(totalElapsed, selectedInterval).coerceIn(0L, 86400L)
                             val finishedBreakSeconds = (totalElapsed - finishedFocusSeconds).coerceAtLeast(0L)
