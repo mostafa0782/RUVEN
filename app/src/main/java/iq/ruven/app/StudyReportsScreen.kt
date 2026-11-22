@@ -170,6 +170,18 @@ fun StudyReportsCard(
                                     listOfNotNull(record.chapterName, record.lessonName).takeIf { it.isNotEmpty() }?.let {
                                         Text(it.joinToString(" / "), style = MaterialTheme.typography.bodySmall)
                                     }
+                                    val purpose = record.metadata.optString("purpose").takeIf { it.isNotBlank() && it != "null" }
+                                    val examDate = record.metadata.optString("exam_date").takeIf { it.isNotBlank() && it != "null" }
+                                    val teacherNotes = record.metadata.optString("teacher_notes").takeIf { it.isNotBlank() && it != "null" }
+                                    val taskTitle = record.metadata.optString("task_title").takeIf { it.isNotBlank() && it != "null" }
+                                    listOfNotNull(
+                                        purpose?.let { "سبب الجلسة: $it" },
+                                        examDate?.let { "موعد الامتحان: $it" },
+                                        taskTitle?.let { "الواجب: $it" },
+                                        teacherNotes?.let { "ملاحظات المدرّس: $it" }
+                                    ).forEach { detail ->
+                                        Text(detail, style = MaterialTheme.typography.bodySmall)
+                                    }
                                     Text(record.recordedAt, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
