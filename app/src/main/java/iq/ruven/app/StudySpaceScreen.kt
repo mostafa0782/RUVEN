@@ -118,6 +118,8 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var interval by remember { mutableStateOf(prefs.getString("interval", "25/5") ?: "25/5") }
     var purpose by remember { mutableStateOf(prefs.getString("session_purpose", "دراسة عامة") ?: "دراسة عامة") }
     var examDate by remember { mutableStateOf(prefs.getString("session_exam_date", "") ?: "") }
+    var publishedExamNotices by remember { mutableStateOf<List<iq.ruven.app.data.remote.SupabaseBackend.SchoolItem>>(emptyList()) }
+    var examNoticesBusy by remember { mutableStateOf(false) }
     var examScope by remember { mutableStateOf(prefs.getString("session_exam_scope", "") ?: "") }
     var teacherNotes by remember { mutableStateOf(prefs.getString("session_teacher_notes", "") ?: "") }
     var taskTitle by remember { mutableStateOf(prefs.getString("session_task_title", "") ?: "") }
@@ -154,6 +156,17 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
         }
     }
     LaunchedEffect(session.userId) {
+        examNoticesBusy = true
+        try {
+            publishedExamNotices = backend.loadPublishedItems(session, null).filter { item ->
+                val text = (item.title + " " + item.body).lowercase()
+                Regex("امتحان|اختبار|شهري|نصف السنة|نهائي|فاينل").containsMatchIn(text)
+            }.take(12)
+        } catch (_: Exception) {
+            publishedExamNotices = emptyList()
+        } finally {
+            examNoticesBusy = false
+        }
         val pendingSync = StudyRecordOutbox.syncPending(context, backend, session)
         pendingOutboxCount = pendingSync.pendingCount
         cloudReportBusy = true
@@ -266,6 +279,29 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                         OutlinedTextField(value = examScope, onValueChange = { examScope = it.take(500); prefs.edit().putString("session_exam_scope", examScope).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Exam material / chapters" else "مادة الامتحان والفصول الداخلة") }, minLines = 2)
                         OutlinedTextField(value = teacherNotes, onValueChange = { teacherNotes = it.take(1000); prefs.edit().putString("session_teacher_notes", teacherNotes).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Teacher's notes" else "ملاحظات المدرّس على المادة") }, minLines = 2)
                         Text(if (isEnglish) "Enter only details confirmed by your teacher or the school's published notice." else "اكتب المعلومات المؤكدة من المدرّس أو إعلان المدرسة؛ التطبيق لا يخمّن موعد الامتحان أو ملاحظاته.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(if (isEnglish) "Published school exam notices" else "إعلانات الامتحانات المنشورة من المدرسة", fontWeight = FontWeight.SemiBold)
+                        if (examNoticesBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                        if (publishedExamNotices.isEmpty() && !examNoticesBusy) {
+                            Text(if (isEnglish) "No matching published exam notice was found." else "ماكو إعلان امتحان منشور مطابق حالياً. تگدر تدخل التفاصيل يدوياً.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        publishedExamNotices.forEach { notice ->
+                            OutlinedButton(
+                                onClick = {
+                                    notice.subjectName?.let { subject = it }
+                                    examScope = notice.body.take(500)
+                                    teacherNotes = notice.title.take(1000)
+                                    val dateMatch = Regex("""\\b(?:\\d{4}-\\d{2}-\\d{2}|\\d{1,2}/\\d{1,2}/\\d{4})\\b""").find(notice.title + " " + notice.body)
+                                    if (dateMatch != null) examDate = dateMatch.value
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(Modifier.fillMaxWidth()) {
+                                    Text(notice.title, fontWeight = FontWeight.SemiBold)
+                                    if (!notice.subjectName.isNullOrBlank()) Text(notice.subjectName, style = MaterialTheme.typography.labelSmall)
+                                    Text(notice.body.take(180), style = MaterialTheme.typography.bodySmall, maxLines = 3)
+                                }
+                            }
+                        }
                     } else if (purpose == "واجب") {
                         OutlinedTextField(value = taskTitle, onValueChange = { taskTitle = it.take(200); prefs.edit().putString("session_task_title", taskTitle).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Homework / task" else "اسم الواجب أو المهمة") }, singleLine = true)
                     }
