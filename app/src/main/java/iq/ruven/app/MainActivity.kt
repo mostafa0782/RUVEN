@@ -2176,6 +2176,9 @@ private fun ServerSchoolItemsScreen(
         "announcement" -> SchoolPermissions.canPublishSubjectNotice(role, assignedSubject = hasAssignedPair)
         else -> false
     }
+    val canOpenComposer = canCreate || (
+        role == SchoolRole.TEACHER && needsSubject && teacherAssignments.isNotEmpty()
+    )
     val visibleItems = remoteItems.filter { it.itemType == itemType }.filter {
         search.isBlank() || it.title.contains(search, true) || it.body.contains(search, true) ||
             (it.subjectName?.contains(search, true) == true) || (it.className?.contains(search, true) == true)
@@ -2193,7 +2196,7 @@ private fun ServerSchoolItemsScreen(
                 Text(translated("تحديث من خادم المدرسة"))
             }
         }
-        if (canCreate) item {
+        if (canOpenComposer) item {
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
