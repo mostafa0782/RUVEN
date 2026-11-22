@@ -56,6 +56,13 @@ private fun saveExamMarkers(context: Context, markers: List<String>) {
     studyPrefs(context).edit().putString("exam_markers", array.toString()).apply()
 }
 
+private fun readStudySessionHistory(context: Context, userId: String): List<JSONObject> {
+    val array = runCatching {
+        JSONArray(studyPrefs(context).getString("weekly_sessions_$userId", "[]"))
+    }.getOrElse { JSONArray() }
+    return (0 until array.length()).mapNotNull { array.optJSONObject(it) }
+}
+
 @Composable
 fun StudySpaceCard(isEnglish: Boolean, session: iq.ruven.app.data.remote.SupabaseBackend.Session, backend: iq.ruven.app.data.remote.SupabaseBackend) {
     val context = LocalContext.current
@@ -118,6 +125,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var addHomework by remember { mutableStateOf(false) }
     var lessonCompleted by remember { mutableStateOf(false) }
     var sessions by remember { mutableIntStateOf(prefs.getInt("sessions_${session.userId}", 0)) }
+    var weeklyHistory by remember(session.userId) { mutableStateOf(readStudySessionHistory(context, session.userId)) }
     var completedLessons by remember { mutableIntStateOf(prefs.getInt("completed_lessons", 0)) }
     var examMarkers by remember { mutableStateOf(readExamMarkers(context)) }
     var newExamMarker by remember { mutableStateOf("") }
@@ -490,6 +498,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                             val boundedWeeklySessions = JSONArray()
                             val firstWeeklyIndex = (weeklySessions.length() - 180).coerceAtLeast(0)
                             for (recordIndex in firstWeeklyIndex until weeklySessions.length()) boundedWeeklySessions.put(weeklySessions.getJSONObject(recordIndex))
+                            weeklyHistory = (0 until boundedWeeklySessions.length()).mapNotNull { boundedWeeklySessions.optJSONObject(it) }
                             prefs.edit()
                                 .putString("last_subject", subject)
                                 .putInt("sessions_${session.userId}", sessions)
@@ -553,6 +562,14 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     Text(if (isEnglish) "MY STUDY SUMMARY" else "ملخص إنجازي", fontWeight = FontWeight.Bold)
                     Text(if (isEnglish) "Completed lessons: " + completedLessons + " · Sessions: " + sessions else "الدروس المكتملة: " + completedLessons + " · الجلسات: " + sessions)
                     Text("إجمالي وقت الدراسة الفعلي: " + (prefs.getLong("study_seconds_${session.userId}", 0L) / 3600) + " ساعة و" + ((prefs.getLong("study_seconds_${session.userId}", 0L) % 3600) / 60) + " دقيقة", style = MaterialTheme.typography.bodySmall)
+                    Text(if (isEnglish) "Recent sessions" else "آخر جلسات الدراسة", fontWeight = FontWeight.SemiBold)
+                    weeklyHistory.takeLast(5).asReversed().forEach { entry ->
+                        val at = java.text.SimpleDateFormat("yyyy/MM/dd  HH:mm", java.util.Locale.getDefault()).format(java.util.Date(entry.optLong("at")))
+                        val focusMinutes = entry.optLong("seconds") / 60
+                        val restMinutes = entry.optLong("break_seconds") / 60
+                        Text("${entry.optString("subject")} · ${entry.optString("purpose")} · ${focusMinutes} د دراسة · ${restMinutes} د استراحة · $at", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (weeklyHistory.isEmpty()) Text(if (isEnglish) "No study sessions saved yet." else "ماكو جلسات دراسة مسجلة بعد.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("الواجبات: " + homework.count { it.second == "كُتب" } + " كُتب · " + homework.count { it.second == "اكتمل" } + " مكتمل · " + homework.count { it.second == "شبه منجز" } + " شبه منجز · " + homework.count { it.second == "لم ينجز" } + " لم ينجز", style = MaterialTheme.typography.bodySmall)
                     OutlinedButton(onClick = {
                         val report = "RUVEN Study Report\nSubject: " + subject + "\nCompleted lessons: " + completedLessons + "\nSessions: " + sessions + "\nHomework: " + homework.joinToString { it.first + " — " + it.second } + "\nExam scope: " + examMarkers.joinToString(" | ")
