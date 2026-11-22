@@ -125,6 +125,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var taskTitle by remember { mutableStateOf(prefs.getString("session_task_title", "") ?: "") }
     var running by remember { mutableStateOf(prefs.getBoolean("active_running_${session.userId}", false)) }
     var elapsed by remember { mutableLongStateOf(prefs.getLong("active_elapsed_${session.userId}", 0L)) }
+    val sessionLocked = running || elapsed > 0L
     var startAt by remember { mutableLongStateOf(prefs.getLong("active_start_at_${session.userId}", 0L)) }
     var pageTracking by remember { mutableStateOf(prefs.getBoolean("page_tracking", false)) }
     var page by remember { mutableStateOf(prefs.getString("last_page", "") ?: "") }
@@ -262,26 +263,26 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                 item {
                     Text(if (isEnglish) "SUBJECT" else "المادة", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     var expanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                        OutlinedTextField(value = subject, onValueChange = {}, readOnly = true, modifier = Modifier.fillMaxWidth().menuAnchor(), trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) })
+                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (!sessionLocked) expanded = !expanded }) {
+                        OutlinedTextField(value = subject, onValueChange = {}, readOnly = true, enabled = !sessionLocked, modifier = Modifier.fillMaxWidth().menuAnchor(), trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) })
                         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            studySubjects.forEach { s -> DropdownMenuItem(text = { Text(s) }, onClick = { subject = s; expanded = false }) }
+                            studySubjects.forEach { s -> DropdownMenuItem(text = { Text(s) }, enabled = !sessionLocked, onClick = { subject = s; expanded = false }) }
                         }
                     }
-                    OutlinedTextField(value = chapter, onValueChange = { chapter = it }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Chapter (optional)" else "الفصل (اختياري)") }, singleLine = true)
-                    OutlinedTextField(value = lesson, onValueChange = { lesson = it }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Lesson (optional)" else "الدرس (اختياري)") }, singleLine = true)
+                    OutlinedTextField(value = chapter, onValueChange = { chapter = it }, modifier = Modifier.fillMaxWidth(), enabled = !sessionLocked, label = { Text(if (isEnglish) "Chapter (optional)" else "الفصل (اختياري)") }, singleLine = true)
+                    OutlinedTextField(value = lesson, onValueChange = { lesson = it }, modifier = Modifier.fillMaxWidth(), enabled = !sessionLocked, label = { Text(if (isEnglish) "Lesson (optional)" else "الدرس (اختياري)") }, singleLine = true)
                 }
                 item {
                     Text(if (isEnglish) "WHY ARE YOU STUDYING?" else "سبب الدراسة", fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         listOf("امتحان", "واجب", "مراجعة", "دراسة عامة").forEach { value ->
-                            FilterChip(selected = purpose == value, onClick = { purpose = value; prefs.edit().putString("session_purpose", value).apply() }, label = { Text(value) })
+                            FilterChip(selected = purpose == value, enabled = !sessionLocked, onClick = { purpose = value; prefs.edit().putString("session_purpose", value).apply() }, label = { Text(value) })
                         }
                     }
                     if (purpose == "امتحان") {
-                        OutlinedTextField(value = examDate, onValueChange = { examDate = it.take(40); prefs.edit().putString("session_exam_date", examDate).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Exam date (as published)" else "موعد الامتحان (حسب إعلان المدرسة)") }, singleLine = true, placeholder = { Text("مثال: 2026-12-03") })
-                        OutlinedTextField(value = examScope, onValueChange = { examScope = it.take(500); prefs.edit().putString("session_exam_scope", examScope).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Exam material / chapters" else "مادة الامتحان والفصول الداخلة") }, minLines = 2)
-                        OutlinedTextField(value = teacherNotes, onValueChange = { teacherNotes = it.take(1000); prefs.edit().putString("session_teacher_notes", teacherNotes).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Teacher's notes" else "ملاحظات المدرّس على المادة") }, minLines = 2)
+                        OutlinedTextField(value = examDate, enabled = !sessionLocked, onValueChange = { examDate = it.take(40); prefs.edit().putString("session_exam_date", examDate).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Exam date (as published)" else "موعد الامتحان (حسب إعلان المدرسة)") }, singleLine = true, placeholder = { Text("مثال: 2026-12-03") })
+                        OutlinedTextField(value = examScope, enabled = !sessionLocked, onValueChange = { examScope = it.take(500); prefs.edit().putString("session_exam_scope", examScope).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Exam material / chapters" else "مادة الامتحان والفصول الداخلة") }, minLines = 2)
+                        OutlinedTextField(value = teacherNotes, enabled = !sessionLocked, onValueChange = { teacherNotes = it.take(1000); prefs.edit().putString("session_teacher_notes", teacherNotes).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Teacher's notes" else "ملاحظات المدرّس على المادة") }, minLines = 2)
                         Text(if (isEnglish) "Enter only details confirmed by your teacher or the school's published notice." else "اكتب المعلومات المؤكدة من المدرّس أو إعلان المدرسة؛ التطبيق لا يخمّن موعد الامتحان أو ملاحظاته.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(if (isEnglish) "Published school exam notices" else "إعلانات الامتحانات المنشورة من المدرسة", fontWeight = FontWeight.SemiBold)
                         if (examNoticesBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -308,23 +309,23 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                             }
                         }
                     } else if (purpose == "واجب") {
-                        OutlinedTextField(value = taskTitle, onValueChange = { taskTitle = it.take(200); prefs.edit().putString("session_task_title", taskTitle).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Homework / task" else "اسم الواجب أو المهمة") }, singleLine = true)
+                        OutlinedTextField(value = taskTitle, enabled = !sessionLocked, onValueChange = { taskTitle = it.take(200); prefs.edit().putString("session_task_title", taskTitle).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Homework / task" else "اسم الواجب أو المهمة") }, singleLine = true)
                     }
                 }
                 item {
                     Text(if (isEnglish) "SESSION LENGTH" else "مدة الجلسة", fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf(30, 60, 120).forEach { m -> FilterChip(selected = !unlimited && duration == m, onClick = { duration = m; unlimited = false }, label = { Text(if (m == 30) "30 د" else if (m == 60) "1 س" else "2 س") }) }
+                        listOf(30, 60, 120).forEach { m -> FilterChip(selected = !unlimited && duration == m, enabled = !sessionLocked, onClick = { duration = m; unlimited = false }, label = { Text(if (m == 30) "30 د" else if (m == 60) "1 س" else "2 س") }) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         listOf(180, 240).forEach { m -> FilterChip(selected = !unlimited && duration == m, onClick = { duration = m; unlimited = false }, label = { Text(if (m == 180) "3 س" else "4 س") }) }
-                        FilterChip(selected = unlimited, onClick = { unlimited = true }, label = { Text(if (isEnglish) "Unlimited" else "بلا وقت") })
+                        FilterChip(selected = unlimited, enabled = !sessionLocked, onClick = { unlimited = true }, label = { Text(if (isEnglish) "Unlimited" else "بلا وقت") })
                     }
                 }
                 item {
                     Text(if (isEnglish) "FOCUS / BREAK" else "التركيز والاستراحة", fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf("25/5", "50/10", "بلا استراحة").forEach { value -> FilterChip(selected = interval == value, onClick = { interval = value }, label = { Text(value) }) }
+                        listOf("25/5", "50/10", "بلا استراحة").forEach { value -> FilterChip(selected = interval == value, enabled = !sessionLocked, onClick = { interval = value }, label = { Text(value) }) }
                     }
                 }
                 item {
@@ -586,7 +587,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                             startAt = 0L
                             prefs.edit().putBoolean("active_running_${session.userId}", false).putLong("active_elapsed_${session.userId}", elapsed).putLong("active_start_at_${session.userId}", 0L).apply()
                         }) { Text(if (isEnglish) "Pause" else "إيقاف مؤقت") }
-                        TextButton(enabled = !cloudBusy, onClick = {
+                        TextButton(enabled = !cloudBusy && (running || elapsed > 0L || lessonCompleted), onClick = {
                             if (running) elapsed = (android.os.SystemClock.elapsedRealtime() - startAt).coerceAtLeast(0L) / 1000L
                             running = false
                             cancelStudySessionAlert(context, session.userId)
@@ -595,10 +596,10 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                             val finishedBreakSeconds = (totalElapsed - finishedFocusSeconds).coerceAtLeast(0L)
                             val finishedLesson = lessonCompleted
                             val sessionId = java.util.UUID.randomUUID().toString()
-                            sessions += 1
+                            if (finishedFocusSeconds > 0L) sessions += 1
                             if (finishedLesson) completedLessons += 1
                             val weeklySessions = runCatching { JSONArray(prefs.getString("weekly_sessions_${session.userId}", "[]") ?: "[]") }.getOrDefault(JSONArray())
-                            weeklySessions.put(JSONObject()
+                            if (finishedFocusSeconds > 0L) weeklySessions.put(JSONObject()
                                 .put("id", sessionId)
                                 .put("at", System.currentTimeMillis())
                                 .put("subject", subject)
