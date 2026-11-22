@@ -195,9 +195,9 @@ private fun writeHomeworkPlan(prefs: android.content.SharedPreferences, steps: L
 
 private data class RuvenSavedContent(val id: Long, val text: String)
 
-private fun readRuvenSavedContent(prefs: android.content.SharedPreferences): List<RuvenSavedContent> =
+private fun readRuvenSavedContent(prefs: android.content.SharedPreferences, storageKey: String = "saved_content_v1"): List<RuvenSavedContent> =
     runCatching {
-        val array = JSONArray(prefs.getString("saved_content_v1", "[]") ?: "[]")
+        val array = JSONArray(prefs.getString(storageKey, "[]") ?: "[]")
         (0 until array.length()).mapNotNull { index ->
             val item = array.optJSONObject(index) ?: return@mapNotNull null
             val id = item.optLong("id")
@@ -206,12 +206,12 @@ private fun readRuvenSavedContent(prefs: android.content.SharedPreferences): Lis
         }.takeLast(100)
     }.getOrDefault(emptyList())
 
-private fun writeRuvenSavedContent(prefs: android.content.SharedPreferences, items: List<RuvenSavedContent>) {
+private fun writeRuvenSavedContent(prefs: android.content.SharedPreferences, items: List<RuvenSavedContent>, storageKey: String = "saved_content_v1") {
     val array = JSONArray()
     items.takeLast(100).forEach { item ->
         array.put(JSONObject().put("id", item.id).put("text", item.text))
     }
-    prefs.edit().putString("saved_content_v1", array.toString()).apply()
+    prefs.edit().putString(storageKey, array.toString()).apply()
 }
 
 private val ruvenStudentTools = listOf(
@@ -240,7 +240,8 @@ private val ruvenStudentTools = listOf(
     RuvenStudentTool(31, "تسجيل المزاج", "Mood check-in", "سجّل شعورك بكلمات بسيطة (خاص على جهازك)", "Describe your mood briefly (private on this device)"),
     RuvenStudentTool(32, "دقيقة هدوء", "Quiet minute", "اكتب شنو تريد تتركه مؤقتًا حتى ترتاح", "Write what you want to pause and set aside"),
     RuvenStudentTool(36, "رسالة شكر", "Thank-you helper", "اكتب شنو الشخص ساعدك بيه", "Describe how the person helped you"),
-    RuvenStudentTool(37, "صياغة اعتذار", "Apology helper", "اكتب باختصار شنو صار حتى تصيغ اعتذارًا محترمًا", "Briefly describe what happened to draft a respectful apology")
+    RuvenStudentTool(37, "صياغة اعتذار", "Apology helper", "اكتب باختصار شنو صار حتى تصيغ اعتذارًا محترمًا", "Briefly describe what happened to draft a respectful apology"),
+    RuvenStudentTool(41, "سجل المساعدة", "Help received log", "اكتب شنو المساعدة اللي تلقيتها حتى تحفظها بشكل خاص", "Record the help you received in a private log")
 )
 
 @Composable
@@ -252,6 +253,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean, publishedItems: List<iq.ruven.app.
     var output by remember { mutableStateOf("") }
     var lostItemQrToken by remember { mutableStateOf("") }
     var savedContent by remember { mutableStateOf(readRuvenSavedContent(prefs)) }
+    var helpReceived by remember { mutableStateOf(readRuvenSavedContent(prefs, "help_received_v1")) }
     var homeworkPlan by remember { mutableStateOf(readHomeworkPlan(prefs)) }
     val revisionExportLauncher = rememberLauncherForActivityResult(CreateDocument("text/plain")) { uri: Uri? ->
         if (uri != null) runCatching {
@@ -320,6 +322,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean, publishedItems: List<iq.ruven.app.
                                     if (tool.id == 5) { hintLevel = 0; hintTopic = "" }
                                     if (tool.id == 2) homeworkPlan = readHomeworkPlan(prefs)
                                     if (tool.id == 13) savedContent = readRuvenSavedContent(prefs)
+                                    if (tool.id == 41) helpReceived = readRuvenSavedContent(prefs, "help_received_v1")
                                     input = if (tool.id == 27) java.time.LocalDate.now().toString() else prefs.getString("input_${tool.id}", "") ?: ""
                                     output = prefs.getString("result_${tool.id}", "") ?: ""
                                     if (tool.id == 1 || tool.id == 18 || tool.id == 20) {
@@ -402,6 +405,21 @@ fun StudentFeatureHubCard(isEnglish: Boolean, publishedItems: List<iq.ruven.app.
                     }
                     if (tool.id == 23 && lostItemQrToken.isNotBlank()) {
                         LostItemClaimQr(lostItemQrToken)
+                    }
+                    if (tool.id == 41) {
+                        Text(if (isEnglish) "Private entries on this device · ${helpReceived.size}/100" else "سجلات خاصة على هذا الجهاز · ${helpReceived.size}/100", style = MaterialTheme.typography.labelMedium)
+                        if (helpReceived.isEmpty()) Text(if (isEnglish) "No entries yet." else "ماكو سجلات بعد.", style = MaterialTheme.typography.bodySmall)
+                        helpReceived.asReversed().forEach { item ->
+                            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                                Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                    Text(item.text, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                                    TextButton(onClick = {
+                                        helpReceived = helpReceived.filterNot { it.id == item.id }
+                                        writeRuvenSavedContent(prefs, helpReceived, "help_received_v1")
+                                    }) { Text(if (isEnglish) "Delete" else "حذف") }
+                                }
+                            }
+                        }
                     }
                     if (tool.id == 13) {
                         Text(if (isEnglish) "Saved on this device · ${savedContent.size}/100" else "محفوظة على هذا الجهاز · ${savedContent.size}/100", style = MaterialTheme.typography.labelMedium)
@@ -514,6 +532,13 @@ fun StudentFeatureHubCard(isEnglish: Boolean, publishedItems: List<iq.ruven.app.
                         if (isEnglish) "Content saved on this device." else "انحفظ المحتوى على هذا الجهاز."
                     } else if (tool.id == 13 && input.isBlank()) {
                         if (isEnglish) "Review or delete your saved items below." else "راجع المحفوظات أو احذف العناصر من القائمة أدناه."
+                    } else if (tool.id == 41 && input.isNotBlank()) {
+                        val next = (helpReceived + RuvenSavedContent(System.currentTimeMillis(), input.trim())).takeLast(100)
+                        helpReceived = next
+                        writeRuvenSavedContent(prefs, next, "help_received_v1")
+                        if (isEnglish) "Help entry saved privately on this device." else "انحفظ سجل المساعدة بشكل خاص على هذا الجهاز."
+                    } else if (tool.id == 41 && input.isBlank()) {
+                        if (isEnglish) "Review or delete your private help entries below." else "راجع سجلات المساعدة الخاصة أو احذفها من القائمة أدناه."
                     } else if (tool.id == 14 && input.isBlank()) {
                         val recent = prefs.all.entries
                             .filter { it.key.startsWith("recent_") }
