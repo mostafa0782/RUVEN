@@ -161,6 +161,11 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
         }
     }
     LaunchedEffect(running) {
+        if (running && startAt > android.os.SystemClock.elapsedRealtime()) {
+            running = false
+            startAt = 0L
+            prefs.edit().putBoolean("active_running_${session.userId}", false).putLong("active_start_at_${session.userId}", 0L).apply()
+        }
         while (running) {
             delay(1000)
             elapsed = (android.os.SystemClock.elapsedRealtime() - startAt).coerceAtLeast(0L) / 1000L
