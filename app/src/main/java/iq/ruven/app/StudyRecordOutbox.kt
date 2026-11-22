@@ -26,6 +26,12 @@ data class StudyRecordDraft(
     val homeworkStatus: String? = null,
     val examKind: String? = null,
     val pageNumber: Int? = null,
+    val purpose: String? = null,
+    val plannedDurationSeconds: Long? = null,
+    val breakDurationSeconds: Long = 0L,
+    val examDate: String? = null,
+    val teacherNotes: String? = null,
+    val taskTitle: String? = null,
     val clientRecordId: String = UUID.randomUUID().toString()
 ) {
     init {
@@ -33,6 +39,12 @@ data class StudyRecordDraft(
         require(subjectName.isNotBlank() && subjectName.length <= 80)
         require(durationSeconds in 0L..86400L)
         require(pageNumber == null || pageNumber >= 1)
+        require(purpose == null || purpose in setOf("امتحان", "واجب", "مراجعة", "دراسة عامة"))
+        require(plannedDurationSeconds == null || plannedDurationSeconds in 0L..86400L)
+        require(breakDurationSeconds in 0L..86400L)
+        require(examDate == null || examDate.length <= 40)
+        require(teacherNotes == null || teacherNotes.length <= 1000)
+        require(taskTitle == null || taskTitle.length <= 200)
         UUID.fromString(clientRecordId)
     }
 
@@ -49,6 +61,12 @@ data class StudyRecordDraft(
         .put("homework_status", homeworkStatus ?: JSONObject.NULL)
         .put("exam_kind", examKind ?: JSONObject.NULL)
         .put("page_number", pageNumber ?: JSONObject.NULL)
+        .put("purpose", purpose ?: JSONObject.NULL)
+        .put("planned_duration_seconds", plannedDurationSeconds ?: JSONObject.NULL)
+        .put("break_duration_seconds", breakDurationSeconds)
+        .put("exam_date", examDate ?: JSONObject.NULL)
+        .put("teacher_notes", teacherNotes ?: JSONObject.NULL)
+        .put("task_title", taskTitle ?: JSONObject.NULL)
 
     companion object {
         internal fun fromJson(row: JSONObject): StudyRecordDraft = StudyRecordDraft(
@@ -62,6 +80,12 @@ data class StudyRecordDraft(
             homeworkStatus = row.optString("homework_status").takeUnless { it.isBlank() || it == "null" },
             examKind = row.optString("exam_kind").takeUnless { it.isBlank() || it == "null" },
             pageNumber = if (row.isNull("page_number")) null else row.optInt("page_number"),
+            purpose = row.optString("purpose").takeUnless { it.isBlank() || it == "null" },
+            plannedDurationSeconds = if (row.isNull("planned_duration_seconds")) null else row.optLong("planned_duration_seconds"),
+            breakDurationSeconds = row.optLong("break_duration_seconds"),
+            examDate = row.optString("exam_date").takeUnless { it.isBlank() || it == "null" },
+            teacherNotes = row.optString("teacher_notes").takeUnless { it.isBlank() || it == "null" },
+            taskTitle = row.optString("task_title").takeUnless { it.isBlank() || it == "null" },
             clientRecordId = row.getString("client_record_id")
         )
     }
@@ -165,6 +189,12 @@ object StudyRecordOutbox {
                     homeworkStatus = draft.homeworkStatus,
                     examKind = draft.examKind,
                     pageNumber = draft.pageNumber,
+                    metadata = JSONObject().put("purpose", draft.purpose ?: JSONObject.NULL)
+                        .put("planned_duration_seconds", draft.plannedDurationSeconds ?: JSONObject.NULL)
+                        .put("break_duration_seconds", draft.breakDurationSeconds)
+                        .put("exam_date", draft.examDate ?: JSONObject.NULL)
+                        .put("teacher_notes", draft.teacherNotes ?: JSONObject.NULL)
+                        .put("task_title", draft.taskTitle ?: JSONObject.NULL),
                     clientRecordId = draft.clientRecordId
                 )
                 remove(context, draft.clientRecordId)
