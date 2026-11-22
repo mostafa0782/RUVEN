@@ -50,14 +50,38 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
           test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner"
 
+      # Push builds use one persistent signing identity. Pull-request builds stay
+      # on the disposable debug key because secrets are unavailable to fork PRs.
+      - name: Configure persistent Android signing
+        if: github.event_name != 'pull_request' && github.ref != 'refs/heads/main'
+        shell: bash
+        env:
+          RUVEN_KEYSTORE_BASE64: ${{ secrets.RUVEN_KEYSTORE_BASE64 }}
+          RUVEN_KEYSTORE_PASSWORD: ${{ secrets.RUVEN_KEYSTORE_PASSWORD }}
+          RUVEN_KEY_ALIAS: ${{ secrets.RUVEN_KEY_ALIAS }}
+          RUVEN_KEY_PASSWORD: ${{ secrets.RUVEN_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$RUVEN_KEYSTORE_BASE64" || -z "$RUVEN_KEYSTORE_PASSWORD" || -z "$RUVEN_KEY_ALIAS" || -z "$RUVEN_KEY_PASSWORD" ]]; then
+            echo "::error::Add the four RUVEN signing secrets in GitHub repository settings before building a distributable APK."
+            exit 1
+          fi
+          KEYSTORE_PATH="$RUNNER_TEMP/ruven-upload.jks"
+          printf '%s' "$RUVEN_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$RUVEN_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$RUVEN_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$RUVEN_KEY_PASSWORD" >> "$GITHUB_ENV"
+
       - name: Run unit tests
         run: gradle :app:testDebugUnitTest -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.0
 
-      - name: Build unsigned debug APK for non-main testing
+      - name: Build consistently signed debug APK for feature branches
         if: github.ref != 'refs/heads/main' || github.event_name == 'pull_request'
         run: gradle :app:assembleDebug -PVERSION_CODE=${{ github.run_number }} -PVERSION_NAME=0.1.${{ github.run_number }}
 
-      - name: Upload unsigned debug APK
+      - name: Upload debug APK
         if: github.ref != 'refs/heads/main' || github.event_name == 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # pinned
         with:
