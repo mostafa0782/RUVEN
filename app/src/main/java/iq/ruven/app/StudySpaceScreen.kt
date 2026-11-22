@@ -93,9 +93,14 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     var duration by remember { mutableIntStateOf(prefs.getInt("duration", 60)) }
     var unlimited by remember { mutableStateOf(prefs.getBoolean("unlimited", false)) }
     var interval by remember { mutableStateOf(prefs.getString("interval", "25/5") ?: "25/5") }
-    var running by remember { mutableStateOf(false) }
-    var elapsed by remember { mutableLongStateOf(0L) }
-    var startAt by remember { mutableLongStateOf(0L) }
+    var purpose by remember { mutableStateOf(prefs.getString("session_purpose", "دراسة عامة") ?: "دراسة عامة") }
+    var examDate by remember { mutableStateOf(prefs.getString("session_exam_date", "") ?: "") }
+    var examScope by remember { mutableStateOf(prefs.getString("session_exam_scope", "") ?: "") }
+    var teacherNotes by remember { mutableStateOf(prefs.getString("session_teacher_notes", "") ?: "") }
+    var taskTitle by remember { mutableStateOf(prefs.getString("session_task_title", "") ?: "") }
+    var running by remember { mutableStateOf(prefs.getBoolean("active_running", false)) }
+    var elapsed by remember { mutableLongStateOf(prefs.getLong("active_elapsed", 0L)) }
+    var startAt by remember { mutableLongStateOf(prefs.getLong("active_start_at", 0L)) }
     var pageTracking by remember { mutableStateOf(prefs.getBoolean("page_tracking", false)) }
     var page by remember { mutableStateOf(prefs.getString("last_page", "") ?: "") }
     var pdfUri by remember { mutableStateOf(prefs.getString("pdf_uri", "") ?: "") }
@@ -139,7 +144,11 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
         while (running) {
             delay(1000)
             elapsed = (System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 1000L
-            if (!unlimited && elapsed >= duration * 60L) running = false
+            prefs.edit().putLong("active_elapsed", elapsed).putLong("active_start_at", startAt).putBoolean("active_running", true).apply()
+            if (!unlimited && elapsed >= duration * 60L) {
+                running = false
+                prefs.edit().putBoolean("active_running", false).putLong("active_elapsed", elapsed).apply()
+            }
         }
     }
     val seconds = if (unlimited) elapsed else (duration * 60L - elapsed).coerceAtLeast(0L)
@@ -172,6 +181,22 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                     }
                     OutlinedTextField(value = chapter, onValueChange = { chapter = it }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Chapter (optional)" else "الفصل (اختياري)") }, singleLine = true)
                     OutlinedTextField(value = lesson, onValueChange = { lesson = it }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Lesson (optional)" else "الدرس (اختياري)") }, singleLine = true)
+                }
+                item {
+                    Text(if (isEnglish) "WHY ARE YOU STUDYING?" else "سبب الدراسة", fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf("امتحان", "واجب", "مراجعة", "دراسة عامة").forEach { value ->
+                            FilterChip(selected = purpose == value, onClick = { purpose = value; prefs.edit().putString("session_purpose", value).apply() }, label = { Text(value) })
+                        }
+                    }
+                    if (purpose == "امتحان") {
+                        OutlinedTextField(value = examDate, onValueChange = { examDate = it.take(40); prefs.edit().putString("session_exam_date", examDate).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Exam date (as published)" else "موعد الامتحان (حسب إعلان المدرسة)") }, singleLine = true, placeholder = { Text("مثال: 2026-12-03") })
+                        OutlinedTextField(value = examScope, onValueChange = { examScope = it.take(500); prefs.edit().putString("session_exam_scope", examScope).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Exam material / chapters" else "مادة الامتحان والفصول الداخلة") }, minLines = 2)
+                        OutlinedTextField(value = teacherNotes, onValueChange = { teacherNotes = it.take(1000); prefs.edit().putString("session_teacher_notes", teacherNotes).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Teacher's notes" else "ملاحظات المدرّس على المادة") }, minLines = 2)
+                        Text(if (isEnglish) "Enter only details confirmed by your teacher or the school's published notice." else "اكتب المعلومات المؤكدة من المدرّس أو إعلان المدرسة؛ التطبيق لا يخمّن موعد الامتحان أو ملاحظاته.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if (purpose == "واجب") {
+                        OutlinedTextField(value = taskTitle, onValueChange = { taskTitle = it.take(200); prefs.edit().putString("session_task_title", taskTitle).apply() }, modifier = Modifier.fillMaxWidth(), label = { Text(if (isEnglish) "Homework / task" else "اسم الواجب أو المهمة") }, singleLine = true)
+                    }
                 }
                 item {
                     Text(if (isEnglish) "SESSION LENGTH" else "مدة الجلسة", fontWeight = FontWeight.Bold)
@@ -413,7 +438,8 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                 }
                 item {
                     HorizontalDivider()
-                    Text(if (isEnglish) "FOCUS TIMER" else "مؤقت التركيز", fontWeight = FontWeight.Bold)
+                    Text(if (isEnglish) "STUDY SESSION TIMER" else "مؤقت جلسة الدراسة", fontWeight = FontWeight.Bold)
+                    Text((if (isEnglish) "Purpose: " else "السبب: ") + purpose + " · " + (if (isEnglish) "Focus time: " else "وقت الدراسة الفعلي: ") + (studyFocusSeconds(elapsed, selectedInterval) / 60) + " " + (if (isEnglish) "min" else "دقيقة"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(timer, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     Text(
                         when (cycleState.phase) {
@@ -428,38 +454,69 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                         Button(enabled = !running, onClick = {
                             if (startAt == 0L) startAt = System.currentTimeMillis() - elapsed * 1000L
                             running = true
-                            prefs.edit().putString("last_subject", subject).putString("chapter", chapter).putString("lesson", lesson).putInt("duration", duration).putBoolean("unlimited", unlimited).putString("interval", interval).apply()
+                            prefs.edit().putBoolean("active_running", true).putLong("active_start_at", startAt).putLong("active_elapsed", elapsed)
+                                .putString("last_subject", subject).putString("chapter", chapter).putString("lesson", lesson).putInt("duration", duration).putBoolean("unlimited", unlimited).putString("interval", interval).apply()
                         }) { Icon(Icons.Rounded.PlayArrow, null); Text(if (isEnglish) "Start" else "بدء") }
-                        OutlinedButton(onClick = { running = false; startAt = 0L }) { Text(if (isEnglish) "Pause" else "إيقاف مؤقت") }
-                        TextButton(onClick = {
+                        OutlinedButton(onClick = {
+                            if (running) elapsed = (System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 1000L
                             running = false
-                            val finishedSeconds = elapsed.coerceIn(0L, 86400L)
+                            startAt = 0L
+                            prefs.edit().putBoolean("active_running", false).putLong("active_elapsed", elapsed).putLong("active_start_at", 0L).apply()
+                        }) { Text(if (isEnglish) "Pause" else "إيقاف مؤقت") }
+                        TextButton(enabled = !cloudBusy, onClick = {
+                            running = false
+                            val totalElapsed = elapsed.coerceIn(0L, 86400L)
+                            val finishedFocusSeconds = studyFocusSeconds(totalElapsed, selectedInterval).coerceIn(0L, 86400L)
+                            val finishedBreakSeconds = (totalElapsed - finishedFocusSeconds).coerceAtLeast(0L)
                             val finishedLesson = lessonCompleted
+                            val sessionId = java.util.UUID.randomUUID().toString()
                             sessions += 1
                             if (finishedLesson) completedLessons += 1
                             val weeklySessions = runCatching { JSONArray(prefs.getString("weekly_sessions", "[]") ?: "[]") }.getOrDefault(JSONArray())
                             weeklySessions.put(JSONObject()
+                                .put("id", sessionId)
                                 .put("at", System.currentTimeMillis())
                                 .put("subject", subject)
+                                .put("purpose", purpose)
                                 .put("lesson", lesson)
-                                .put("seconds", finishedSeconds)
-                                .put("completed", finishedLesson))
+                                .put("seconds", finishedFocusSeconds)
+                                .put("break_seconds", finishedBreakSeconds)
+                                .put("planned_seconds", if (unlimited) JSONObject.NULL else duration * 60)
+                                .put("completed", finishedLesson)
+                                .put("exam_date", if (purpose == "امتحان") examDate else "")
+                                .put("exam_scope", if (purpose == "امتحان") examScope else "")
+                                .put("teacher_notes", if (purpose == "امتحان") teacherNotes else "")
+                                .put("task_title", if (purpose == "واجب") taskTitle else ""))
                             val boundedWeeklySessions = JSONArray()
                             val firstWeeklyIndex = (weeklySessions.length() - 180).coerceAtLeast(0)
-                            for (recordIndex in firstWeeklyIndex until weeklySessions.length()) {
-                                boundedWeeklySessions.put(weeklySessions.getJSONObject(recordIndex))
-                            }
-                            prefs.edit().putString("last_subject", subject).putInt("sessions", sessions).putInt("completed_lessons", completedLessons)
-                                .putLong("study_seconds", prefs.getLong("study_seconds", 0L) + finishedSeconds)
-                                .putString("weekly_sessions", boundedWeeklySessions.toString()).apply()
+                            for (recordIndex in firstWeeklyIndex until weeklySessions.length()) boundedWeeklySessions.put(weeklySessions.getJSONObject(recordIndex))
+                            prefs.edit()
+                                .putString("last_subject", subject)
+                                .putInt("sessions", sessions)
+                                .putInt("completed_lessons", completedLessons)
+                                .putLong("study_seconds", prefs.getLong("study_seconds", 0L) + finishedFocusSeconds)
+                                .putString("weekly_sessions", boundedWeeklySessions.toString())
+                                .putBoolean("active_running", false)
+                                .putLong("active_elapsed", 0L)
+                                .putLong("active_start_at", 0L)
+                                .apply()
                             cloudBusy = true
                             scope.launch {
                                 val drafts = buildList {
-                                    if (finishedSeconds > 0L) add(
+                                    if (finishedFocusSeconds > 0L) add(
                                         StudyRecordDraft(
-                                            "study_session", subject, chapter, lesson,
-                                            durationSeconds = finishedSeconds,
-                                            pageNumber = if (pageTracking) page.toIntOrNull() else null
+                                            recordType = "study_session",
+                                            subjectName = subject,
+                                            chapterName = if (purpose == "امتحان") examScope.takeIf { it.isNotBlank() } else chapter,
+                                            lessonName = lesson,
+                                            durationSeconds = finishedFocusSeconds,
+                                            pageNumber = if (pageTracking) page.toIntOrNull() else null,
+                                            purpose = purpose,
+                                            plannedDurationSeconds = if (unlimited) null else duration * 60L,
+                                            breakDurationSeconds = finishedBreakSeconds,
+                                            examDate = examDate.takeIf { purpose == "امتحان" && it.isNotBlank() },
+                                            teacherNotes = teacherNotes.takeIf { purpose == "امتحان" && it.isNotBlank() },
+                                            taskTitle = taskTitle.takeIf { purpose == "واجب" && it.isNotBlank() }
                                         )
                                     )
                                     if (finishedLesson) add(
@@ -475,27 +532,27 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                                 for (draft in drafts) {
                                     val result = runCatching { StudyRecordOutbox.enqueueAndSync(context, backend, session, draft) }
                                     if (result.isSuccess) pending = result.getOrThrow().pendingCount
-                                    else {
-                                        failureMessage = result.exceptionOrNull()?.message ?: "error"
-                                        break
-                                    }
+                                    else { failureMessage = result.exceptionOrNull()?.message ?: "error"; break }
                                 }
                                 pendingOutboxCount = pending
                                 cloudStatus = when {
                                     failureMessage != null -> (if (isEnglish) "Queue save failed: " else "فشل حفظ قائمة المزامنة: ") + failureMessage
                                     pending > 0 -> (if (isEnglish) "Saved offline · pending: " else "حُفظ محلياً · بانتظار المزامنة: ") + pending
-                                    else -> if (isEnglish) "Study progress synced to school account" else "تمت مزامنة تقدمك الدراسي مع حساب المدرسة"
+                                    else -> if (isEnglish) "Study session saved and synced" else "تم حفظ جلسة الدراسة ومزامنتها"
                                 }
                                 cloudBusy = false
                             }
-                            elapsed = 0L; startAt = 0L; lessonCompleted = false
-                        }) { Text(if (isEnglish) "Finish" else "إنهاء") }
+                            elapsed = 0L
+                            startAt = 0L
+                            lessonCompleted = false
+                        }) { Text(if (isEnglish) "Finish session" else "إنهاء الجلسة") }
                     }
                 }
                 item {
                     HorizontalDivider()
                     Text(if (isEnglish) "MY STUDY SUMMARY" else "ملخص إنجازي", fontWeight = FontWeight.Bold)
                     Text(if (isEnglish) "Completed lessons: " + completedLessons + " · Sessions: " + sessions else "الدروس المكتملة: " + completedLessons + " · الجلسات: " + sessions)
+                    Text("إجمالي وقت الدراسة الفعلي: " + (prefs.getLong("study_seconds", 0L) / 3600) + " ساعة و" + ((prefs.getLong("study_seconds", 0L) % 3600) / 60) + " دقيقة", style = MaterialTheme.typography.bodySmall)
                     Text("الواجبات: " + homework.count { it.second == "كُتب" } + " كُتب · " + homework.count { it.second == "اكتمل" } + " مكتمل · " + homework.count { it.second == "شبه منجز" } + " شبه منجز · " + homework.count { it.second == "لم ينجز" } + " لم ينجز", style = MaterialTheme.typography.bodySmall)
                     OutlinedButton(onClick = {
                         val report = "RUVEN Study Report\nSubject: " + subject + "\nCompleted lessons: " + completedLessons + "\nSessions: " + sessions + "\nHomework: " + homework.joinToString { it.first + " — " + it.second } + "\nExam scope: " + examMarkers.joinToString(" | ")
