@@ -42,6 +42,18 @@ class StudySpaceModelsTest {
         assertEquals(StudyCycleState(StudyPhase.FOCUS, 25 * 60L), studyCycleState(30 * 60L, StudyInterval.POMODORO_25_5))
     }
 
+    @Test fun focusedSecondsExcludeBreaksAndCountPartialCycles() {
+        assertEquals(25L * 60L, studyFocusSeconds(30L * 60L, StudyInterval.POMODORO_25_5))
+        assertEquals(25L * 60L + 10L * 60L, studyFocusSeconds(40L * 60L, StudyInterval.POMODORO_25_5))
+        assertEquals(50L * 60L, studyFocusSeconds(60L * 60L, StudyInterval.LONG_50_10))
+        assertEquals(17L * 60L, studyFocusSeconds(17L * 60L, StudyInterval.NO_BREAKS))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun focusSecondsRejectNegativeElapsedTime() {
+        studyFocusSeconds(-1L, StudyInterval.POMODORO_25_5)
+    }
+
     @Test fun longFocusCycleAndNoBreakModeWork() {
         assertEquals(StudyCycleState(StudyPhase.BREAK, 10 * 60L), studyCycleState(50 * 60L, StudyInterval.LONG_50_10))
         assertEquals(StudyCycleState(StudyPhase.NO_BREAK, 0L), studyCycleState(3600L, StudyInterval.NO_BREAKS))
