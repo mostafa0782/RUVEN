@@ -21,6 +21,17 @@ data class StudyCycleState(
 )
 
 /** Computes the current focus/rest phase from elapsed active session time. */
+/** Returns accumulated focused seconds, excluding scheduled breaks. */
+fun studyFocusSeconds(elapsedSeconds: Long, interval: StudyInterval): Long {
+    require(elapsedSeconds >= 0L)
+    if (interval == StudyInterval.NO_BREAKS) return elapsedSeconds
+    val focus = interval.focusMinutes * 60L
+    val cycle = (interval.focusMinutes + interval.breakMinutes) * 60L
+    val fullCycles = elapsedSeconds / cycle
+    val remainder = elapsedSeconds % cycle
+    return fullCycles * focus + minOf(remainder, focus)
+}
+
 fun studyCycleState(elapsedSeconds: Long, interval: StudyInterval): StudyCycleState {
     require(elapsedSeconds >= 0L)
     if (interval == StudyInterval.NO_BREAKS) {
