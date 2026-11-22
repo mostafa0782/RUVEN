@@ -523,6 +523,11 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                         color = if (cycleState.phase == StudyPhase.BREAK) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    if (!notificationPermissionGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        TextButton(onClick = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
+                            Text(if (isEnglish) "Enable study reminders" else "فعّل تنبيهات الاستراحة والعودة للدراسة")
+                        }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(enabled = !running, onClick = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationPermissionGranted) {
@@ -541,7 +546,7 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
                             prefs.edit().putBoolean("active_running_${session.userId}", false).putLong("active_elapsed_${session.userId}", elapsed).putLong("active_start_at_${session.userId}", 0L).apply()
                         }) { Text(if (isEnglish) "Pause" else "إيقاف مؤقت") }
                         TextButton(enabled = !cloudBusy, onClick = {
-                            if (running) elapsed = (System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 1000L
+                            if (running) elapsed = (android.os.SystemClock.elapsedRealtime() - startAt).coerceAtLeast(0L) / 1000L
                             running = false
                             cancelStudySessionAlert(context, session.userId)
                             val totalElapsed = elapsed.coerceIn(0L, 86400L)
