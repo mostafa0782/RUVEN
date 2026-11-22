@@ -63,8 +63,8 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "$RUVEN_KEYSTORE_BASE64" || -z "$RUVEN_KEYSTORE_PASSWORD" || -z "$RUVEN_KEY_ALIAS" || -z "$RUVEN_KEY_PASSWORD" ]]; then
-            echo "::error::Add the four RUVEN signing secrets in GitHub repository settings before building a distributable APK."
-            exit 1
+            echo "::warning::Persistent signing secrets are not configured. Continuing with the standard debug signing key; this APK may not update an existing installation signed with another key."
+            exit 0
           fi
           KEYSTORE_PATH="$RUNNER_TEMP/ruven-upload.jks"
           printf '%s' "$RUVEN_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
