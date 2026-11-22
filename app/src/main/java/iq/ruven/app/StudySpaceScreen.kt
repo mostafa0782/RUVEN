@@ -160,6 +160,11 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
             }
         }
     }
+    val selectedInterval = when (interval) {
+        "50/10" -> StudyInterval.LONG_50_10
+        "بلا استراحة" -> StudyInterval.NO_BREAKS
+        else -> StudyInterval.POMODORO_25_5
+    }
     LaunchedEffect(running) {
         if (running && startAt > android.os.SystemClock.elapsedRealtime()) {
             running = false
@@ -179,11 +184,6 @@ private fun StudySpaceDialog(isEnglish: Boolean, session: iq.ruven.app.data.remo
     val focusedElapsed = studyFocusSeconds(elapsed, selectedInterval)
     val seconds = if (unlimited) elapsed else (duration * 60L - focusedElapsed).coerceAtLeast(0L)
     val timer = "%02d:%02d:%02d".format(seconds / 3600, (seconds % 3600) / 60, seconds % 60)
-    val selectedInterval = when (interval) {
-        "50/10" -> StudyInterval.LONG_50_10
-        "بلا استراحة" -> StudyInterval.NO_BREAKS
-        else -> StudyInterval.POMODORO_25_5
-    }
     val cycleState = studyCycleState(elapsed, selectedInterval)
     val phaseTime = "%02d:%02d".format(cycleState.remainingSeconds / 60, cycleState.remainingSeconds % 60)
 
