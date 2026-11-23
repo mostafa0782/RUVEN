@@ -241,7 +241,8 @@ private val ruvenStudentTools = listOf(
     RuvenStudentTool(32, "دقيقة هدوء", "Quiet minute", "اكتب شنو تريد تتركه مؤقتًا حتى ترتاح", "Write what you want to pause and set aside"),
     RuvenStudentTool(36, "رسالة شكر", "Thank-you helper", "اكتب شنو الشخص ساعدك بيه", "Describe how the person helped you"),
     RuvenStudentTool(37, "صياغة اعتذار", "Apology helper", "اكتب باختصار شنو صار حتى تصيغ اعتذارًا محترمًا", "Briefly describe what happened to draft a respectful apology"),
-    RuvenStudentTool(41, "سجل المساعدة", "Help received log", "اكتب شنو المساعدة اللي تلقيتها حتى تحفظها بشكل خاص", "Record the help you received in a private log")
+    RuvenStudentTool(41, "سجل المساعدة", "Help received log", "اكتب شنو المساعدة اللي تلقيتها حتى تحفظها بشكل خاص", "Record the help you received in a private log"),
+    RuvenStudentTool(42, "دعاء السفر", "Travel supplication", "عرض دعاء السفر المأثور", "Show the traditional travel supplication")
 )
 
 @Composable
@@ -249,6 +250,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean, publishedItems: List<iq.ruven.app.
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("ruven_student_tools", Context.MODE_PRIVATE) }
     var selected by remember { mutableStateOf<RuvenStudentTool?>(null) }
+    var toolSearch by remember { mutableStateOf("") }
     var input by remember { mutableStateOf("") }
     var output by remember { mutableStateOf("") }
     var lostItemQrToken by remember { mutableStateOf("") }
@@ -313,42 +315,46 @@ fun StudentFeatureHubCard(isEnglish: Boolean, publishedItems: List<iq.ruven.app.
                     Text(if (isEnglish) "Exit focus mode" else "إيقاف وضع التركيز")
                 }
             } else {
-                ruvenStudentTools.chunked(2).forEach { pair ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = toolSearch, onValueChange = { toolSearch = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(16.dp), placeholder = { Text(if (isEnglish) "Search student tools…" else "ابحث عن أداة…") })
+                val filteredTools = ruvenStudentTools.filter { tool -> toolSearch.isBlank() || tool.ar.contains(toolSearch, true) || tool.en.contains(toolSearch, true) }
+                Text(if (isEnglish) "${filteredTools.size} tools" else "${filteredTools.size} أداة", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                filteredTools.chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         pair.forEach { tool ->
-                            Button(
-                                onClick = {
-                                    selected = tool
-                                    if (tool.id == 5) { hintLevel = 0; hintTopic = "" }
-                                    if (tool.id == 2) homeworkPlan = readHomeworkPlan(prefs)
-                                    if (tool.id == 13) savedContent = readRuvenSavedContent(prefs)
-                                    if (tool.id == 41) helpReceived = readRuvenSavedContent(prefs, "help_received_v1")
-                                    input = if (tool.id == 27) java.time.LocalDate.now().toString() else prefs.getString("input_${tool.id}", "") ?: ""
-                                    output = prefs.getString("result_${tool.id}", "") ?: ""
-                                    if (tool.id == 1 || tool.id == 18 || tool.id == 20) {
-                                        val itemsKey = when (tool.id) { 1 -> "bag_items"; 18 -> "morning_items"; else -> "tomorrow_items" }
-                                        val checkedKey = when (tool.id) { 1 -> "bag_checked"; 18 -> "morning_checked"; else -> "tomorrow_checked" }
-                                        val stored = prefs.getString(itemsKey, "").orEmpty().split('|').map { it.trim() }.filter { it.isNotEmpty() }
-                                        bagItems = if (tool.id == 20 && stored.isEmpty()) buildTomorrowPreparationItems(context, "") else stored
-                                        checkedBagItems = prefs.getString(checkedKey, "").orEmpty().split(',').mapNotNull { it.toIntOrNull() }.toSet()
-                                    }
-                                    val recentEditor = prefs.edit()
-                                    .putString("recent_${System.currentTimeMillis()}", tool.ar)
-                                val recentKeys = prefs.all.keys
-                                    .filter { it.startsWith("recent_") }
-                                    .sortedByDescending { it.removePrefix("recent_").toLongOrNull() ?: 0L }
+                            Card(onClick = {
+                                selected = tool
+                                if (tool.id == 5) { hintLevel = 0; hintTopic = "" }
+                                if (tool.id == 2) homeworkPlan = readHomeworkPlan(prefs)
+                                if (tool.id == 13) savedContent = readRuvenSavedContent(prefs)
+                                if (tool.id == 41) helpReceived = readRuvenSavedContent(prefs, "help_received_v1")
+                                input = if (tool.id == 27) java.time.LocalDate.now().toString() else prefs.getString("input_${tool.id}", "") ?: ""
+                                output = prefs.getString("result_${tool.id}", "") ?: ""
+                                if (tool.id == 1 || tool.id == 18 || tool.id == 20) {
+                                    val itemsKey = when (tool.id) { 1 -> "bag_items"; 18 -> "morning_items"; else -> "tomorrow_items" }
+                                    val checkedKey = when (tool.id) { 1 -> "bag_checked"; 18 -> "morning_checked"; else -> "tomorrow_checked" }
+                                    val stored = prefs.getString(itemsKey, "").orEmpty().split('|').map { it.trim() }.filter { it.isNotEmpty() }
+                                    bagItems = if (tool.id == 20 && stored.isEmpty()) buildTomorrowPreparationItems(context, "") else stored
+                                    checkedBagItems = prefs.getString(checkedKey, "").orEmpty().split(',').mapNotNull { it.toIntOrNull() }.toSet()
+                                }
+                                val recentEditor = prefs.edit().putString("recent_${System.currentTimeMillis()}", tool.ar)
+                                val recentKeys = prefs.all.keys.filter { it.startsWith("recent_") }.sortedByDescending { it.removePrefix("recent_").toLongOrNull() ?: 0L }
                                 recentKeys.drop(7).forEach(recentEditor::remove)
                                 recentEditor.apply()
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(13.dp)
-                            ) {
-                                Text(if (isEnglish) tool.en else tool.ar, style = MaterialTheme.typography.labelMedium)
+                            }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+                                Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    Text(when(tool.id) { in 1..20, 27 -> if(isEnglish) "STUDY" else "دراسة"; in 21..23,33 -> if(isEnglish) "PLANNING" else "تنظيم"; in 31..32,36..37,41 -> if(isEnglish) "WELLBEING" else "رفاه"; else -> if(isEnglish) "DAILY" else "يومي" },
+                                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                    Text(if (isEnglish) tool.en else tool.ar, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, minLines = 2)
+                                    Text(if (isEnglish) tool.promptEn else tool.promptAr, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, minLines = 2)
+                                }
                             }
                         }
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
+                if (filteredTools.isEmpty()) Text(if (isEnglish) "No matching tools." else "ماكو أدوات مطابقة.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -726,6 +732,7 @@ private fun buildToolResult(id: Int, value: String, isEnglish: Boolean): String 
         32 -> if (isEnglish) "Pause for a moment, relax your shoulders, and take a few comfortable breaths. This is a simple pause, not medical care." else "وقف لحظة، ريّح كتافك وخذ كم نفس مريح. هاي استراحة بسيطة وليست علاجًا طبيًا."
         36 -> if (isEnglish) "Thank-you message draft:\nThank you for helping me with $value. I appreciate your time and support." else "مسودة شكر:\nشكرًا لأنك ساعدتني بـ$value. أقدّر وقتك ومساعدتك."
         37 -> if (isEnglish) "Apology draft (review before sending):\nI’m sorry for $value. I understand that my words or actions may have affected you. I take responsibility for my part, and I’ll try to handle this better next time. If you’re comfortable, I’d like to hear what I can do to make things right." else "مسودة اعتذار (راجعها قبل الإرسال):\nآسف على $value. أفهم أن كلامي أو تصرفي ممكن ضايقك. أتحمّل مسؤوليتي عن الجزء اللي صدر مني، وأحاول أتعامل ويا الموضوع بصورة أفضل بالمرة الجاية. وإذا يناسبك، أريد أسمع منك شنو أگدر أسوي حتى أصلّح الموقف."
+        42 -> if (isEnglish) "TRAVEL SUPPLICATION\\n\\nSubhana alladhi sakhkhara lana hadha wa ma kunna lahu muqrinin, wa inna ila rabbina lamunqalibun.\\n\\nAllahumma inna nas’aluka fi safarina hadha al-birra wa al-taqwa, wa min al-‘amali ma tarda. Allahumma hawwin ‘alayna safarana hadha watwi ‘anna bu‘dah. Allahumma anta al-sahibu fis-safar wal-khalifatu fil-ahl." else "دعاء السفر\\n\\n«سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَذَا وَمَا كُنَّا لَهُ مُقْرِنِينَ ۝ وَإِنَّا إِلَىٰ رَبِّنَا لَمُنقَلِبُونَ»\\n\\nاللهم إنا نسألك في سفرنا هذا البر والتقوى، ومن العمل ما ترضى. اللهم هوّن علينا سفرنا هذا واطوِ عنا بُعده. اللهم أنت الصاحب في السفر والخليفة في الأهل."
         else -> value
     }
 }
