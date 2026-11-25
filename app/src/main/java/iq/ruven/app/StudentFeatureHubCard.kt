@@ -344,7 +344,7 @@ fun StudentFeatureHubCard(isEnglish: Boolean, publishedItems: List<iq.ruven.app.
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                                 Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                                    Text(when(tool.id) { in 1..20, 27 -> if(isEnglish) "STUDY" else "دراسة"; in 21..23,33 -> if(isEnglish) "PLANNING" else "تنظيم"; in 31..32,36..37,41 -> if(isEnglish) "WELLBEING" else "رفاه"; else -> if(isEnglish) "DAILY" else "يومي" },
+                                    Text(when (tool.id) { in 1..20 -> if (isEnglish) "STUDY" else "دراسة"; 27 -> if (isEnglish) "STUDY" else "دراسة"; in 21..23 -> if (isEnglish) "PLANNING" else "تنظيم"; 33 -> if (isEnglish) "PLANNING" else "تنظيم"; in 31..32 -> if (isEnglish) "WELLBEING" else "رفاه"; in 36..37 -> if (isEnglish) "WELLBEING" else "رفاه"; 41 -> if (isEnglish) "WELLBEING" else "رفاه"; else -> if (isEnglish) "DAILY" else "يومي" },
                                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                     Text(if (isEnglish) tool.en else tool.ar, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, minLines = 2)
                                     Text(if (isEnglish) tool.promptEn else tool.promptAr, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, minLines = 2)
