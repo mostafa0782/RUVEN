@@ -891,7 +891,7 @@ private fun RuvenAuthenticatedApp(
                 val tabs = buildList {
                     add(RuvenTab.Home to Icons.Rounded.Home)
                     add(RuvenTab.Schedule to Icons.Rounded.CalendarMonth)
-                    add(RuvenTab.Homework to Icons.AutoMirrored.Rounded.MenuBook)
+                    add(RuvenTab.Homework to Icons.Rounded.MenuBook)
                     add(RuvenTab.Preparations to Icons.Rounded.Description)
                     add(RuvenTab.Notices to Icons.AutoMirrored.Rounded.Announcement)
                     add(RuvenTab.Workflows to Icons.Rounded.Description)
